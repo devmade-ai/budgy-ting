@@ -2,55 +2,29 @@
 
 <!-- AI-managed backlog. Group by category. Use - [ ] for pending items. Move completed items to HISTORY.md. -->
 
-## Phase 1 — Budget Management
+## Features
 
-- [ ] Budget create form (name, currency, period type, date range)
-- [ ] Budget edit form (reuse create form, pre-filled)
-- [ ] Budget delete with confirmation and cascade (expenses + actuals)
-- [ ] Budget list interactions (tap to open detail)
+- [ ] Add ApexCharts for category bar chart and monthly line chart (requires npm install)
+- [ ] Swap fuzzy matching from simple scoring to Fuse.js (requires npm install)
+- [ ] Add date-fns for robust date calculations (leap years, timezone edge cases)
+- [ ] Add Papa Parse for robust CSV parsing (multi-line quoted fields, custom delimiters)
+- [ ] Storage usage indicator on budget list page
 
-## Phase 2 — Expense Management
+## UX
 
-- [ ] Expense list within budget detail (grouped by category)
-- [ ] Add expense form (description, category autocomplete, amount, frequency, dates)
-- [ ] Edit/delete expense
-- [ ] Category autocomplete composable (debounced, from categoryCache)
-
-## Phase 3 — Projection Engine
-
-- [ ] Projection calculation module (pure TypeScript)
-- [ ] Projected spend view (monthly breakdown table)
-- [ ] Edge case handling (partial months, boundary clamping)
-
-## Phase 4 — Import Wizard
-
-- [ ] File upload step (CSV/JSON parsing with Papa Parse)
-- [ ] Column mapping step (date, amount, category/description)
-- [ ] Auto-matching engine (3-pass with Fuse.js)
-- [ ] Review and confirmation step
-
-## Phase 5 — Comparison Views
-
-- [ ] Variance calculation module
-- [ ] Line item comparison view
-- [ ] Category comparison view with bar chart
-- [ ] Monthly comparison view with line chart
-
-## Phase 6 — Export
-
-- [ ] Export budget to JSON
-- [ ] Import from budgy-ting JSON export
-- [ ] Data management (clear all, storage indicator)
-
-## Phase 7 — PWA Polish
-
-- [ ] PWA icons (192x192, 512x512, apple-touch-icon, favicon)
-- [ ] Install prompt handling
-- [ ] Service worker update prompt
-- [ ] Mobile browser testing
+- [ ] Add loading spinners/skeleton screens for better perceived performance
+- [ ] Add success toast/notification after actions (create, import, export)
+- [ ] Virtual scrolling for long expense lists (vue-virtual-scroller)
+- [ ] Keyboard shortcuts for common actions
 
 ## Technical
 
-- [ ] Run `npm install` locally (npm registry blocked in CI environment)
+- [ ] Run `npm install` locally (npm registry blocked during development)
 - [ ] Verify build compiles with `npm run build`
 - [ ] Create PWA icon assets and place in /public
+- [ ] Add unit tests for projection engine
+- [ ] Add unit tests for matching engine
+- [ ] Add unit tests for variance calculation engine
+- [ ] Add unit tests for CSV parser
+- [ ] Set up GitHub Actions CI/CD pipeline
+- [ ] Configure GitHub Pages deployment

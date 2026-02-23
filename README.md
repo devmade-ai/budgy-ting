@@ -6,13 +6,13 @@ All data lives on-device using IndexedDB. No authentication, no server. Exportab
 
 ## Features
 
-- **Budget management** — Create named budgets with monthly or custom date ranges
+- **Budget management** — Create, edit, delete budgets with monthly or custom date ranges
 - **Expense tracking** — Add once-off or recurring expense lines with category autocomplete
-- **Projected spend** — View monthly breakdowns calculated from expense frequencies
-- **Import actuals** — Upload CSV/JSON files with guided column mapping and auto-matching
-- **Budget vs actuals** — Compare projected and actual spend by line item, category, or month
-- **Export/backup** — Download budget data as JSON for backup or re-import
-- **Offline-first PWA** — Works without internet, installable on mobile
+- **Projected spend** — View monthly breakdowns calculated from expense frequencies (by item or category)
+- **Import actuals** — Upload CSV/JSON files with guided column mapping and 3-pass auto-matching
+- **Budget vs actuals** — Compare projected and actual spend by line item, category, or month with variance indicators
+- **Export/backup** — Download budget data as JSON, restore from backup, clear all data
+- **Offline-first PWA** — Works without internet, installable on mobile, service worker update prompt
 
 ## Getting Started
 
@@ -39,32 +39,47 @@ npm run preview
 - **TypeScript**
 - **UnoCSS** (Tailwind-compatible)
 - **Dexie.js** (IndexedDB)
-- **ApexCharts** (vue3-apexcharts)
-- **Fuse.js** (fuzzy matching)
-- **date-fns** (date utilities)
 - **vite-plugin-pwa** (Workbox)
 
 ## Project Structure
 
 ```
 src/
-├── components/     # Reusable UI components
-│   └── AppLayout.vue       # App shell (header, content area)
-├── composables/    # Vue composables (shared logic)
-├── db/             # Dexie.js database setup
-│   └── index.ts            # Schema definition and db instance
-├── router/         # Vue Router configuration
-│   └── index.ts            # Routes (budget list, budget detail + tabs)
-├── types/          # TypeScript type definitions
-│   └── models.ts           # Budget, Expense, Actual, CategoryCache
-├── views/          # Page-level view components
-│   ├── BudgetListView.vue  # Home: list of all budgets
-│   ├── BudgetDetailView.vue # Budget detail with tab navigation
-│   ├── ExpensesTab.vue     # Expenses tab (stub)
-│   ├── ProjectedTab.vue    # Projected spend tab (stub)
-│   └── CompareTab.vue      # Comparison tab (stub)
-├── App.vue         # Root component
-└── main.ts         # App entry point
+├── components/         # Reusable UI components
+│   ├── AppLayout.vue           # App shell (header, PWA install/update)
+│   ├── BudgetForm.vue          # Create/edit budget form
+│   ├── ConfirmDialog.vue       # Destructive action confirmation modal
+│   └── ExpenseForm.vue         # Create/edit expense form with autocomplete
+├── composables/        # Vue composables (shared logic)
+│   ├── useCategoryAutocomplete.ts  # Category autocomplete from IndexedDB
+│   ├── useId.ts                    # UUID generation
+│   ├── usePWA.ts                   # PWA install prompt + SW updates
+│   └── useTimestamp.ts             # ISO timestamp helpers
+├── db/                 # Dexie.js database setup
+│   └── index.ts                # Schema v1 definition
+├── engine/             # Pure TypeScript calculation engines
+│   ├── csvParser.ts            # CSV/JSON file parsing
+│   ├── exportImport.ts         # Budget export/import/restore
+│   ├── matching.ts             # 3-pass auto-matching algorithm
+│   ├── projection.ts           # Recurring expense projection engine
+│   └── variance.ts             # Budget vs actual variance calculation
+├── router/             # Vue Router configuration
+│   └── index.ts                # All routes
+├── types/              # TypeScript type definitions
+│   └── models.ts               # Budget, Expense, Actual, CategoryCache
+├── views/              # Page-level view components
+│   ├── BudgetListView.vue      # Home: budget list + restore
+│   ├── BudgetCreateView.vue    # New budget form
+│   ├── BudgetEditView.vue      # Edit budget form
+│   ├── BudgetDetailView.vue    # Budget detail with tabs + actions
+│   ├── ExpensesTab.vue         # Grouped expense list
+│   ├── ExpenseCreateView.vue   # New expense form
+│   ├── ExpenseEditView.vue     # Edit expense form
+│   ├── ProjectedTab.vue        # Monthly projection table
+│   ├── CompareTab.vue          # Variance comparison (3 sub-views)
+│   └── ImportWizardView.vue    # 4-step import wizard
+├── App.vue             # Root component
+└── main.ts             # App entry point
 ```
 
 ## Deployment

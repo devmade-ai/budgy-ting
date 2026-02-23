@@ -4,7 +4,7 @@
 
 ## Run `npm install`
 
-**Why:** The npm registry was unavailable during scaffolding, so dependencies aren't installed yet.
+**Why:** The npm registry was unavailable during development, so dependencies aren't installed yet.
 
 **Steps:**
 1. Open terminal in the project root

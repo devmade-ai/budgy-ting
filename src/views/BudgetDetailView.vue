@@ -2,6 +2,8 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { db } from '@/db'
+import { exportBudget, downloadJSON } from '@/engine/exportImport'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import type { Budget } from '@/types/models'
 
 const props = defineProps<{ id: string }>()
@@ -10,6 +12,7 @@ const router = useRouter()
 
 const budget = ref<Budget | null>(null)
 const loading = ref(true)
+const showDeleteConfirm = ref(false)
 
 onMounted(async () => {
   const found = await db.budgets.get(props.id)
@@ -28,6 +31,25 @@ const tabs = [
 ] as const
 
 const activeTab = computed(() => route.name as string)
+
+function editBudget() {
+  router.push({ name: 'budget-edit', params: { id: props.id } })
+}
+
+async function handleExport() {
+  const data = await exportBudget(props.id)
+  if (data) downloadJSON(data, data.budget.name)
+}
+
+async function deleteBudget() {
+  // Cascade delete: remove expenses and actuals linked to this budget
+  await db.transaction('rw', [db.budgets, db.expenses, db.actuals], async () => {
+    await db.actuals.where('budgetId').equals(props.id).delete()
+    await db.expenses.where('budgetId').equals(props.id).delete()
+    await db.budgets.delete(props.id)
+  })
+  router.replace({ name: 'budget-list' })
+}
 </script>
 
 <template>
@@ -53,6 +75,40 @@ const activeTab = computed(() => route.name as string)
             <span v-if="budget.currencyLabel"> &middot; {{ budget.currencyLabel }}</span>
           </p>
         </div>
+        <div class="flex gap-2">
+          <button
+            class="btn-primary text-sm"
+            title="Import actuals"
+            @click="router.push({ name: 'import-actuals', params: { id: props.id } })"
+          >
+            <span class="i-lucide-upload mr-1" />
+            Import
+          </button>
+          <button
+            class="btn-secondary text-sm"
+            title="Export budget"
+            @click="handleExport"
+          >
+            <span class="i-lucide-download mr-1" />
+            Export
+          </button>
+          <button
+            class="btn-secondary text-sm"
+            title="Edit budget"
+            @click="editBudget"
+          >
+            <span class="i-lucide-pencil mr-1" />
+            Edit
+          </button>
+          <button
+            class="btn-danger text-sm"
+            title="Delete budget"
+            @click="showDeleteConfirm = true"
+          >
+            <span class="i-lucide-trash-2 mr-1" />
+            Delete
+          </button>
+        </div>
       </div>
     </div>
 
@@ -76,5 +132,16 @@ const activeTab = computed(() => route.name as string)
 
     <!-- Tab content -->
     <RouterView :budget="budget" />
+
+    <!-- Delete confirmation -->
+    <ConfirmDialog
+      v-if="showDeleteConfirm"
+      title="Delete budget?"
+      :message="`This will permanently delete '${budget.name}' and all its expenses and imported data. This cannot be undone.`"
+      confirm-label="Delete budget"
+      :danger="true"
+      @confirm="deleteBudget"
+      @cancel="showDeleteConfirm = false"
+    />
   </div>
 </template>

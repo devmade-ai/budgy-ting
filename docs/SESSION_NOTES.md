@@ -4,30 +4,35 @@
 
 ## Worked on
 
-Phase 0: Project scaffolding for budgy-ting PWA.
+Full MVP implementation — all 7 phases of the budgy-ting PWA.
 
 ## Accomplished
 
-- Saved full product definition to `docs/PRODUCT_DEFINITION.md`
-- Created Vite + Vue 3 + TypeScript project structure manually (npm registry unavailable in environment)
-- Configured UnoCSS with Tailwind preset, brand colours, and utility shortcuts
-- Configured vite-plugin-pwa with manifest and icon references
-- Set up Dexie.js v4 with schema v1 (budgets, expenses, actuals, categoryCache)
-- Defined TypeScript models matching the product definition data model
-- Set up Vue Router with budget list and budget detail (3 nested tabs: Expenses, Projected, Compare)
-- Created AppLayout component (header with app name, max-width content area)
-- Created BudgetListView with empty state, loading state, and budget card list
-- Created BudgetDetailView with back navigation, tab bar, and RouterView for tab content
-- Created stub views for ExpensesTab, ProjectedTab, CompareTab
+- **Phase 0:** Project scaffolding (Vite, Vue 3, TypeScript, UnoCSS, Dexie, PWA, routing)
+- **Phase 1:** Budget CRUD (create/edit/delete forms, cascade delete, list with empty state)
+- **Phase 2:** Expense CRUD (grouped list, category autocomplete composable, frequency selector)
+- **Phase 3:** Projection engine (all 6 frequency types, partial months, monthly breakdown table)
+- **Phase 4:** Import wizard (CSV/JSON parsing, column auto-detect, 3-pass matching, review/approve)
+- **Phase 5:** Comparison views (variance engine, line item/category/monthly views, CSS bar charts)
+- **Phase 6:** Export/import (JSON export with comparison snapshot, restore from backup, clear all)
+- **Phase 7:** PWA polish (install prompt, service worker update banner)
 
 ## Current state
 
-Phase 0 scaffolding is complete. All files are in place. **Dependencies need to be installed** — npm registry was blocked in the build environment, so the user needs to run `npm install` locally. No `node_modules/` or `dist/` exist yet.
+All code for MVP is written. **Dependencies need to be installed** — npm registry was blocked in the build environment. Run `npm install` then `npm run dev` to test.
+
+Key items still needing attention:
+- PWA icons don't exist yet (need to create and place in /public)
+- Charts use CSS bars instead of ApexCharts (npm couldn't install). Can swap when deps available.
+- Fuzzy matching uses simple substring/Levenshtein instead of Fuse.js. Can swap when deps available.
+- No date-fns yet — using simple ISO string math for date calculations
 
 ## Key context
 
-- npm registry is blocked in this environment — cannot install deps or run builds here
-- Project uses path alias `@/` -> `src/` configured in both vite.config.ts and tsconfig.app.json
-- UnoCSS icons use `@iconify-json/lucide` for the Lucide icon set (i-lucide-* classes)
-- PWA icons (pwa-192x192.png, pwa-512x512.png, apple-touch-icon.png, favicon.ico) still need to be created and placed in `/public`
-- Next phase: Phase 1 (Budget CRUD) — create/edit/delete budget forms, budget list interactions
+- npm registry blocked — all code hand-written without node_modules
+- CSV parser is custom (not Papa Parse) — handles common cases but not all edge cases
+- Matching engine has simple fuzzy scoring — will benefit from Fuse.js swap
+- All engines are pure TypeScript in `src/engine/` — testable independently
+- Path alias `@/` -> `src/` in both vite.config.ts and tsconfig.app.json
+- UnoCSS icons: `@iconify-json/lucide` for i-lucide-* classes
+- Brand colour: emerald/green (#10b981)
