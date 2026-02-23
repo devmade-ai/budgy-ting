@@ -1,0 +1,32 @@
+/**
+ * Dexie.js database setup for budgy-ting.
+ *
+ * Requirement: Local-first IndexedDB storage with typed schema
+ * Approach: Dexie v4 with typed tables matching the data model
+ * Alternatives:
+ *   - Raw IndexedDB: Rejected - painful API, no type safety
+ *   - localStorage: Rejected - 5MB limit, no indexing
+ */
+
+import Dexie, { type EntityTable } from 'dexie'
+import type { Budget, Expense, Actual, CategoryCache } from '@/types/models'
+
+const db = new Dexie('budgy-ting') as Dexie & {
+  budgets: EntityTable<Budget, 'id'>
+  expenses: EntityTable<Expense, 'id'>
+  actuals: EntityTable<Actual, 'id'>
+  categoryCache: EntityTable<CategoryCache, 'category'>
+}
+
+// Schema v1: indexes match product definition spec
+// budgetId on expenses/actuals for per-budget queries
+// category indexes for autocomplete and matching
+// date index on actuals for monthly rollup queries
+db.version(1).stores({
+  budgets: 'id, name, createdAt',
+  expenses: 'id, budgetId, category, createdAt',
+  actuals: 'id, budgetId, expenseId, category, date',
+  categoryCache: 'category, lastUsed',
+})
+
+export { db }
