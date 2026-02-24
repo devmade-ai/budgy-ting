@@ -89,7 +89,7 @@ function goToImport() {
     </div>
 
     <!-- Comparison views -->
-    <template v-else>
+    <template v-else-if="comparison">
       <!-- Summary bar -->
       <div class="card mb-4">
         <div class="grid grid-cols-3 gap-4 text-center">

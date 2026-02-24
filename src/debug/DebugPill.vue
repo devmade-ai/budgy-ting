@@ -34,7 +34,7 @@ let unsubscribe: (() => void) | null = null
 
 onMounted(() => {
   entries.value = [...getEntries()]
-  unsubscribe = subscribe((entry) => {
+  unsubscribe = subscribe(() => {
     entries.value = [...getEntries()]
   })
 })
