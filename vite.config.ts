@@ -4,7 +4,13 @@ import UnoCSS from 'unocss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import { resolve } from 'path'
 
+// GitHub Pages deploys to /<repo-name>/ — VITE_BASE_URL is set by the
+// CI workflow so asset paths and PWA scope resolve correctly.
+const raw = process.env.VITE_BASE_URL || '/'
+const base = raw.endsWith('/') ? raw : `${raw}/`
+
 export default defineConfig({
+  base,
   plugins: [
     vue(),
     UnoCSS(),
@@ -18,8 +24,8 @@ export default defineConfig({
         theme_color: '#10b981',
         background_color: '#ffffff',
         display: 'standalone',
-        scope: '/',
-        start_url: '/',
+        scope: base,
+        start_url: base,
         icons: [
           {
             src: 'pwa-192x192.png',
