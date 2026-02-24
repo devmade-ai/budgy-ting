@@ -14,7 +14,9 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
 const router = createRouter({
-  history: createWebHistory(),
+  // import.meta.env.BASE_URL comes from Vite's `base` config so routes
+  // resolve correctly on GitHub Pages (e.g. /budgy-ting/…).
+  history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
       path: '/',
