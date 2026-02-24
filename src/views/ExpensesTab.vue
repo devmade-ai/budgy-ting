@@ -8,6 +8,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { db } from '@/db'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
+import { formatAmount } from '@/composables/useFormat'
 import type { Budget, Expense } from '@/types/models'
 
 const props = defineProps<{ budget: Budget }>()
@@ -57,10 +58,6 @@ function frequencyLabel(f: string): string {
     'annually': '/year',
   }
   return labels[f] ?? f
-}
-
-function formatAmount(n: number): string {
-  return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
 function addExpense() {

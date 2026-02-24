@@ -12,6 +12,7 @@ import { useRouter } from 'vue-router'
 import { db } from '@/db'
 import { calculateProjection, getDefaultPeriod } from '@/engine/projection'
 import { calculateComparison } from '@/engine/variance'
+import { formatAmount } from '@/composables/useFormat'
 import type { Budget, Expense, Actual } from '@/types/models'
 import type { ComparisonResult } from '@/engine/variance'
 
@@ -49,10 +50,6 @@ const comparison = computed<ComparisonResult | null>(() => {
 })
 
 const viewMode = ref<'items' | 'categories' | 'monthly'>('items')
-
-function formatAmount(n: number): string {
-  return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-}
 
 function formatPercent(n: number | null): string {
   if (n === null) return 'N/A'

@@ -42,7 +42,11 @@ async function handleExport() {
 }
 
 async function deleteBudget() {
-  // Cascade delete: remove expenses and actuals linked to this budget
+  // Requirement: Deleting a budget removes all related data
+  // Approach: Cascade delete in a single transaction — actuals, then expenses, then budget
+  // Alternatives:
+  //   - Soft-delete with archival: Rejected — adds complexity for an MVP with JSON export backup
+  //   - Leave orphaned data: Rejected — wastes IndexedDB space, confuses future queries
   await db.transaction('rw', [db.budgets, db.expenses, db.actuals], async () => {
     await db.actuals.where('budgetId').equals(props.id).delete()
     await db.expenses.where('budgetId').equals(props.id).delete()

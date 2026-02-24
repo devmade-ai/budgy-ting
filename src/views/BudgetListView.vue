@@ -1,4 +1,12 @@
 <script setup lang="ts">
+/**
+ * Requirement: Budget list with restore-from-backup and clear-all-data flows
+ * Approach: FileReader + JSON validation for import, with replace-or-skip
+ *   confirmation when a matching budget ID already exists
+ * Alternatives:
+ *   - Drag-and-drop import: Rejected — file-input is simpler on mobile
+ */
+
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { db } from '@/db'

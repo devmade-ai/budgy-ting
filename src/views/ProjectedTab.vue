@@ -7,6 +7,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { db } from '@/db'
 import { calculateProjection, getDefaultPeriod } from '@/engine/projection'
+import { formatAmount } from '@/composables/useFormat'
 import type { Budget, Expense } from '@/types/models'
 import type { ProjectionResult } from '@/engine/projection'
 
@@ -39,10 +40,6 @@ const projection = computed<ProjectionResult | null>(() => {
 })
 
 const viewMode = ref<'items' | 'categories'>('items')
-
-function formatAmount(n: number): string {
-  return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-}
 
 function formatMonth(monthStr: string): string {
   const [y, m] = monthStr.split('-')

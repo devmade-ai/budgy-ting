@@ -20,6 +20,7 @@ import {
   parseDate,
   parseAmount,
 } from '@/engine/matching'
+import { formatAmount } from '@/composables/useFormat'
 import type { Budget, Expense } from '@/types/models'
 import type { ParsedCSV } from '@/engine/csvParser'
 import type { ImportedRow, MatchResult } from '@/engine/matching'
@@ -310,10 +311,6 @@ function confidenceColor(c: string): string {
     unmatched: 'bg-gray-100 text-gray-600',
   }
   return colors[c] ?? 'bg-gray-100 text-gray-600'
-}
-
-function formatAmount(n: number): string {
-  return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 </script>
 
