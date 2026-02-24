@@ -37,6 +37,11 @@ export default defineConfig({
             sizes: '512x512',
             type: 'image/png',
           },
+          // Requirement: Maskable icon for Android adaptive-icon cropping.
+          // Approach: Separate entry with purpose 'maskable' (same image).
+          // Alternatives:
+          //   - Combined 'any maskable': Rejected — triggers Chrome DevTools warning.
+          //   - Dedicated padded maskable image: Ideal but not yet designed.
           {
             src: 'pwa-512x512.png',
             sizes: '512x512',
