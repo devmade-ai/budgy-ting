@@ -1,0 +1,16 @@
+<!--
+  App icon source — rasterized by scripts/generate-icons.mjs via sharp.
+
+  Requirement: Icon must render identically in CI (Ubuntu) and locally.
+  Approach: Generic "serif" font-family for the B glyph.
+  Alternatives:
+    - Georgia: Rejected — proprietary MS font, not installed on Ubuntu CI runners.
+    - Convert text to <path>: Rejected — harder to tweak; serif fallback is adequate.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="92" fill="#10b981"/>
+  <circle cx="256" cy="256" r="180" fill="white"/>
+  <text x="256" y="270" font-family="serif" font-weight="bold"
+    font-size="240" fill="#10b981" text-anchor="middle"
+    dominant-baseline="central">B</text>
+</svg>
