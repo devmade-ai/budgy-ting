@@ -25,13 +25,25 @@ const importError = ref('')
 const showReplaceConfirm = ref(false)
 const pendingImportData = ref<ExportSchema | null>(null)
 
+// General error state for DB failures
+const error = ref('')
+
 onMounted(async () => {
-  budgets.value = await db.budgets.orderBy('createdAt').reverse().toArray()
-  loading.value = false
+  try {
+    budgets.value = await db.budgets.orderBy('createdAt').reverse().toArray()
+  } catch {
+    error.value = 'Couldn\'t load your budgets. Please refresh the page and try again.'
+  } finally {
+    loading.value = false
+  }
 })
 
 async function refreshList() {
-  budgets.value = await db.budgets.orderBy('createdAt').reverse().toArray()
+  try {
+    budgets.value = await db.budgets.orderBy('createdAt').reverse().toArray()
+  } catch {
+    error.value = 'Couldn\'t refresh the list. Please refresh the page and try again.'
+  }
 }
 
 function openBudget(id: string) {
@@ -68,14 +80,18 @@ function handleRestoreFile(event: Event) {
     }
 
     // Check if budget already exists
-    const existing = await db.budgets.get(result.data.budget.id)
-    if (existing) {
-      pendingImportData.value = result.data
-      showReplaceConfirm.value = true
-    } else {
-      const importResult = await importBudget(result.data, 'merge')
-      importMessage.value = importResult.message
-      await refreshList()
+    try {
+      const existing = await db.budgets.get(result.data.budget.id)
+      if (existing) {
+        pendingImportData.value = result.data
+        showReplaceConfirm.value = true
+      } else {
+        const importResult = await importBudget(result.data, 'merge')
+        importMessage.value = importResult.message
+        await refreshList()
+      }
+    } catch {
+      importError.value = 'Couldn\'t restore the backup. Please try again.'
     }
   }
   reader.onerror = () => {
@@ -89,22 +105,31 @@ function handleRestoreFile(event: Event) {
 
 async function confirmReplace() {
   if (!pendingImportData.value) return
-  const result = await importBudget(pendingImportData.value, 'replace')
-  importMessage.value = result.message
-  pendingImportData.value = null
-  showReplaceConfirm.value = false
-  await refreshList()
+  try {
+    const result = await importBudget(pendingImportData.value, 'replace')
+    importMessage.value = result.message
+    pendingImportData.value = null
+    showReplaceConfirm.value = false
+    await refreshList()
+  } catch {
+    importError.value = 'Couldn\'t replace the budget. Please try again.'
+    showReplaceConfirm.value = false
+  }
 }
 
 async function handleClearAll() {
-  await db.transaction('rw', [db.budgets, db.expenses, db.actuals, db.categoryCache], async () => {
-    await db.actuals.clear()
-    await db.expenses.clear()
-    await db.budgets.clear()
-    await db.categoryCache.clear()
-  })
-  await refreshList()
-  importMessage.value = 'All data cleared'
+  try {
+    await db.transaction('rw', [db.budgets, db.expenses, db.actuals, db.categoryCache], async () => {
+      await db.actuals.clear()
+      await db.expenses.clear()
+      await db.budgets.clear()
+      await db.categoryCache.clear()
+    })
+    await refreshList()
+    importMessage.value = 'All data cleared'
+  } catch {
+    error.value = 'Couldn\'t clear data. Please try again.'
+  }
 }
 
 const showClearConfirm = ref(false)
@@ -130,6 +155,14 @@ const showClearConfirm = ref(false)
           New Budget
         </button>
       </div>
+    </div>
+
+    <!-- General error -->
+    <div v-if="error" class="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-center justify-between">
+      <span>{{ error }}</span>
+      <button class="text-red-400 hover:text-red-600" @click="error = ''">
+        <span class="i-lucide-x" />
+      </button>
     </div>
 
     <!-- Success/error messages -->

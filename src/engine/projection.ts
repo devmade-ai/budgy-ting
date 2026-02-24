@@ -13,7 +13,7 @@
  *   as the 12-month rolling view per product definition recommendation.
  */
 
-import type { Expense } from '@/types/models'
+import type { Budget, Expense } from '@/types/models'
 
 export interface MonthSlot {
   /** ISO month string: YYYY-MM */
@@ -99,6 +99,27 @@ export function getDefaultPeriod(): { startDate: string; endDate: string } {
   const endDate = `${endYear}-${String(endM).padStart(2, '0')}-${String(daysInEndMonth).padStart(2, '0')}`
 
   return { startDate, endDate }
+}
+
+/**
+ * Resolve the effective start/end dates for a budget.
+ *
+ * Requirement: Monthly budgets use a 12-month rolling view from current month;
+ *   custom budgets use their explicit dates with fallback to defaults.
+ * Approach: Single helper to eliminate the 3-file duplication of this logic
+ *   (was in ProjectedTab, CompareTab, and exportImport).
+ */
+export function resolveBudgetPeriod(budget: Pick<Budget, 'startDate' | 'endDate' | 'periodType'>): { startDate: string; endDate: string } {
+  let startDate = budget.startDate
+  let endDate = budget.endDate
+
+  if (budget.periodType === 'monthly' || !endDate) {
+    const defaults = getDefaultPeriod()
+    if (!startDate) startDate = defaults.startDate
+    if (!endDate) endDate = defaults.endDate
+  }
+
+  return { startDate, endDate: endDate! }
 }
 
 /**

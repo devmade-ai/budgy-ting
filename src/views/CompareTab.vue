@@ -10,7 +10,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { db } from '@/db'
-import { calculateProjection, getDefaultPeriod } from '@/engine/projection'
+import { calculateProjection, resolveBudgetPeriod } from '@/engine/projection'
 import { calculateComparison } from '@/engine/variance'
 import { formatAmount } from '@/composables/useFormat'
 import type { Budget, Expense, Actual } from '@/types/models'
@@ -22,30 +22,28 @@ const router = useRouter()
 const expenses = ref<Expense[]>([])
 const actuals = ref<Actual[]>([])
 const loading = ref(true)
+const error = ref('')
 
 onMounted(async () => {
-  const [exps, acts] = await Promise.all([
-    db.expenses.where('budgetId').equals(props.budget.id).toArray(),
-    db.actuals.where('budgetId').equals(props.budget.id).toArray(),
-  ])
-  expenses.value = exps
-  actuals.value = acts
-  loading.value = false
+  try {
+    const [exps, acts] = await Promise.all([
+      db.expenses.where('budgetId').equals(props.budget.id).toArray(),
+      db.actuals.where('budgetId').equals(props.budget.id).toArray(),
+    ])
+    expenses.value = exps
+    actuals.value = acts
+  } catch {
+    error.value = 'Couldn\'t load comparison data. Please refresh and try again.'
+  } finally {
+    loading.value = false
+  }
 })
 
 const comparison = computed<ComparisonResult | null>(() => {
   if (expenses.value.length === 0 && actuals.value.length === 0) return null
 
-  let startDate = props.budget.startDate
-  let endDate = props.budget.endDate
-
-  if (props.budget.periodType === 'monthly' || !endDate) {
-    const defaults = getDefaultPeriod()
-    if (!startDate) startDate = defaults.startDate
-    if (!endDate) endDate = defaults.endDate
-  }
-
-  const projection = calculateProjection(expenses.value, startDate, endDate!)
+  const { startDate, endDate } = resolveBudgetPeriod(props.budget)
+  const projection = calculateProjection(expenses.value, startDate, endDate)
   return calculateComparison(projection, actuals.value, expenses.value)
 })
 
@@ -69,11 +67,19 @@ function goToImport() {
 
 <template>
   <div>
+    <!-- Error -->
+    <div v-if="error" class="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-center justify-between">
+      <span>{{ error }}</span>
+      <button class="text-red-400 hover:text-red-600" @click="error = ''">
+        <span class="i-lucide-x" />
+      </button>
+    </div>
+
     <!-- Loading -->
     <div v-if="loading" class="text-center py-12 text-gray-400">Loading...</div>
 
     <!-- Empty state -->
-    <div v-else-if="!comparison" class="text-center py-12">
+    <div v-else-if="!comparison && !error" class="text-center py-12">
       <div class="i-lucide-bar-chart-3 text-4xl text-gray-300 mx-auto mb-3" />
       <p class="text-gray-500">Nothing to compare yet</p>
       <p class="text-gray-400 text-sm mt-1 mb-4">

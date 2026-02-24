@@ -4,6 +4,15 @@
 
 ## 2026-02-24
 
+- **Audit Fixes (Error Handling, Dependencies, Code Duplication):**
+  - Added try/catch with user-friendly error banners to all 10 views with DB operations
+    (BudgetListView, BudgetCreateView, BudgetEditView, BudgetDetailView,
+    ExpenseCreateView, ExpenseEditView, ExpensesTab, ProjectedTab, CompareTab, ImportWizardView)
+  - Added silent error handling to `useCategoryAutocomplete` (non-critical, degrades gracefully)
+  - Removed phantom `date-fns` dependency from package.json (was listed but never imported)
+  - Extracted `resolveBudgetPeriod()` helper in projection.ts to eliminate 3-file duplication
+    of budget period resolution logic (was in ProjectedTab, CompareTab, exportImport)
+
 - **Deployment Setup:**
   - GitHub Actions workflow (`deploy.yml`) — build + deploy to GitHub Pages
   - Icon generation script (`scripts/generate-icons.mjs`) — SVG to PNG via sharp

@@ -29,18 +29,24 @@ export function useCategoryAutocomplete() {
     }
 
     debounceTimer = setTimeout(async () => {
-      const allCategories = await db.categoryCache
-        .orderBy('lastUsed')
-        .reverse()
-        .toArray()
+      try {
+        const allCategories = await db.categoryCache
+          .orderBy('lastUsed')
+          .reverse()
+          .toArray()
 
-      const needle = val.toLowerCase()
-      suggestions.value = allCategories
-        .map((c) => c.category)
-        .filter((cat) => cat.toLowerCase().includes(needle))
-        .slice(0, 10)
+        const needle = val.toLowerCase()
+        suggestions.value = allCategories
+          .map((c) => c.category)
+          .filter((cat) => cat.toLowerCase().includes(needle))
+          .slice(0, 10)
 
-      isOpen.value = suggestions.value.length > 0
+        isOpen.value = suggestions.value.length > 0
+      } catch {
+        // Autocomplete is non-critical — silently degrade if DB fails
+        suggestions.value = []
+        isOpen.value = false
+      }
     }, 150)
   })
 
@@ -61,8 +67,12 @@ export function useCategoryAutocomplete() {
  * Call after saving an expense.
  */
 export async function touchCategory(category: string): Promise<void> {
-  await db.categoryCache.put({
-    category,
-    lastUsed: nowISO(),
-  })
+  try {
+    await db.categoryCache.put({
+      category,
+      lastUsed: nowISO(),
+    })
+  } catch {
+    // Category cache is non-critical — silently degrade if DB fails
+  }
 }

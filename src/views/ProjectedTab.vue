@@ -6,7 +6,7 @@
 
 import { ref, computed, onMounted } from 'vue'
 import { db } from '@/db'
-import { calculateProjection, getDefaultPeriod } from '@/engine/projection'
+import { calculateProjection, resolveBudgetPeriod } from '@/engine/projection'
 import { formatAmount } from '@/composables/useFormat'
 import type { Budget, Expense } from '@/types/models'
 import type { ProjectionResult } from '@/engine/projection'
@@ -15,28 +15,26 @@ const props = defineProps<{ budget: Budget }>()
 
 const expenses = ref<Expense[]>([])
 const loading = ref(true)
+const error = ref('')
 
 onMounted(async () => {
-  expenses.value = await db.expenses
-    .where('budgetId')
-    .equals(props.budget.id)
-    .toArray()
-  loading.value = false
+  try {
+    expenses.value = await db.expenses
+      .where('budgetId')
+      .equals(props.budget.id)
+      .toArray()
+  } catch {
+    error.value = 'Couldn\'t load projections. Please refresh and try again.'
+  } finally {
+    loading.value = false
+  }
 })
 
 const projection = computed<ProjectionResult | null>(() => {
   if (expenses.value.length === 0) return null
 
-  let startDate = props.budget.startDate
-  let endDate = props.budget.endDate
-
-  if (props.budget.periodType === 'monthly' || !endDate) {
-    const defaults = getDefaultPeriod()
-    if (!startDate) startDate = defaults.startDate
-    if (!endDate) endDate = defaults.endDate
-  }
-
-  return calculateProjection(expenses.value, startDate, endDate!)
+  const { startDate, endDate } = resolveBudgetPeriod(props.budget)
+  return calculateProjection(expenses.value, startDate, endDate)
 })
 
 const viewMode = ref<'items' | 'categories'>('items')
@@ -56,8 +54,16 @@ const sortedCategories = computed(() => {
 
 <template>
   <div>
+    <!-- Error -->
+    <div v-if="error" class="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-center justify-between">
+      <span>{{ error }}</span>
+      <button class="text-red-400 hover:text-red-600" @click="error = ''">
+        <span class="i-lucide-x" />
+      </button>
+    </div>
+
     <!-- Empty state -->
-    <div v-if="!loading && !projection" class="text-center py-12">
+    <div v-if="!loading && !projection && !error" class="text-center py-12">
       <div class="i-lucide-trending-up text-4xl text-gray-300 mx-auto mb-3" />
       <p class="text-gray-500">No projections yet</p>
       <p class="text-gray-400 text-sm mt-1">

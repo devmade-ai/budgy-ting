@@ -9,7 +9,7 @@
  */
 
 import { db } from '@/db'
-import { calculateProjection, getDefaultPeriod } from './projection'
+import { calculateProjection, resolveBudgetPeriod } from './projection'
 import { calculateComparison } from './variance'
 import type { Budget, Expense, Actual } from '@/types/models'
 
@@ -58,16 +58,8 @@ export async function exportBudget(budgetId: string): Promise<ExportSchema | nul
   let comparison: ExportSchema['comparison'] = null
 
   if (expenses.length > 0) {
-    let startDate = budget.startDate
-    let endDate = budget.endDate
-
-    if (budget.periodType === 'monthly' || !endDate) {
-      const defaults = getDefaultPeriod()
-      if (!startDate) startDate = defaults.startDate
-      if (!endDate) endDate = defaults.endDate
-    }
-
-    const projection = calculateProjection(expenses, startDate, endDate!)
+    const { startDate, endDate } = resolveBudgetPeriod(budget)
+    const projection = calculateProjection(expenses, startDate, endDate)
     const comp = calculateComparison(projection, actuals, expenses)
 
     comparison = {

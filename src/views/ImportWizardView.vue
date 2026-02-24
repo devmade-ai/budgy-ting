@@ -31,19 +31,25 @@ const router = useRouter()
 const budget = ref<Budget | null>(null)
 const expenses = ref<Expense[]>([])
 const loading = ref(true)
+const error = ref('')
 
 onMounted(async () => {
-  const [foundBudget, foundExpenses] = await Promise.all([
-    db.budgets.get(props.id),
-    db.expenses.where('budgetId').equals(props.id).toArray(),
-  ])
-  if (!foundBudget) {
-    router.replace({ name: 'budget-list' })
-    return
+  try {
+    const [foundBudget, foundExpenses] = await Promise.all([
+      db.budgets.get(props.id),
+      db.expenses.where('budgetId').equals(props.id).toArray(),
+    ])
+    if (!foundBudget) {
+      router.replace({ name: 'budget-list' })
+      return
+    }
+    budget.value = foundBudget
+    expenses.value = foundExpenses
+  } catch {
+    error.value = 'Couldn\'t load budget data. Please go back and try again.'
+  } finally {
+    loading.value = false
   }
-  budget.value = foundBudget
-  expenses.value = foundExpenses
-  loading.value = false
 })
 
 // ── Wizard state ──
@@ -266,28 +272,33 @@ async function confirmImport() {
   if (!budget.value) return
   saving.value = true
 
-  const now = nowISO()
-  const approvedResults = matchResults.value.filter((r) => r.approved)
+  try {
+    const now = nowISO()
+    const approvedResults = matchResults.value.filter((r) => r.approved)
 
-  await db.actuals.bulkAdd(
-    approvedResults.map((r) => ({
-      id: useId(),
-      budgetId: budget.value!.id,
-      expenseId: r.matchedExpense?.id ?? null,
-      date: r.importedRow.date,
-      amount: r.importedRow.amount,
-      category: r.importedRow.category,
-      description: r.importedRow.description,
-      originalRow: r.importedRow.originalRow,
-      matchConfidence: r.confidence,
-      approved: true,
-      createdAt: now,
-      updatedAt: now,
-    }))
-  )
+    await db.actuals.bulkAdd(
+      approvedResults.map((r) => ({
+        id: useId(),
+        budgetId: budget.value!.id,
+        expenseId: r.matchedExpense?.id ?? null,
+        date: r.importedRow.date,
+        amount: r.importedRow.amount,
+        category: r.importedRow.category,
+        description: r.importedRow.description,
+        originalRow: r.importedRow.originalRow,
+        matchConfidence: r.confidence,
+        approved: true,
+        createdAt: now,
+        updatedAt: now,
+      }))
+    )
 
-  step.value = 4
-  saving.value = false
+    step.value = 4
+  } catch {
+    error.value = 'Couldn\'t save imported data. Please try again.'
+  } finally {
+    saving.value = false
+  }
 }
 
 function goBack() {
@@ -323,6 +334,13 @@ function confidenceColor(c: string): string {
       <span class="i-lucide-arrow-left" />
       {{ step === 1 ? 'Back to budget' : 'Previous step' }}
     </button>
+
+    <div v-if="error" class="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-center justify-between">
+      <span>{{ error }}</span>
+      <button class="text-red-400 hover:text-red-600" @click="error = ''">
+        <span class="i-lucide-x" />
+      </button>
+    </div>
 
     <div v-if="loading" class="text-center py-12 text-gray-400">Loading...</div>
 

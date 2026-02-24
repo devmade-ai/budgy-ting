@@ -13,15 +13,21 @@ const router = useRouter()
 const budget = ref<Budget | null>(null)
 const loading = ref(true)
 const showDeleteConfirm = ref(false)
+const error = ref('')
 
 onMounted(async () => {
-  const found = await db.budgets.get(props.id)
-  if (!found) {
-    router.replace({ name: 'budget-list' })
-    return
+  try {
+    const found = await db.budgets.get(props.id)
+    if (!found) {
+      router.replace({ name: 'budget-list' })
+      return
+    }
+    budget.value = found
+  } catch {
+    error.value = 'Couldn\'t load this budget. Please go back and try again.'
+  } finally {
+    loading.value = false
   }
-  budget.value = found
-  loading.value = false
 })
 
 const tabs = [
@@ -37,8 +43,12 @@ function editBudget() {
 }
 
 async function handleExport() {
-  const data = await exportBudget(props.id)
-  if (data) downloadJSON(data, data.budget.name)
+  try {
+    const data = await exportBudget(props.id)
+    if (data) downloadJSON(data, data.budget.name)
+  } catch {
+    error.value = 'Couldn\'t export the budget. Please try again.'
+  }
 }
 
 async function deleteBudget() {
@@ -47,16 +57,28 @@ async function deleteBudget() {
   // Alternatives:
   //   - Soft-delete with archival: Rejected — adds complexity for an MVP with JSON export backup
   //   - Leave orphaned data: Rejected — wastes IndexedDB space, confuses future queries
-  await db.transaction('rw', [db.budgets, db.expenses, db.actuals], async () => {
-    await db.actuals.where('budgetId').equals(props.id).delete()
-    await db.expenses.where('budgetId').equals(props.id).delete()
-    await db.budgets.delete(props.id)
-  })
-  router.replace({ name: 'budget-list' })
+  try {
+    await db.transaction('rw', [db.budgets, db.expenses, db.actuals], async () => {
+      await db.actuals.where('budgetId').equals(props.id).delete()
+      await db.expenses.where('budgetId').equals(props.id).delete()
+      await db.budgets.delete(props.id)
+    })
+    router.replace({ name: 'budget-list' })
+  } catch {
+    error.value = 'Couldn\'t delete the budget. Please try again.'
+    showDeleteConfirm.value = false
+  }
 }
 </script>
 
 <template>
+  <div v-if="error" class="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-center justify-between">
+    <span>{{ error }}</span>
+    <button class="text-red-400 hover:text-red-600" @click="error = ''">
+      <span class="i-lucide-x" />
+    </button>
+  </div>
+
   <div v-if="loading" class="text-center py-12 text-gray-400">
     Loading...
   </div>

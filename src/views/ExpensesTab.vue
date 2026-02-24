@@ -17,13 +17,19 @@ const router = useRouter()
 const expenses = ref<Expense[]>([])
 const loading = ref(true)
 const deleteTarget = ref<Expense | null>(null)
+const error = ref('')
 
 onMounted(async () => {
-  expenses.value = await db.expenses
-    .where('budgetId')
-    .equals(props.budget.id)
-    .toArray()
-  loading.value = false
+  try {
+    expenses.value = await db.expenses
+      .where('budgetId')
+      .equals(props.budget.id)
+      .toArray()
+  } catch {
+    error.value = 'Couldn\'t load expenses. Please refresh and try again.'
+  } finally {
+    loading.value = false
+  }
 })
 
 const groupedExpenses = computed(() => {
@@ -74,14 +80,19 @@ function editExpense(exp: Expense) {
 async function confirmDelete() {
   if (!deleteTarget.value) return
 
-  // Remove linked actuals when deleting an expense
-  await db.transaction('rw', [db.expenses, db.actuals], async () => {
-    await db.actuals.where('expenseId').equals(deleteTarget.value!.id).modify({ expenseId: null })
-    await db.expenses.delete(deleteTarget.value!.id)
-  })
+  try {
+    // Remove linked actuals when deleting an expense
+    await db.transaction('rw', [db.expenses, db.actuals], async () => {
+      await db.actuals.where('expenseId').equals(deleteTarget.value!.id).modify({ expenseId: null })
+      await db.expenses.delete(deleteTarget.value!.id)
+    })
 
-  expenses.value = expenses.value.filter((e) => e.id !== deleteTarget.value!.id)
-  deleteTarget.value = null
+    expenses.value = expenses.value.filter((e) => e.id !== deleteTarget.value!.id)
+    deleteTarget.value = null
+  } catch {
+    error.value = 'Couldn\'t delete the expense. Please try again.'
+    deleteTarget.value = null
+  }
 }
 </script>
 
@@ -98,6 +109,14 @@ async function confirmDelete() {
       <button class="btn-primary text-sm" @click="addExpense">
         <span class="i-lucide-plus mr-1" />
         Add Expense
+      </button>
+    </div>
+
+    <!-- Error -->
+    <div v-if="error" class="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-center justify-between">
+      <span>{{ error }}</span>
+      <button class="text-red-400 hover:text-red-600" @click="error = ''">
+        <span class="i-lucide-x" />
       </button>
     </div>
 

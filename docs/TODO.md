@@ -6,7 +6,7 @@
 
 - [ ] Add ApexCharts for category bar chart and monthly line chart (requires npm install)
 - [ ] Swap fuzzy matching from simple scoring to Fuse.js (requires npm install)
-- [ ] Add date-fns for robust date calculations (leap years, timezone edge cases)
+- [ ] Add date-fns for robust date calculations (leap years, timezone edge cases) — removed from package.json since unused; re-add when needed
 - [ ] Add Papa Parse for robust CSV parsing (multi-line quoted fields, custom delimiters)
 - [ ] Storage usage indicator on budget list page
 - [ ] Generate dedicated maskable icon with proper safe-zone padding
