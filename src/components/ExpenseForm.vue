@@ -87,6 +87,10 @@ function handleSubmit() {
   })
 }
 
+function handleCategoryBlur() {
+  window.setTimeout(() => close(), 150)
+}
+
 function selectCategory(cat: string) {
   select(cat)
 }
@@ -125,7 +129,7 @@ function selectCategory(cat: string) {
         placeholder="e.g. Venue, Marketing, Software"
         autocomplete="off"
         @focus="isOpen = suggestions.length > 0"
-        @blur="setTimeout(() => close(), 150)"
+        @blur="handleCategoryBlur"
       />
       <!-- Autocomplete dropdown -->
       <div
