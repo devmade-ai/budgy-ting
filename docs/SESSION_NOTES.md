@@ -4,14 +4,13 @@
 
 ## Worked on
 
-Codebase audit fixes: DB error handling, phantom dependency removal, code deduplication.
+Tutorial modal for first-time users.
 
 ## Accomplished
 
-- **Error handling:** Added try/catch + user-facing error banners to all 10 views with IndexedDB operations. Each DB call is now wrapped so users see "Couldn't load/save/delete. Please try again." instead of silent failures or white screens.
-- **Dependency cleanup:** Removed `date-fns` from package.json — it was listed as a dependency but never imported anywhere.
-- **Code deduplication:** Extracted `resolveBudgetPeriod()` helper in `engine/projection.ts` to replace the identical 6-line budget period resolution pattern that was duplicated in ProjectedTab, CompareTab, and exportImport.ts.
-- **Silent error handling:** Added try/catch to `useCategoryAutocomplete` (autocomplete and cache writes degrade gracefully on DB failure).
+- **Tutorial modal:** Created 6-step walkthrough modal (`TutorialModal.vue`) that auto-shows on first visit and can be re-opened via help button in header
+- **State management:** `useTutorial.ts` composable with localStorage-backed dismissal persistence (module-level shared state, same pattern as `usePWAInstall`)
+- **Header help button:** Circle-help icon in AppLayout header for re-triggering tutorial anytime
 
 ## Current state
 
@@ -22,15 +21,16 @@ Working features:
 - Export/import (JSON backup/restore)
 - PWA install prompt (native Chromium + manual instructions for Safari/Firefox)
 - Service worker updates with 60-min periodic checks
+- **Tutorial modal for new users (auto-show + help button re-trigger)**
 - Debug pill (floating diagnostic panel, alpha-phase)
 - GitHub Pages deployment workflow ready
-- **All DB operations now have error handling with user-friendly messages**
+- All DB operations have error handling with user-friendly messages
 
 ## Key context
 
 - npm registry blocked — no `node_modules`, can't run type-check or build
-- Error banner pattern: `<div v-if="error" class="mb-4 p-3 bg-red-50 text-red-600 ...">` — consistent across all views
-- `resolveBudgetPeriod()` in projection.ts is the single source of truth for budget period defaults
+- Tutorial state: localStorage key `budgy-ting-tutorial-dismissed`, module-level `ref` in `useTutorial.ts`
+- Modal pattern: all modals use `Teleport to="body"` with `z-50` overlay (ConfirmDialog, InstallInstructionsModal, TutorialModal)
 - `usePWAUpdate.ts` uses `virtual:pwa-register/vue` (requires vite-plugin-pwa runtime)
 - `usePWAInstall.ts` has module-level event listeners (shared state across components)
 - Debug pill mounts in separate Vue root in `main.ts` (survives main app crashes)

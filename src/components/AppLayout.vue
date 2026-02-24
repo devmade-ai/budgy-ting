@@ -1,14 +1,21 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePWAUpdate } from '@/composables/usePWAUpdate'
+import { useTutorial } from '@/composables/useTutorial'
 import InstallPrompt from '@/components/InstallPrompt.vue'
 import InstallInstructionsModal from '@/components/InstallInstructionsModal.vue'
+import TutorialModal from '@/components/TutorialModal.vue'
 
 const router = useRouter()
 const { hasUpdate, offlineReady, updateApp } = usePWAUpdate()
+const { showTutorial, showIfFirstVisit, openTutorial, dismissTutorial } = useTutorial()
 
 const showInstructions = ref(false)
+
+onMounted(() => {
+  showIfFirstVisit()
+})
 
 function goHome() {
   router.push({ name: 'budget-list' })
@@ -51,6 +58,13 @@ function goHome() {
         >
           budgy-ting
         </button>
+        <button
+          class="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-brand-600 hover:bg-brand-50 transition-colors"
+          title="How it works"
+          @click="openTutorial"
+        >
+          <span class="i-lucide-circle-help text-lg" />
+        </button>
       </div>
     </header>
 
@@ -63,6 +77,12 @@ function goHome() {
     <InstallInstructionsModal
       v-if="showInstructions"
       @close="showInstructions = false"
+    />
+
+    <!-- Tutorial modal (first visit + re-accessible from help button) -->
+    <TutorialModal
+      v-if="showTutorial"
+      @close="dismissTutorial"
     />
   </div>
 </template>

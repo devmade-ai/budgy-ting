@@ -4,6 +4,13 @@
 
 ## 2026-02-24
 
+- **Tutorial Modal for New Users:**
+  - `composables/useTutorial.ts` — shared reactive state backed by localStorage
+  - `components/TutorialModal.vue` — 6-step walkthrough (welcome, create budget, add expenses, projections, import, compare)
+  - Auto-shows on first visit, persists dismissal in localStorage
+  - Help button (circle-help icon) in header to re-open tutorial anytime
+  - Follows existing Teleport modal pattern (ConfirmDialog, InstallInstructionsModal)
+
 - **Audit Fixes (Error Handling, Dependencies, Code Duplication):**
   - Added try/catch with user-friendly error banners to all 10 views with DB operations
     (BudgetListView, BudgetCreateView, BudgetEditView, BudgetDetailView,
