@@ -2,6 +2,44 @@
 
 <!-- Changelog and record of completed work. Organized by date. -->
 
+## 2026-02-24
+
+- **Deployment Setup:**
+  - GitHub Actions workflow (`deploy.yml`) — build + deploy to GitHub Pages
+  - Icon generation script (`scripts/generate-icons.mjs`) — SVG to PNG via sharp
+  - Manual ICO packing for favicon.ico
+  - SPA routing via 404.html copy
+
+- **Deployment Review & Fixes:**
+  - Fixed Vue Router missing `import.meta.env.BASE_URL` (would break routing on GH Pages)
+  - Fixed SVG font from Georgia to generic `serif` (Georgia absent on Ubuntu CI runners)
+  - Split `purpose: 'any maskable'` into separate entry (Chrome DevTools warning)
+  - Bumped Node 20 → 22 in CI (Node 20 EOL April 2026)
+  - Bumped sharp `^0.33.0` → `^0.34.5` (latest stable)
+
+- **Code Standards Audit:**
+  - Extracted duplicated `formatAmount()` to `composables/useFormat.ts` (was in 4 files)
+  - Removed dead `scripts/generate-icons.py` (superseded by `.mjs`, had old Georgia font)
+  - Added decision comments to BudgetListView (import/restore flow)
+  - Added decision comments to BudgetDetailView (cascade delete)
+
+- **PWA System Overhaul:**
+  - Split `usePWA.ts` into `usePWAUpdate.ts` (wraps `useRegisterSW`, 60-min periodic checks,
+    offline-ready auto-dismiss) and `usePWAInstall.ts` (browser detection, analytics, dismiss persistence)
+  - `InstallPrompt.vue` — banner with native install or manual instructions link + dismiss
+  - `InstallInstructionsModal.vue` — browser-specific guides (Safari iOS/macOS, Firefox Android/desktop)
+  - Added `vite-plugin-pwa/client` type reference to env.d.ts
+
+- **Debug System (Alpha):**
+  - `debug/debugLog.ts` — pub/sub event store, 200-entry circular buffer, global error listeners
+  - `debug/DebugPill.vue` — floating pill with Log + Environment tabs, Copy/Clear
+  - Mounted in separate Vue root (survives main app crashes)
+
+- **Completed TODO items moved here:**
+  - Create PWA icon assets and place in /public
+  - Set up GitHub Actions CI/CD pipeline
+  - Configure GitHub Pages deployment
+
 ## 2026-02-23
 
 - Initial project setup: created documentation structure per CLAUDE.md

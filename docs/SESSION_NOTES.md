@@ -4,35 +4,38 @@
 
 ## Worked on
 
-Full MVP implementation — all 7 phases of the budgy-ting PWA.
+Deployment setup, deployment review, code standards audit, PWA system overhaul, debug system.
 
 ## Accomplished
 
-- **Phase 0:** Project scaffolding (Vite, Vue 3, TypeScript, UnoCSS, Dexie, PWA, routing)
-- **Phase 1:** Budget CRUD (create/edit/delete forms, cascade delete, list with empty state)
-- **Phase 2:** Expense CRUD (grouped list, category autocomplete composable, frequency selector)
-- **Phase 3:** Projection engine (all 6 frequency types, partial months, monthly breakdown table)
-- **Phase 4:** Import wizard (CSV/JSON parsing, column auto-detect, 3-pass matching, review/approve)
-- **Phase 5:** Comparison views (variance engine, line item/category/monthly views, CSS bar charts)
-- **Phase 6:** Export/import (JSON export with comparison snapshot, restore from backup, clear all)
-- **Phase 7:** PWA polish (install prompt, service worker update banner)
+- **Deployment:** GitHub Actions workflow for GitHub Pages, sharp-based icon generation from SVG
+- **Deployment review fixes:** Router base path, SVG font (Georgia → serif), Node 22, sharp 0.34, maskable icon split
+- **Code standards:** Extracted duplicated `formatAmount`, removed dead Python script, added decision comments
+- **PWA overhaul:** Split `usePWA` into `usePWAUpdate` + `usePWAInstall`, added `InstallPrompt` banner with dismiss, `InstallInstructionsModal` with 4 browser variants, install analytics in localStorage
+- **Debug system:** `debugLog.ts` (200-entry pub/sub buffer), `DebugPill.vue` (Log + Environment tabs), mounted in separate Vue root
 
 ## Current state
 
-All code for MVP is written. **Dependencies need to be installed** — npm registry was blocked in the build environment. Run `npm install` then `npm run dev` to test.
+All code written. **Dependencies still need `npm install`** — npm registry was blocked. Run `npm install && npm run dev` to test.
 
-Key items still needing attention:
-- PWA icons don't exist yet (need to create and place in /public)
-- Charts use CSS bars instead of ApexCharts (npm couldn't install). Can swap when deps available.
-- Fuzzy matching uses simple substring/Levenshtein instead of Fuse.js. Can swap when deps available.
-- No date-fns yet — using simple ISO string math for date calculations
+Working features:
+- Full budget CRUD, expense CRUD, projection engine, import wizard, comparison views
+- Export/import (JSON backup/restore)
+- PWA install prompt (native Chromium + manual instructions for Safari/Firefox)
+- Service worker updates with 60-min periodic checks
+- Debug pill (floating diagnostic panel, alpha-phase)
+- GitHub Pages deployment workflow ready
 
 ## Key context
 
-- npm registry blocked — all code hand-written without node_modules
-- CSV parser is custom (not Papa Parse) — handles common cases but not all edge cases
-- Matching engine has simple fuzzy scoring — will benefit from Fuse.js swap
+- npm registry blocked — no `node_modules`, can't run type-check or build
+- `usePWAUpdate.ts` uses `virtual:pwa-register/vue` (requires vite-plugin-pwa runtime)
+- `usePWAInstall.ts` has module-level event listeners (shared state across components)
+- Debug pill mounts in separate Vue root in `main.ts` (survives main app crashes)
+- `formatAmount` is now in `composables/useFormat.ts` (shared by 4 views)
+- Icons generated from `public/icon.svg` via `scripts/generate-icons.mjs` (uses `serif` font, not Georgia)
+- `env.d.ts` has `vite-plugin-pwa/client` type reference for `virtual:pwa-register/vue`
 - All engines are pure TypeScript in `src/engine/` — testable independently
-- Path alias `@/` -> `src/` in both vite.config.ts and tsconfig.app.json
+- Path alias `@/` → `src/` in both vite.config.ts and tsconfig.app.json
 - UnoCSS icons: `@iconify-json/lucide` for i-lucide-* classes
 - Brand colour: emerald/green (#10b981)

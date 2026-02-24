@@ -9,6 +9,7 @@
 - [ ] Add date-fns for robust date calculations (leap years, timezone edge cases)
 - [ ] Add Papa Parse for robust CSV parsing (multi-line quoted fields, custom delimiters)
 - [ ] Storage usage indicator on budget list page
+- [ ] Generate dedicated maskable icon with proper safe-zone padding
 
 ## UX
 
@@ -21,10 +22,8 @@
 
 - [ ] Run `npm install` locally (npm registry blocked during development)
 - [ ] Verify build compiles with `npm run build`
-- [ ] Create PWA icon assets and place in /public
 - [ ] Add unit tests for projection engine
 - [ ] Add unit tests for matching engine
 - [ ] Add unit tests for variance calculation engine
 - [ ] Add unit tests for CSV parser
-- [ ] Set up GitHub Actions CI/CD pipeline
-- [ ] Configure GitHub Pages deployment
+- [ ] Remove debug system (DebugPill + debugLog) after alpha phase

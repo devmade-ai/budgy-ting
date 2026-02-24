@@ -6,7 +6,6 @@
  *   already installed, dismissed, or unsupported browser.
  */
 
-import { ref } from 'vue'
 import { usePWAInstall } from '@/composables/usePWAInstall'
 
 const {
