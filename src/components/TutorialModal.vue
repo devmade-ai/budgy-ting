@@ -57,6 +57,9 @@ const steps: TutorialStep[] = [
 
 const currentStep = ref(0)
 
+// Computed to safely access the active step, avoiding TS2532 "possibly undefined" on array index
+const activeStep = computed(() => steps[currentStep.value] as TutorialStep)
+
 const isFirst = computed(() => currentStep.value === 0)
 const isLast = computed(() => currentStep.value === steps.length - 1)
 
@@ -99,14 +102,14 @@ function goToStep(index: number) {
         <!-- Step content -->
         <div class="text-center pt-2 pb-4">
           <div
-            :class="steps[currentStep].icon"
+            :class="activeStep.icon"
             class="text-4xl text-brand-500 mx-auto mb-4"
           />
           <h3 class="text-lg font-semibold text-gray-900 mb-2">
-            {{ steps[currentStep].title }}
+            {{ activeStep.title }}
           </h3>
           <p class="text-sm text-gray-600 leading-relaxed">
-            {{ steps[currentStep].description }}
+            {{ activeStep.description }}
           </p>
         </div>
 
