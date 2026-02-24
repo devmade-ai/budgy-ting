@@ -61,9 +61,10 @@ function goHome() {
         <button
           class="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-brand-600 hover:bg-brand-50 transition-colors"
           title="How it works"
+          aria-label="How it works"
           @click="openTutorial"
         >
-          <span class="i-lucide-circle-help text-lg" />
+          <span class="i-lucide-circle-help text-lg" aria-hidden="true" />
         </button>
       </div>
     </header>

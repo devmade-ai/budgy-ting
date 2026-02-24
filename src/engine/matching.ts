@@ -74,12 +74,14 @@ export function matchImportedRows(
       if (usedExpenses.has(`${exp.id}-${row.date}`)) return false
       if (Math.abs(exp.amount - row.amount) >= 0.01) return false
 
-      // Fuzzy match on category or description
-      const score = Math.min(
+      // Require best-of-both: use Math.max so BOTH category and description
+      // must be reasonable, not just one. Math.min was a bug — it let garbage
+      // descriptions through as long as category was a perfect match.
+      const score = Math.max(
         fuzzyScore(row.category, exp.category),
         fuzzyScore(row.description, exp.description),
       )
-      return score <= 0.3
+      return score <= 0.4
     })
 
     if (match) {
@@ -137,11 +139,17 @@ export function matchImportedRows(
 }
 
 /**
- * Simple fuzzy scoring (0 = perfect match, 1 = no match).
- * Approximates Fuse.js behavior for basic cases.
+ * Fuzzy scoring using Levenshtein distance (0 = perfect match, 1 = no match).
  * Will be replaced by Fuse.js when available.
+ *
+ * Requirement: Score how similar two strings are for matching imported rows
+ * Approach: Levenshtein distance normalized by max string length
+ * Alternatives:
+ *   - Character presence check: Rejected — order-blind, "abc" vs "cba" scored as perfect
+ *   - Jaccard index on character sets: Rejected — loses positional information
  */
 function fuzzyScore(a: string, b: string): number {
+  if (!a && !b) return 0
   if (!a || !b) return 1
 
   const al = a.toLowerCase().trim()
@@ -150,19 +158,29 @@ function fuzzyScore(a: string, b: string): number {
   if (al === bl) return 0
   if (al.includes(bl) || bl.includes(al)) return 0.1
 
-  // Simple character-by-character comparison (normalized Levenshtein-like)
-  const maxLen = Math.max(al.length, bl.length)
+  const m = al.length
+  const n = bl.length
+  const maxLen = Math.max(m, n)
   if (maxLen === 0) return 0
 
-  let matches = 0
-  const shorter = al.length <= bl.length ? al : bl
-  const longer = al.length > bl.length ? al : bl
+  // Levenshtein with single-row DP for memory efficiency
+  let prev: number[] = Array.from({ length: n + 1 }, (_, j) => j)
+  let curr: number[] = new Array(n + 1)
 
-  for (const char of shorter) {
-    if (longer.includes(char)) matches++
+  for (let i = 1; i <= m; i++) {
+    curr[0] = i
+    for (let j = 1; j <= n; j++) {
+      const cost = al[i - 1] === bl[j - 1] ? 0 : 1
+      curr[j] = Math.min(
+        prev[j]! + 1,      // deletion
+        curr[j - 1]! + 1,  // insertion
+        prev[j - 1]! + cost // substitution
+      )
+    }
+    ;[prev, curr] = [curr, prev]
   }
 
-  return 1 - (matches / maxLen)
+  return prev[n]! / maxLen
 }
 
 /**

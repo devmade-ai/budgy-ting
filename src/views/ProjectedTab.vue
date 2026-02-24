@@ -55,7 +55,7 @@ const sortedCategories = computed(() => {
 <template>
   <div>
     <!-- Error -->
-    <div v-if="error" class="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-center justify-between">
+    <div v-if="error" class="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-center justify-between" role="alert">
       <span>{{ error }}</span>
       <button class="text-red-400 hover:text-red-600" @click="error = ''">
         <span class="i-lucide-x" />

@@ -87,12 +87,35 @@ function handleSubmit() {
   })
 }
 
+const BLUR_DELAY_MS = 150
+const highlightIndex = ref(-1)
+
 function handleCategoryBlur() {
-  window.setTimeout(() => close(), 150)
+  window.setTimeout(() => close(), BLUR_DELAY_MS)
+}
+
+function handleCategoryKeydown(e: KeyboardEvent) {
+  if (!isOpen.value || suggestions.value.length === 0) return
+
+  if (e.key === 'ArrowDown') {
+    e.preventDefault()
+    highlightIndex.value = Math.min(highlightIndex.value + 1, suggestions.value.length - 1)
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault()
+    highlightIndex.value = Math.max(highlightIndex.value - 1, 0)
+  } else if (e.key === 'Enter' && highlightIndex.value >= 0) {
+    e.preventDefault()
+    const selected = suggestions.value[highlightIndex.value]
+    if (selected) selectCategory(selected)
+  } else if (e.key === 'Escape') {
+    close()
+    highlightIndex.value = -1
+  }
 }
 
 function selectCategory(cat: string) {
   select(cat)
+  highlightIndex.value = -1
 }
 </script>
 
@@ -128,19 +151,30 @@ function selectCategory(cat: string) {
         class="input-field"
         placeholder="e.g. Venue, Marketing, Software"
         autocomplete="off"
+        role="combobox"
+        :aria-expanded="isOpen"
+        aria-controls="category-listbox"
+        :aria-activedescendant="highlightIndex >= 0 ? `category-option-${highlightIndex}` : undefined"
         @focus="isOpen = suggestions.length > 0"
         @blur="handleCategoryBlur"
+        @keydown="handleCategoryKeydown"
       />
       <!-- Autocomplete dropdown -->
       <div
         v-if="isOpen"
+        id="category-listbox"
+        role="listbox"
         class="absolute z-20 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto"
       >
         <button
-          v-for="cat in suggestions"
+          v-for="(cat, idx) in suggestions"
+          :id="`category-option-${idx}`"
           :key="cat"
           type="button"
-          class="w-full text-left px-3 py-2 text-sm hover:bg-brand-50 transition-colors"
+          role="option"
+          :aria-selected="idx === highlightIndex"
+          class="w-full text-left px-3 py-2 text-sm transition-colors"
+          :class="idx === highlightIndex ? 'bg-brand-50 text-brand-700' : 'hover:bg-brand-50'"
           @mousedown.prevent="selectCategory(cat)"
         >
           {{ cat }}

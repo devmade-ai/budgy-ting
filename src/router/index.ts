@@ -79,6 +79,11 @@ const router = createRouter({
       component: () => import('@/views/ImportWizardView.vue'),
       props: true,
     },
+    {
+      path: '/:pathMatch(.*)*',
+      name: 'not-found',
+      redirect: { name: 'budget-list' },
+    },
   ],
 })
 

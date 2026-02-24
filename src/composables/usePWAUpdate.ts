@@ -28,7 +28,8 @@ const {
   onRegisteredSW(swUrl, registration) {
     debugLog('pwa', 'info', 'Service worker registered', { swUrl })
 
-    // Periodic update checks
+    // Periodic update checks — intentionally app-lifetime, no cleanup needed.
+    // The interval runs as long as the app is open (single-page app, never unmounts).
     if (registration) {
       setInterval(() => {
         debugLog('pwa', 'info', 'Periodic SW update check')

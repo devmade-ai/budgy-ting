@@ -68,7 +68,7 @@ function goToImport() {
 <template>
   <div>
     <!-- Error -->
-    <div v-if="error" class="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-center justify-between">
+    <div v-if="error" class="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-center justify-between" role="alert">
       <span>{{ error }}</span>
       <button class="text-red-400 hover:text-red-600" @click="error = ''">
         <span class="i-lucide-x" />
@@ -271,7 +271,7 @@ function goToImport() {
                 :style="{
                   width: `${Math.min(100, (cat.budgeted / Math.max(cat.budgeted, cat.actual, 1)) * 100)}%`
                 }"
-                title="Budgeted"
+                :title="`Budgeted: ${formatAmount(cat.budgeted)}`"
               />
               <div
                 class="rounded-sm h-full transition-all"
@@ -279,16 +279,23 @@ function goToImport() {
                 :style="{
                   width: `${Math.min(100, (cat.actual / Math.max(cat.budgeted, cat.actual, 1)) * 100)}%`
                 }"
-                title="Actual"
+                :title="`Actual: ${formatAmount(cat.actual)} (${cat.direction === 'over' ? 'over budget' : 'under budget'})`"
               />
+            </div>
+            <!-- Colorblind-safe text label alongside color bars -->
+            <div class="text-[10px] mt-0.5" :class="varianceClass(cat.direction, cat.variancePercent)">
+              {{ cat.direction === 'over' ? 'Over' : cat.direction === 'under' ? 'Under' : 'On track' }}
             </div>
           </div>
           <div class="flex gap-4 text-xs text-gray-400 mt-2">
             <span class="flex items-center gap-1">
-              <span class="w-3 h-3 bg-blue-200 rounded-sm inline-block" /> Budgeted
+              <span class="w-3 h-3 bg-blue-200 rounded-sm inline-block" aria-hidden="true" /> Budgeted
             </span>
             <span class="flex items-center gap-1">
-              <span class="w-3 h-3 bg-green-300 rounded-sm inline-block" /> Actual
+              <span class="w-3 h-3 bg-green-300 rounded-sm inline-block" aria-hidden="true" /> Under budget
+            </span>
+            <span class="flex items-center gap-1">
+              <span class="w-3 h-3 bg-red-300 rounded-sm inline-block" aria-hidden="true" /> Over budget
             </span>
           </div>
         </div>
@@ -375,10 +382,13 @@ function goToImport() {
           </div>
           <div class="flex gap-4 text-xs text-gray-400 mt-2">
             <span class="flex items-center gap-1">
-              <span class="w-3 h-3 bg-blue-200 rounded-sm inline-block" /> Projected
+              <span class="w-3 h-3 bg-blue-200 rounded-sm inline-block" aria-hidden="true" /> Projected
             </span>
             <span class="flex items-center gap-1">
-              <span class="w-3 h-3 bg-green-300 rounded-sm inline-block" /> Actual
+              <span class="w-3 h-3 bg-green-300 rounded-sm inline-block" aria-hidden="true" /> Under budget
+            </span>
+            <span class="flex items-center gap-1">
+              <span class="w-3 h-3 bg-red-300 rounded-sm inline-block" aria-hidden="true" /> Over budget
             </span>
           </div>
         </div>

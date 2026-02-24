@@ -11,6 +11,7 @@
  */
 
 import { ref, computed } from 'vue'
+import { useDialogA11y } from '@/composables/useDialogA11y'
 
 const emit = defineEmits<{
   close: []
@@ -56,6 +57,9 @@ const steps: TutorialStep[] = [
 ]
 
 const currentStep = ref(0)
+const dialogRef = ref<HTMLElement | null>(null)
+
+useDialogA11y(dialogRef, () => emit('close'))
 
 // Computed to safely access the active step, avoiding TS2532 "possibly undefined" on array index
 const activeStep = computed(() => steps[currentStep.value] as TutorialStep)
@@ -76,7 +80,9 @@ function prev() {
 }
 
 function goToStep(index: number) {
-  currentStep.value = index
+  if (index >= 0 && index < steps.length) {
+    currentStep.value = index
+  }
 }
 </script>
 
@@ -86,14 +92,22 @@ function goToStep(index: number) {
       <!-- Backdrop -->
       <div
         class="absolute inset-0 bg-black/40"
+        aria-hidden="true"
         @click="emit('close')"
       />
 
       <!-- Dialog -->
-      <div class="relative bg-white rounded-xl shadow-xl max-w-sm w-full p-6">
+      <div
+        ref="dialogRef"
+        role="dialog"
+        aria-label="How it works"
+        aria-modal="true"
+        class="relative bg-white rounded-xl shadow-xl max-w-sm w-full p-6"
+      >
         <!-- Skip/close button -->
         <button
           class="absolute top-3 right-3 text-gray-400 hover:text-gray-600 transition-colors"
+          aria-label="Close tutorial"
           @click="emit('close')"
         >
           <span class="i-lucide-x text-lg" />
@@ -104,6 +118,7 @@ function goToStep(index: number) {
           <div
             :class="activeStep.icon"
             class="text-4xl text-brand-500 mx-auto mb-4"
+            aria-hidden="true"
           />
           <h3 class="text-lg font-semibold text-gray-900 mb-2">
             {{ activeStep.title }}
@@ -114,10 +129,13 @@ function goToStep(index: number) {
         </div>
 
         <!-- Step dots -->
-        <div class="flex justify-center gap-1.5 mb-5">
+        <div class="flex justify-center gap-1.5 mb-5" role="tablist" aria-label="Tutorial steps">
           <button
-            v-for="(_, index) in steps"
+            v-for="(s, index) in steps"
             :key="index"
+            role="tab"
+            :aria-selected="index === currentStep"
+            :aria-label="`Step ${index + 1}: ${s.title}`"
             class="w-2 h-2 rounded-full transition-colors"
             :class="index === currentStep ? 'bg-brand-500' : 'bg-gray-200 hover:bg-gray-300'"
             @click="goToStep(index)"

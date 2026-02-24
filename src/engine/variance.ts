@@ -58,9 +58,12 @@ export interface ComparisonResult {
   totalVariance: number
 }
 
+// Half-cent rounding tolerance — amounts below this are treated as zero variance.
+// Display-level tolerance (e.g. 5% threshold for colour coding) is handled in CompareTab.
+const ROUNDING_TOLERANCE = 0.005
+
 function getDirection(variance: number): 'over' | 'under' | 'neutral' {
-  if (Math.abs(variance) < 0.005) return 'neutral'
-  // Tolerance of 5% is handled at display level, not calculation
+  if (Math.abs(variance) < ROUNDING_TOLERANCE) return 'neutral'
   return variance > 0 ? 'over' : 'under'
 }
 
@@ -151,9 +154,9 @@ export function calculateComparison(
     const hasActuals = actualsByMonth.has(slot.month)
     const variance = actualAmount - projected
 
-    const m = parseInt(slot.month.split('-')[1]!, 10)
-    const y = slot.month.split('-')[0]!.slice(2)
-    const monthLabel = `${monthLabels[m - 1]} ${y}`
+    const m = slot.monthNum
+    const y = String(slot.year).slice(2)
+    const monthLabel = `${monthLabels[m - 1] ?? 'Unknown'} ${y}`
 
     return {
       month: slot.month,

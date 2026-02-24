@@ -70,6 +70,11 @@ const mappingErrors = ref<string[]>([])
 
 // Step 3: Matching
 const matchResults = ref<MatchResult[]>([])
+const skippedRows = ref(0)
+
+// Step 3: Pagination
+const MATCHES_PER_PAGE = 50
+const matchPage = ref(0)
 
 // Step 4: Confirmation
 const saving = ref(false)
@@ -204,6 +209,7 @@ function runMatching() {
   if (!parsedData.value) return
 
   const importedRows: ImportedRow[] = []
+  let skipped = 0
 
   for (const row of parsedData.value.rows) {
     const dateStr = row[dateColumn.value] ?? ''
@@ -212,7 +218,10 @@ function runMatching() {
     const parsedDateVal = parseDate(dateStr, dateFormatIndex.value)
     const parsedAmountVal = parseAmount(amountStr)
 
-    if (!parsedDateVal || parsedAmountVal === null) continue
+    if (!parsedDateVal || parsedAmountVal === null) {
+      skipped++
+      continue
+    }
 
     importedRows.push({
       date: parsedDateVal,
@@ -223,6 +232,8 @@ function runMatching() {
     })
   }
 
+  skippedRows.value = skipped
+  matchPage.value = 0
   matchResults.value = matchImportedRows(importedRows, expenses.value)
 }
 
@@ -254,6 +265,13 @@ function approveAll(confidence: string) {
     }
   }
 }
+
+const paginatedResults = computed(() => {
+  const start = matchPage.value * MATCHES_PER_PAGE
+  return matchResults.value.slice(start, start + MATCHES_PER_PAGE)
+})
+
+const totalPages = computed(() => Math.ceil(matchResults.value.length / MATCHES_PER_PAGE))
 
 const matchSummary = computed(() => {
   const total = matchResults.value.length
@@ -335,7 +353,7 @@ function confidenceColor(c: string): string {
       {{ step === 1 ? 'Back to budget' : 'Previous step' }}
     </button>
 
-    <div v-if="error" class="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-center justify-between">
+    <div v-if="error" class="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-center justify-between" role="alert">
       <span>{{ error }}</span>
       <button class="text-red-400 hover:text-red-600" @click="error = ''">
         <span class="i-lucide-x" />
@@ -553,6 +571,12 @@ function confidenceColor(c: string): string {
           We matched your imported data against budget expenses. Review and approve the results.
         </p>
 
+        <!-- Skipped row warning -->
+        <div v-if="skippedRows > 0" class="mb-4 p-3 bg-amber-50 text-amber-700 text-sm rounded-lg" role="alert">
+          {{ skippedRows }} row{{ skippedRows === 1 ? ' was' : 's were' }} skipped because the date or amount couldn't be read.
+          Check the date format and amount column on the previous step.
+        </div>
+
         <!-- Summary badges -->
         <div class="flex flex-wrap gap-2 mb-4">
           <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-700">
@@ -587,11 +611,11 @@ function confidenceColor(c: string): string {
           </button>
         </div>
 
-        <!-- Match results table -->
-        <div class="space-y-2 max-h-[60vh] overflow-y-auto">
+        <!-- Match results (paginated) -->
+        <div class="space-y-2">
           <div
-            v-for="(result, i) in matchResults"
-            :key="i"
+            v-for="(result, i) in paginatedResults"
+            :key="matchPage * MATCHES_PER_PAGE + i"
             class="card p-3"
             :class="result.approved ? 'border-green-200' : ''"
           >
@@ -621,11 +645,11 @@ function confidenceColor(c: string): string {
               </div>
 
               <div class="flex items-center gap-2 shrink-0">
-                <!-- Reassign dropdown for unmatched or override -->
                 <select
                   class="text-xs border border-gray-200 rounded px-1 py-0.5"
+                  aria-label="Assign to expense"
                   :value="result.matchedExpense?.id ?? ''"
-                  @change="reassignExpense(i, ($event.target as HTMLSelectElement).value || null)"
+                  @change="reassignExpense(matchPage * MATCHES_PER_PAGE + i, ($event.target as HTMLSelectElement).value || null)"
                 >
                   <option value="">Unbudgeted</option>
                   <option
@@ -637,19 +661,39 @@ function confidenceColor(c: string): string {
                   </option>
                 </select>
 
-                <!-- Approve toggle -->
                 <button
                   class="btn text-xs px-2 py-1"
                   :class="result.approved
                     ? 'bg-green-100 text-green-700 border border-green-300'
                     : 'bg-gray-100 text-gray-600 border border-gray-200'"
-                  @click="toggleApproval(i)"
+                  @click="toggleApproval(matchPage * MATCHES_PER_PAGE + i)"
                 >
                   {{ result.approved ? 'Approved' : 'Approve' }}
                 </button>
               </div>
             </div>
           </div>
+        </div>
+
+        <!-- Pagination controls -->
+        <div v-if="totalPages > 1" class="flex items-center justify-between mt-4">
+          <button
+            class="btn-secondary text-xs"
+            :disabled="matchPage === 0"
+            @click="matchPage--"
+          >
+            Previous
+          </button>
+          <span class="text-xs text-gray-500">
+            Page {{ matchPage + 1 }} of {{ totalPages }}
+          </span>
+          <button
+            class="btn-secondary text-xs"
+            :disabled="matchPage >= totalPages - 1"
+            @click="matchPage++"
+          >
+            Next
+          </button>
         </div>
 
         <div class="flex gap-3 mt-6">

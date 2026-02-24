@@ -4,38 +4,36 @@
 
 ## Worked on
 
-Tutorial modal for first-time users.
+Full codebase review and comprehensive bug fixes, accessibility improvements, and architecture cleanup.
 
 ## Accomplished
 
-- **Tutorial modal:** Created 6-step walkthrough modal (`TutorialModal.vue`) that auto-shows on first visit and can be re-opened via help button in header
-- **State management:** `useTutorial.ts` composable with localStorage-backed dismissal persistence (module-level shared state, same pattern as `usePWAInstall`)
-- **Header help button:** Circle-help icon in AppLayout header for re-triggering tutorial anytime
+- **Engine bug fixes:** Levenshtein fuzzy matching (was order-blind), Date-based projection days (was broken across month boundaries), variance threshold documentation fix, stronger import validation
+- **Accessibility:** Focus trapping + Escape in all modals, `role="alert"` on all error banners, `aria-label` on all icon-only buttons, keyboard nav on category autocomplete (ARIA combobox pattern), colorblind-safe text labels on CompareTab
+- **Architecture:** 404 catch-all route, import pagination (50/page), skipped row feedback, reusable ErrorAlert/LoadingSpinner/EmptyState/useDialogA11y, localStorage key consistency
 
 ## Current state
 
-All code written. **Dependencies still need `npm install`** — npm registry was blocked. Run `npm install && npm run dev` to test.
+All code written, type-checks pass, build succeeds. Dependencies installed and working.
 
 Working features:
 - Full budget CRUD, expense CRUD, projection engine, import wizard, comparison views
 - Export/import (JSON backup/restore)
 - PWA install prompt (native Chromium + manual instructions for Safari/Firefox)
 - Service worker updates with 60-min periodic checks
-- **Tutorial modal for new users (auto-show + help button re-trigger)**
+- Tutorial modal for new users (auto-show + help button re-trigger)
 - Debug pill (floating diagnostic panel, alpha-phase)
 - GitHub Pages deployment workflow ready
-- All DB operations have error handling with user-friendly messages
+- All modals have focus trapping, Escape key, proper ARIA roles
+- All error banners announced to screen readers
+- Category autocomplete keyboard-navigable
 
 ## Key context
 
-- npm registry blocked — no `node_modules`, can't run type-check or build
-- Tutorial state: localStorage key `budgy-ting-tutorial-dismissed`, module-level `ref` in `useTutorial.ts`
-- Modal pattern: all modals use `Teleport to="body"` with `z-50` overlay (ConfirmDialog, InstallInstructionsModal, TutorialModal)
-- `usePWAUpdate.ts` uses `virtual:pwa-register/vue` (requires vite-plugin-pwa runtime)
-- `usePWAInstall.ts` has module-level event listeners (shared state across components)
-- Debug pill mounts in separate Vue root in `main.ts` (survives main app crashes)
-- `formatAmount` is in `composables/useFormat.ts` (shared by 4 views)
-- All engines are pure TypeScript in `src/engine/` — testable independently
-- Path alias `@/` → `src/` in both vite.config.ts and tsconfig.app.json
-- UnoCSS icons: `@iconify-json/lucide` for i-lucide-* classes
-- Brand colour: emerald/green (#10b981)
+- Tutorial localStorage key changed from `budgy-ting-tutorial-dismissed` to `budgy-ting:tutorial-dismissed` (colon prefix)
+- New files: `composables/useDialogA11y.ts`, `components/ErrorAlert.vue`, `components/LoadingSpinner.vue`, `components/EmptyState.vue`
+- ImportWizardView still 700+ lines — split into step components tracked in TODO.md
+- New reusable components not yet adopted in views (tracked in TODO as gradual migration)
+- Fuzzy matching now uses Levenshtein distance with `Math.max` for medium confidence
+- `engine/projection.ts` has new `daysBetween()` helper using Date objects
+- `engine/variance.ts` uses `ROUNDING_TOLERANCE` constant and `slot.monthNum`/`slot.year` instead of string parsing

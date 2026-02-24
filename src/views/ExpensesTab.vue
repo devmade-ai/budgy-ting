@@ -113,7 +113,7 @@ async function confirmDelete() {
     </div>
 
     <!-- Error -->
-    <div v-if="error" class="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-center justify-between">
+    <div v-if="error" class="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-center justify-between" role="alert">
       <span>{{ error }}</span>
       <button class="text-red-400 hover:text-red-600" @click="error = ''">
         <span class="i-lucide-x" />
@@ -153,17 +153,19 @@ async function confirmDelete() {
             <div class="flex gap-1 ml-3 shrink-0">
               <button
                 class="p-1.5 text-gray-400 hover:text-gray-600 rounded transition-colors"
-                title="Edit"
+                :title="`Edit ${exp.description}`"
+                :aria-label="`Edit ${exp.description}`"
                 @click="editExpense(exp)"
               >
-                <span class="i-lucide-pencil text-sm" />
+                <span class="i-lucide-pencil text-sm" aria-hidden="true" />
               </button>
               <button
                 class="p-1.5 text-gray-400 hover:text-red-500 rounded transition-colors"
-                title="Delete"
+                :title="`Delete ${exp.description}`"
+                :aria-label="`Delete ${exp.description}`"
                 @click="deleteTarget = exp"
               >
-                <span class="i-lucide-trash-2 text-sm" />
+                <span class="i-lucide-trash-2 text-sm" aria-hidden="true" />
               </button>
             </div>
           </div>

@@ -123,6 +123,18 @@ export function resolveBudgetPeriod(budget: Pick<Budget, 'startDate' | 'endDate'
 }
 
 /**
+ * Count days between two ISO date strings (inclusive).
+ * Uses Date objects instead of day-of-month arithmetic to correctly
+ * handle month boundaries (e.g. Jan 25 to Feb 4 = 11 days).
+ */
+function daysBetween(startISO: string, endISO: string): number {
+  const MS_PER_DAY = 86_400_000
+  const start = new Date(startISO + 'T00:00:00')
+  const end = new Date(endISO + 'T00:00:00')
+  return Math.round((end.getTime() - start.getTime()) / MS_PER_DAY) + 1
+}
+
+/**
  * Calculate the amount an expense contributes to a given month.
  */
 function calculateMonthAmount(expense: Expense, slot: MonthSlot, budgetEnd: string): number {
@@ -148,17 +160,15 @@ function calculateMonthAmount(expense: Expense, slot: MonthSlot, budgetEnd: stri
 
     case 'daily': {
       // Amount × number of days in this month (within bounds)
-      const startDay = parseInt(effectiveStart.split('-')[2]!, 10)
-      const endDay = parseInt(effectiveEnd.split('-')[2]!, 10)
-      const days = endDay - startDay + 1
+      // Use Date objects to correctly handle month boundaries
+      const days = daysBetween(effectiveStart, effectiveEnd)
       return expense.amount * days
     }
 
     case 'weekly': {
       // Amount × weeks overlapping this month
-      const startDay = parseInt(effectiveStart.split('-')[2]!, 10)
-      const endDay = parseInt(effectiveEnd.split('-')[2]!, 10)
-      const days = endDay - startDay + 1
+      // Use Date objects to correctly handle month boundaries
+      const days = daysBetween(effectiveStart, effectiveEnd)
       const weeks = days / 7
       return expense.amount * weeks
     }
