@@ -2,6 +2,31 @@
 
 <!-- Changelog and record of completed work. Organized by date. -->
 
+## 2026-02-25
+
+- **Fixed Budget Envelope Feature:**
+  - Added `totalBudget: number | null` field to Budget model
+  - DB schema v2 migration — preserves existing data, sets null for existing budgets
+  - BudgetForm: "I have a set amount to spend" checkbox + amount input
+  - New `engine/envelope.ts` — calculates remaining balance, daily burn rate, depletion date, month-by-month running balance with actual vs projected effective spend
+  - ProjectedTab: envelope summary card showing total budget, projected spend, remaining/over, and which month the budget runs out
+  - CompareTab: envelope card with total budget, spent so far, remaining, depletion date, daily burn rate, and forecast message ("on track" vs "over budget by X")
+  - Export/import backward compatibility — old exports without totalBudget default to null
+
+- **Unit Tests (56 tests, 5 files):**
+  - `projection.test.ts` — 13 tests: month slot generation, all 6 frequency types, end dates, cross-boundary daily expenses, category rollup
+  - `matching.test.ts` — 16 tests: high/medium/low/unmatched confidence, date format detection, date parsing, amount parsing with currency symbols/parenthetical negatives
+  - `variance.test.ts` — 7 tests: zero/positive/negative variance, per-line-item, unbudgeted actuals, category and monthly rollup
+  - `csvParser.test.ts` — 13 tests: basic CSV, quoted fields, escaped quotes, CRLF, column mismatch, empty files, blank lines, JSON import
+  - `envelope.test.ts` — 7 tests: no actuals, with actuals, budget exceeded, burn rate, depletion date, running balance
+  - Installed vitest, added test config to vite.config.ts, added npm test scripts
+
+- **Completed TODO items moved here:**
+  - Add unit tests for projection engine
+  - Add unit tests for matching engine
+  - Add unit tests for variance calculation engine
+  - Add unit tests for CSV parser
+
 ## 2026-02-24
 
 - **Codebase Review & Bug Fixes:**

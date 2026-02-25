@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Requirement: Create/edit budget form with name, currency, period type, dates
+ * Requirement: Create/edit budget form with name, currency, period type, dates, optional total budget
  * Approach: Single form component reused for create and edit via optional budget prop
  * Alternatives:
  *   - Separate create/edit components: Rejected — too much duplication
@@ -22,6 +22,7 @@ const emit = defineEmits<{
     periodType: PeriodType
     startDate: string
     endDate: string | null
+    totalBudget: number | null
   }]
   cancel: []
 }>()
@@ -31,14 +32,18 @@ const currencyLabel = ref(props.budget?.currencyLabel ?? 'R')
 const periodType = ref<PeriodType>(props.budget?.periodType ?? 'monthly')
 const startDate = ref(props.budget?.startDate ?? todayISO())
 const endDate = ref(props.budget?.endDate ?? '')
+const hasTotalBudget = ref(props.budget?.totalBudget != null)
+const totalBudgetStr = ref(props.budget?.totalBudget?.toString() ?? '')
 
 const isEditing = computed(() => !!props.budget)
 
 const nameError = ref('')
 const dateError = ref('')
+const budgetAmountError = ref('')
 
 watch(name, () => { nameError.value = '' })
 watch([startDate, endDate], () => { dateError.value = '' })
+watch(totalBudgetStr, () => { budgetAmountError.value = '' })
 
 function validate(): boolean {
   let valid = true
@@ -58,6 +63,14 @@ function validate(): boolean {
     }
   }
 
+  if (hasTotalBudget.value) {
+    const num = parseFloat(totalBudgetStr.value)
+    if (!totalBudgetStr.value || isNaN(num) || num <= 0) {
+      budgetAmountError.value = 'Enter a positive amount'
+      valid = false
+    }
+  }
+
   return valid
 }
 
@@ -70,6 +83,7 @@ function handleSubmit() {
     periodType: periodType.value,
     startDate: startDate.value,
     endDate: periodType.value === 'custom' && endDate.value ? endDate.value : null,
+    totalBudget: hasTotalBudget.value ? parseFloat(totalBudgetStr.value) : null,
   })
 }
 </script>
@@ -106,6 +120,39 @@ function handleSubmit() {
         maxlength="5"
       />
       <p class="text-xs text-gray-400 mt-1">Display only — shown next to amounts</p>
+    </div>
+
+    <!-- Total budget (envelope mode) -->
+    <div>
+      <div class="flex items-center gap-2 mb-2">
+        <input
+          id="has-total-budget"
+          v-model="hasTotalBudget"
+          type="checkbox"
+          class="w-4 h-4 text-brand-600 rounded border-gray-300 focus:ring-brand-500"
+        />
+        <label class="text-sm font-medium text-gray-700" for="has-total-budget">
+          I have a set amount to spend
+        </label>
+      </div>
+      <div v-if="hasTotalBudget" class="ml-6">
+        <label class="block text-sm text-gray-600 mb-1" for="total-budget">
+          Total budget amount
+        </label>
+        <input
+          id="total-budget"
+          v-model="totalBudgetStr"
+          type="number"
+          step="0.01"
+          min="0.01"
+          class="input-field"
+          placeholder="0.00"
+        />
+        <p class="text-xs text-gray-400 mt-1">
+          Track how much you have left as you spend
+        </p>
+        <p v-if="budgetAmountError" class="text-sm text-red-500 mt-1">{{ budgetAmountError }}</p>
+      </div>
     </div>
 
     <!-- Period type -->

@@ -193,7 +193,9 @@ export async function importBudget(
       await db.budgets.delete(data.budget.id)
     }
 
-    await db.budgets.add(data.budget)
+    // Ensure totalBudget field exists (backward compat with v1 exports)
+    const budgetToAdd = { ...data.budget, totalBudget: data.budget.totalBudget ?? null }
+    await db.budgets.add(budgetToAdd)
     if (data.expenses.length > 0) {
       await db.expenses.bulkAdd(data.expenses)
     }

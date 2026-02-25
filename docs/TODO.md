@@ -17,12 +17,9 @@
 
 ## Technical
 
-- [ ] Add unit tests for projection engine
-- [ ] Add unit tests for matching engine
-- [ ] Add unit tests for variance calculation engine
-- [ ] Add unit tests for CSV parser
 - [ ] Remove debug system (DebugPill + debugLog) after alpha phase
 - [ ] Split ImportWizardView.vue into 4 step sub-components (currently 700+ lines, exceeds 600-line threshold)
 - [ ] Replace duplicated error/loading/empty-state markup with ErrorAlert/LoadingSpinner/EmptyState components across all views
 - [ ] Add error boundary component to prevent white-screen crashes
 - [ ] Optimize category autocomplete to use Dexie range queries instead of full-table scan + JS filter
+- [ ] Add unit tests for exportImport engine

@@ -23,6 +23,8 @@ export interface Budget {
   periodType: PeriodType
   startDate: string
   endDate: string | null
+  /** Optional fixed total budget amount (envelope mode). Null = no envelope. */
+  totalBudget: number | null
   createdAt: string
   updatedAt: string
 }

@@ -4,36 +4,37 @@
 
 ## Worked on
 
-Full codebase review and comprehensive bug fixes, accessibility improvements, and architecture cleanup.
+Fixed budget envelope feature + comprehensive unit tests for all engines.
 
 ## Accomplished
 
-- **Engine bug fixes:** Levenshtein fuzzy matching (was order-blind), Date-based projection days (was broken across month boundaries), variance threshold documentation fix, stronger import validation
-- **Accessibility:** Focus trapping + Escape in all modals, `role="alert"` on all error banners, `aria-label` on all icon-only buttons, keyboard nav on category autocomplete (ARIA combobox pattern), colorblind-safe text labels on CompareTab
-- **Architecture:** 404 catch-all route, import pagination (50/page), skipped row feedback, reusable ErrorAlert/LoadingSpinner/EmptyState/useDialogA11y, localStorage key consistency
+- **Envelope feature:** Users can set a total budget amount ("I have R50,000 to spend") and see: remaining balance, daily burn rate, depletion date, month-by-month running balance, and whether they're on track or over budget
+- **Unit tests:** 56 tests across 5 files covering projection, matching, variance, CSV parser, and envelope engines — all passing
+- **DB migration:** Schema v2 adds `totalBudget` field to budgets with backward-compatible upgrade handler
 
 ## Current state
 
-All code written, type-checks pass, build succeeds. Dependencies installed and working.
+All code type-checks and builds. 56 unit tests pass. Dependencies installed.
 
 Working features:
-- Full budget CRUD, expense CRUD, projection engine, import wizard, comparison views
-- Export/import (JSON backup/restore)
-- PWA install prompt (native Chromium + manual instructions for Safari/Firefox)
-- Service worker updates with 60-min periodic checks
-- Tutorial modal for new users (auto-show + help button re-trigger)
-- Debug pill (floating diagnostic panel, alpha-phase)
-- GitHub Pages deployment workflow ready
-- All modals have focus trapping, Escape key, proper ARIA roles
-- All error banners announced to screen readers
-- Category autocomplete keyboard-navigable
+- Full budget CRUD with optional fixed total amount (envelope mode)
+- Expense CRUD with category autocomplete (keyboard navigable)
+- Projection engine showing month-by-month breakdown + envelope depletion tracking
+- Import wizard with pagination, skipped row feedback
+- Comparison views with envelope remaining balance, burn rate, depletion date
+- Export/import with backward compatibility for new totalBudget field
+- All modals with focus trapping, Escape key, ARIA roles
+- All error banners with role="alert"
+- PWA install + service worker updates
+- Tutorial modal for first-time users
 
 ## Key context
 
-- Tutorial localStorage key changed from `budgy-ting-tutorial-dismissed` to `budgy-ting:tutorial-dismissed` (colon prefix)
-- New files: `composables/useDialogA11y.ts`, `components/ErrorAlert.vue`, `components/LoadingSpinner.vue`, `components/EmptyState.vue`
-- ImportWizardView still 700+ lines — split into step components tracked in TODO.md
-- New reusable components not yet adopted in views (tracked in TODO as gradual migration)
-- Fuzzy matching now uses Levenshtein distance with `Math.max` for medium confidence
-- `engine/projection.ts` has new `daysBetween()` helper using Date objects
-- `engine/variance.ts` uses `ROUNDING_TOLERANCE` constant and `slot.monthNum`/`slot.year` instead of string parsing
+- `Budget.totalBudget` is `number | null` — null means no envelope (backward compatible)
+- DB schema is now v2 (Dexie migration handler sets null for existing budgets)
+- `engine/envelope.ts` depends on both `projection.ts` output and `Actual[]` data
+- ProjectedTab shows projected-only envelope summary (no actuals needed)
+- CompareTab shows full envelope with actuals-based burn rate and depletion
+- Export/import uses `{ ...data.budget, totalBudget: data.budget.totalBudget ?? null }` for backward compat
+- vitest configured in `vite.config.ts` test section, tests in `src/engine/*.test.ts`
+- Remaining TODOs in `docs/TODO.md`: ImportWizardView split, ErrorAlert migration, error boundary, exportImport tests

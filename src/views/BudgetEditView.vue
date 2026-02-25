@@ -34,6 +34,7 @@ async function handleSubmit(data: {
   periodType: PeriodType
   startDate: string
   endDate: string | null
+  totalBudget: number | null
 }) {
   try {
     await db.budgets.update(props.id, {
@@ -42,6 +43,7 @@ async function handleSubmit(data: {
       periodType: data.periodType,
       startDate: data.startDate,
       endDate: data.endDate,
+      totalBudget: data.totalBudget,
       updatedAt: nowISO(),
     })
 

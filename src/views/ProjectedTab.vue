@@ -11,6 +11,13 @@ import { formatAmount } from '@/composables/useFormat'
 import type { Budget, Expense } from '@/types/models'
 import type { ProjectionResult } from '@/engine/projection'
 
+/**
+ * Requirement: When budget has a fixed total, show how long money lasts based on projections
+ * Approach: Simple calculation — totalBudget / grandTotal * budget months = coverage months
+ * Alternatives:
+ *   - Reuse envelope engine: Rejected here — envelope needs actuals; projected tab is pre-actuals
+ */
+
 const props = defineProps<{ budget: Budget }>()
 
 const expenses = ref<Expense[]>([])
@@ -50,6 +57,29 @@ const sortedCategories = computed(() => {
   return [...projection.value.categoryRollup.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
 })
+
+/** Envelope summary based on projections only (no actuals yet) */
+const envelopeSummary = computed(() => {
+  if (props.budget.totalBudget == null || !projection.value) return null
+
+  const total = props.budget.totalBudget
+  const projected = projection.value.grandTotal
+  const surplus = total - projected
+  const willExceed = surplus < 0
+  const monthCount = projection.value.months.length
+
+  // Find which month the budget runs out (running balance drops below 0)
+  let running = total
+  let depletionMonth: string | null = null
+  for (const slot of projection.value.months) {
+    running -= projection.value.monthlyTotals.get(slot.month) ?? 0
+    if (running < 0 && !depletionMonth) {
+      depletionMonth = `${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][slot.monthNum - 1]} ${String(slot.year).slice(2)}`
+    }
+  }
+
+  return { total, projected, surplus, willExceed, monthCount, depletionMonth }
+})
 </script>
 
 <template>
@@ -76,6 +106,38 @@ const sortedCategories = computed(() => {
 
     <!-- Projection table -->
     <template v-else-if="projection">
+      <!-- Envelope summary (only when budget has a fixed total amount) -->
+      <div v-if="envelopeSummary" class="card mb-4 border-2" :class="envelopeSummary.willExceed ? 'border-red-200 bg-red-50/30' : 'border-brand-200 bg-brand-50/30'">
+        <div class="grid grid-cols-3 gap-4 text-center">
+          <div>
+            <p class="text-xs text-gray-400 uppercase tracking-wide">Total Budget</p>
+            <p class="text-lg font-semibold text-gray-900">
+              {{ props.budget.currencyLabel }}{{ formatAmount(envelopeSummary.total) }}
+            </p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-400 uppercase tracking-wide">Projected Spend</p>
+            <p class="text-lg font-semibold text-gray-900">
+              {{ props.budget.currencyLabel }}{{ formatAmount(envelopeSummary.projected) }}
+            </p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-400 uppercase tracking-wide">
+              {{ envelopeSummary.willExceed ? 'Over By' : 'Remaining' }}
+            </p>
+            <p class="text-lg font-semibold" :class="envelopeSummary.willExceed ? 'text-red-600' : 'text-brand-600'">
+              {{ props.budget.currencyLabel }}{{ formatAmount(Math.abs(envelopeSummary.surplus)) }}
+            </p>
+          </div>
+        </div>
+        <div v-if="envelopeSummary.depletionMonth" class="mt-3 text-center text-sm text-red-600">
+          Your budget runs out in {{ envelopeSummary.depletionMonth }}
+        </div>
+        <div v-else-if="!envelopeSummary.willExceed" class="mt-3 text-center text-sm text-brand-600">
+          Budget covers all {{ envelopeSummary.monthCount }} months of planned expenses
+        </div>
+      </div>
+
       <!-- View toggle -->
       <div class="flex items-center justify-between mb-4">
         <p class="text-sm text-gray-500">

@@ -29,4 +29,23 @@ db.version(1).stores({
   categoryCache: 'category, lastUsed',
 })
 
+// Schema v2: add totalBudget field (envelope mode)
+// Requirement: Users can set a fixed total budget to track remaining balance
+// Approach: Dexie upgrade handler — set null for existing budgets (no envelope by default)
+// Alternatives:
+//   - New table for envelope data: Rejected — totalBudget belongs on the budget record
+//   - Breaking migration: Rejected — must preserve existing user data
+db.version(2).stores({
+  budgets: 'id, name, createdAt',
+  expenses: 'id, budgetId, category, createdAt',
+  actuals: 'id, budgetId, expenseId, category, date',
+  categoryCache: 'category, lastUsed',
+}).upgrade((tx) => {
+  return tx.table('budgets').toCollection().modify((budget) => {
+    if (budget.totalBudget === undefined) {
+      budget.totalBudget = null
+    }
+  })
+})
+
 export { db }
