@@ -12,6 +12,9 @@ import { useRouter } from 'vue-router'
 import { db } from '@/db'
 import { validateImport, importBudget } from '@/engine/exportImport'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
+import ErrorAlert from '@/components/ErrorAlert.vue'
+import LoadingSpinner from '@/components/LoadingSpinner.vue'
+import EmptyState from '@/components/EmptyState.vue'
 import type { Budget } from '@/types/models'
 import type { ExportSchema } from '@/engine/exportImport'
 
@@ -157,43 +160,18 @@ const showClearConfirm = ref(false)
       </div>
     </div>
 
-    <!-- General error -->
-    <div v-if="error" class="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-center justify-between" role="alert">
-      <span>{{ error }}</span>
-      <button class="text-red-400 hover:text-red-600" aria-label="Dismiss error" @click="error = ''">
-        <span class="i-lucide-x" aria-hidden="true" />
-      </button>
-    </div>
+    <ErrorAlert v-if="error" :message="error" @dismiss="error = ''" />
+    <ErrorAlert v-if="importMessage" :message="importMessage" variant="success" @dismiss="importMessage = ''" />
+    <ErrorAlert v-if="importError" :message="importError" @dismiss="importError = ''" />
 
-    <!-- Success/error messages -->
-    <div v-if="importMessage" class="mb-4 p-3 bg-green-50 text-green-700 text-sm rounded-lg flex items-center justify-between" role="status">
-      <span>{{ importMessage }}</span>
-      <button class="text-green-500 hover:text-green-700" aria-label="Dismiss message" @click="importMessage = ''">
-        <span class="i-lucide-x" aria-hidden="true" />
-      </button>
-    </div>
-    <div v-if="importError" class="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-center justify-between" role="alert">
-      <span>{{ importError }}</span>
-      <button class="text-red-400 hover:text-red-600" aria-label="Dismiss error" @click="importError = ''">
-        <span class="i-lucide-x" aria-hidden="true" />
-      </button>
-    </div>
+    <LoadingSpinner v-if="loading" />
 
-    <!-- Loading state -->
-    <div v-if="loading" class="text-center py-12 text-gray-400">
-      Loading...
-    </div>
-
-    <!-- Empty state -->
-    <div
+    <EmptyState
       v-else-if="budgets.length === 0"
-      class="text-center py-16"
+      icon="i-lucide-wallet"
+      title="No budgets yet"
+      description="Create your first budget or restore from a backup"
     >
-      <div class="i-lucide-wallet text-5xl text-gray-300 mx-auto mb-4" />
-      <p class="text-gray-500 text-lg mb-2">No budgets yet</p>
-      <p class="text-gray-400 text-sm mb-6">
-        Create your first budget or restore from a backup
-      </p>
       <div class="flex gap-3 justify-center">
         <button class="btn-primary" @click="createBudget">
           Create your first budget
@@ -208,7 +186,7 @@ const showClearConfirm = ref(false)
           />
         </label>
       </div>
-    </div>
+    </EmptyState>
 
     <!-- Budget list -->
     <template v-else>

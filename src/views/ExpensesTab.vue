@@ -8,6 +8,9 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { db } from '@/db'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
+import ErrorAlert from '@/components/ErrorAlert.vue'
+import LoadingSpinner from '@/components/LoadingSpinner.vue'
+import EmptyState from '@/components/EmptyState.vue'
 import { formatAmount } from '@/composables/useFormat'
 import type { Budget, Expense } from '@/types/models'
 
@@ -112,26 +115,18 @@ async function confirmDelete() {
       </button>
     </div>
 
-    <!-- Error -->
-    <div v-if="error" class="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-center justify-between" role="alert">
-      <span>{{ error }}</span>
-      <button class="text-red-400 hover:text-red-600" @click="error = ''">
-        <span class="i-lucide-x" />
-      </button>
-    </div>
+    <ErrorAlert v-if="error" :message="error" @dismiss="error = ''" />
 
-    <!-- Loading -->
-    <div v-if="loading" class="text-center py-12 text-gray-400">Loading...</div>
+    <LoadingSpinner v-if="loading" />
 
-    <!-- Empty state -->
-    <div v-else-if="expenses.length === 0" class="text-center py-12">
-      <div class="i-lucide-list text-4xl text-gray-300 mx-auto mb-3" />
-      <p class="text-gray-500">No expenses yet</p>
-      <p class="text-gray-400 text-sm mt-1 mb-4">
-        Add expense lines to start planning your budget
-      </p>
+    <EmptyState
+      v-else-if="expenses.length === 0"
+      icon="i-lucide-list"
+      title="No expenses yet"
+      description="Add expense lines to start planning your budget"
+    >
       <button class="btn-primary" @click="addExpense">Add your first expense</button>
-    </div>
+    </EmptyState>
 
     <!-- Grouped expense list -->
     <div v-else class="space-y-6">

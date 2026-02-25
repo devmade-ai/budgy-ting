@@ -2,8 +2,10 @@
  * Category autocomplete composable.
  *
  * Requirement: Autocomplete from previously used categories across all budgets
- * Approach: Query categoryCache table, debounced filtering, allow new values
+ * Approach: Dexie startsWithIgnoreCase for prefix matching (uses index), fallback
+ *   to substring matching for remaining slots
  * Alternatives:
+ *   - Full-table scan + JS filter: Rejected — loads all categories every keystroke
  *   - Query expenses table directly: Rejected — slower, requires distinct aggregation
  *   - In-memory cache: Rejected — categoryCache table handles persistence across sessions
  */
@@ -11,6 +13,8 @@
 import { ref, watch } from 'vue'
 import { db } from '@/db'
 import { nowISO } from '@/composables/useTimestamp'
+
+const MAX_SUGGESTIONS = 10
 
 export function useCategoryAutocomplete() {
   const query = ref('')
@@ -30,16 +34,40 @@ export function useCategoryAutocomplete() {
 
     debounceTimer = setTimeout(async () => {
       try {
-        const allCategories = await db.categoryCache
-          .orderBy('lastUsed')
-          .reverse()
-          .toArray()
+        const needle = val.toLowerCase().trim()
 
-        const needle = val.toLowerCase()
-        suggestions.value = allCategories
+        // Prefix match via Dexie index (fast, DB-level filtering)
+        const prefixMatches = await db.categoryCache
+          .where('category')
+          .startsWithIgnoreCase(needle)
+          .limit(MAX_SUGGESTIONS)
+          .sortBy('lastUsed')
+
+        const prefixResults = prefixMatches
+          .reverse()
           .map((c) => c.category)
-          .filter((cat) => cat.toLowerCase().includes(needle))
-          .slice(0, 10)
+
+        // If we have enough prefix matches, use those
+        if (prefixResults.length >= MAX_SUGGESTIONS) {
+          suggestions.value = prefixResults.slice(0, MAX_SUGGESTIONS)
+        } else {
+          // Supplement with substring matches (requires broader scan, capped at 100)
+          const allCategories = await db.categoryCache
+            .orderBy('lastUsed')
+            .reverse()
+            .limit(100)
+            .toArray()
+
+          const prefixSet = new Set(prefixResults)
+          const substringMatches = allCategories
+            .filter((c) => !prefixSet.has(c.category) && c.category.toLowerCase().includes(needle))
+            .map((c) => c.category)
+
+          suggestions.value = [
+            ...prefixResults,
+            ...substringMatches,
+          ].slice(0, MAX_SUGGESTIONS)
+        }
 
         isOpen.value = suggestions.value.length > 0
       } catch {

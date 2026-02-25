@@ -4,6 +4,26 @@
 
 ## 2026-02-25
 
+- **Technical Debt Cleanup:**
+  - Split `ImportWizardView.vue` (747 lines) into 4 step sub-components:
+    - `import-steps/ImportStepUpload.vue` — file upload with auto-detection
+    - `import-steps/ImportStepMapping.vue` — column mapping with validation
+    - `import-steps/ImportStepReview.vue` — match review with pagination
+    - `import-steps/ImportStepComplete.vue` — success confirmation
+    - Parent `ImportWizardView.vue` reduced to ~130 lines (orchestrator only)
+  - Migrated all 9 view files to use shared `ErrorAlert`, `LoadingSpinner`, `EmptyState` components — eliminated 15+ instances of duplicated markup
+  - Added `ErrorBoundary.vue` — wraps RouterView to catch unhandled errors, shows recovery UI instead of white screen
+  - Optimized `useCategoryAutocomplete` — uses Dexie `startsWithIgnoreCase` index query for prefix matching (was full-table scan), falls back to capped substring match for remaining slots
+  - Added 19 unit tests for `exportImport` engine (`validateImport` — schema validation, field checks, edge cases)
+  - Total tests: 75 across 6 files (was 56 across 5)
+
+- **Completed TODO items moved here:**
+  - Split ImportWizardView.vue into 4 step sub-components
+  - Replace duplicated error/loading/empty-state markup with shared components across all views
+  - Add error boundary component to prevent white-screen crashes
+  - Optimize category autocomplete to use Dexie range queries
+  - Add unit tests for exportImport engine
+
 - **Fixed Budget Envelope Feature:**
   - Added `totalBudget: number | null` field to Budget model
   - DB schema v2 migration — preserves existing data, sets null for existing budgets

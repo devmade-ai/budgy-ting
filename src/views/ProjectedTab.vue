@@ -8,6 +8,9 @@ import { ref, computed, onMounted } from 'vue'
 import { db } from '@/db'
 import { calculateProjection, resolveBudgetPeriod } from '@/engine/projection'
 import { formatAmount } from '@/composables/useFormat'
+import ErrorAlert from '@/components/ErrorAlert.vue'
+import LoadingSpinner from '@/components/LoadingSpinner.vue'
+import EmptyState from '@/components/EmptyState.vue'
 import type { Budget, Expense } from '@/types/models'
 import type { ProjectionResult } from '@/engine/projection'
 
@@ -84,25 +87,16 @@ const envelopeSummary = computed(() => {
 
 <template>
   <div>
-    <!-- Error -->
-    <div v-if="error" class="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-center justify-between" role="alert">
-      <span>{{ error }}</span>
-      <button class="text-red-400 hover:text-red-600" @click="error = ''">
-        <span class="i-lucide-x" />
-      </button>
-    </div>
+    <ErrorAlert v-if="error" :message="error" @dismiss="error = ''" />
 
-    <!-- Empty state -->
-    <div v-if="!loading && !projection && !error" class="text-center py-12">
-      <div class="i-lucide-trending-up text-4xl text-gray-300 mx-auto mb-3" />
-      <p class="text-gray-500">No projections yet</p>
-      <p class="text-gray-400 text-sm mt-1">
-        Add expenses to see projected spend over time
-      </p>
-    </div>
+    <EmptyState
+      v-if="!loading && !projection && !error"
+      icon="i-lucide-trending-up"
+      title="No projections yet"
+      description="Add expenses to see projected spend over time"
+    />
 
-    <!-- Loading -->
-    <div v-else-if="loading" class="text-center py-12 text-gray-400">Loading...</div>
+    <LoadingSpinner v-else-if="loading" />
 
     <!-- Projection table -->
     <template v-else-if="projection">

@@ -4,37 +4,40 @@
 
 ## Worked on
 
-Fixed budget envelope feature + comprehensive unit tests for all engines.
+Technical debt cleanup — component extraction, shared components migration, error boundary, tests, autocomplete optimization.
 
 ## Accomplished
 
-- **Envelope feature:** Users can set a total budget amount ("I have R50,000 to spend") and see: remaining balance, daily burn rate, depletion date, month-by-month running balance, and whether they're on track or over budget
-- **Unit tests:** 56 tests across 5 files covering projection, matching, variance, CSV parser, and envelope engines — all passing
-- **DB migration:** Schema v2 adds `totalBudget` field to budgets with backward-compatible upgrade handler
+- **ImportWizardView split:** 747-line component refactored into 4 step sub-components + orchestrator (~130 lines)
+- **Shared component migration:** All 9 view files migrated from inline error/loading/empty-state markup to ErrorAlert/LoadingSpinner/EmptyState components
+- **Error boundary:** New ErrorBoundary.vue wraps RouterView — catches unhandled errors, shows recovery UI
+- **ExportImport tests:** 19 new unit tests for validateImport covering all validation paths
+- **Autocomplete optimization:** useCategoryAutocomplete now uses Dexie startsWithIgnoreCase index query + capped substring fallback
+- **Total tests:** 75 across 6 files, all passing
 
 ## Current state
 
-All code type-checks and builds. 56 unit tests pass. Dependencies installed.
+All code type-checks and builds. 75 unit tests pass. Dependencies installed.
 
 Working features:
 - Full budget CRUD with optional fixed total amount (envelope mode)
-- Expense CRUD with category autocomplete (keyboard navigable)
+- Expense CRUD with category autocomplete (keyboard navigable, index-optimized)
 - Projection engine showing month-by-month breakdown + envelope depletion tracking
-- Import wizard with pagination, skipped row feedback
+- Import wizard split into 4 step sub-components with pagination, skipped row feedback
 - Comparison views with envelope remaining balance, burn rate, depletion date
-- Export/import with backward compatibility for new totalBudget field
+- Export/import with backward compatibility for totalBudget field
+- All views using shared ErrorAlert/LoadingSpinner/EmptyState components
+- Error boundary preventing white-screen crashes
 - All modals with focus trapping, Escape key, ARIA roles
-- All error banners with role="alert"
 - PWA install + service worker updates
 - Tutorial modal for first-time users
 
 ## Key context
 
+- Import wizard: parent `ImportWizardView.vue` orchestrates 4 step components in `views/import-steps/`
+- `ErrorBoundary.vue` wraps `<RouterView>` in `App.vue` — uses `onErrorCaptured` to catch child errors
+- Category autocomplete uses 2-tier query: prefix match via index first, then capped substring scan
 - `Budget.totalBudget` is `number | null` — null means no envelope (backward compatible)
-- DB schema is now v2 (Dexie migration handler sets null for existing budgets)
-- `engine/envelope.ts` depends on both `projection.ts` output and `Actual[]` data
-- ProjectedTab shows projected-only envelope summary (no actuals needed)
-- CompareTab shows full envelope with actuals-based burn rate and depletion
-- Export/import uses `{ ...data.budget, totalBudget: data.budget.totalBudget ?? null }` for backward compat
+- DB schema is v2 (Dexie migration handler sets null for existing budgets)
 - vitest configured in `vite.config.ts` test section, tests in `src/engine/*.test.ts`
-- Remaining TODOs in `docs/TODO.md`: ImportWizardView split, ErrorAlert migration, error boundary, exportImport tests
+- Remaining TODOs in `docs/TODO.md`: ApexCharts, Papa Parse, storage indicator, maskable icon, success toasts, virtual scrolling, keyboard shortcuts, debug system removal

@@ -4,6 +4,8 @@ import { useRouter } from 'vue-router'
 import { db } from '@/db'
 import { nowISO } from '@/composables/useTimestamp'
 import BudgetForm from '@/components/BudgetForm.vue'
+import ErrorAlert from '@/components/ErrorAlert.vue'
+import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import type { Budget, PeriodType } from '@/types/models'
 
 const props = defineProps<{ id: string }>()
@@ -68,14 +70,9 @@ function handleCancel() {
       Back
     </button>
 
-    <div v-if="error" class="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-center justify-between" role="alert">
-      <span>{{ error }}</span>
-      <button class="text-red-400 hover:text-red-600" @click="error = ''">
-        <span class="i-lucide-x" />
-      </button>
-    </div>
+    <ErrorAlert v-if="error" :message="error" @dismiss="error = ''" />
 
-    <div v-if="loading" class="text-center py-12 text-gray-400">Loading...</div>
+    <LoadingSpinner v-if="loading" />
 
     <template v-else-if="budget">
       <h1 class="page-title mb-6">Edit Budget</h1>

@@ -15,6 +15,9 @@ import { calculateComparison } from '@/engine/variance'
 import { calculateEnvelope } from '@/engine/envelope'
 import { formatAmount } from '@/composables/useFormat'
 import { todayISO } from '@/composables/useTimestamp'
+import ErrorAlert from '@/components/ErrorAlert.vue'
+import LoadingSpinner from '@/components/LoadingSpinner.vue'
+import EmptyState from '@/components/EmptyState.vue'
 import type { Budget, Expense, Actual } from '@/types/models'
 import type { ComparisonResult } from '@/engine/variance'
 import type { EnvelopeResult } from '@/engine/envelope'
@@ -79,26 +82,18 @@ function goToImport() {
 
 <template>
   <div>
-    <!-- Error -->
-    <div v-if="error" class="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-center justify-between" role="alert">
-      <span>{{ error }}</span>
-      <button class="text-red-400 hover:text-red-600" @click="error = ''">
-        <span class="i-lucide-x" />
-      </button>
-    </div>
+    <ErrorAlert v-if="error" :message="error" @dismiss="error = ''" />
 
-    <!-- Loading -->
-    <div v-if="loading" class="text-center py-12 text-gray-400">Loading...</div>
+    <LoadingSpinner v-if="loading" />
 
-    <!-- Empty state -->
-    <div v-else-if="!comparison && !error" class="text-center py-12">
-      <div class="i-lucide-bar-chart-3 text-4xl text-gray-300 mx-auto mb-3" />
-      <p class="text-gray-500">Nothing to compare yet</p>
-      <p class="text-gray-400 text-sm mt-1 mb-4">
-        Add expenses and import actuals to see comparisons
-      </p>
+    <EmptyState
+      v-else-if="!comparison && !error"
+      icon="i-lucide-bar-chart-3"
+      title="Nothing to compare yet"
+      description="Add expenses and import actuals to see comparisons"
+    >
       <button class="btn-primary" @click="goToImport">Import actuals</button>
-    </div>
+    </EmptyState>
 
     <!-- Comparison views -->
     <template v-else-if="comparison">
