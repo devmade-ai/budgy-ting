@@ -19,6 +19,12 @@ export interface ImportedRow {
   category: string
   description: string
   originalRow: Record<string, string>
+  /**
+   * Original sign from the CSV before Math.abs().
+   * Negative typically means a credit/income in bank statements.
+   * Used as a hint for type-aware matching.
+   */
+  originalSign?: 'positive' | 'negative'
 }
 
 export interface MatchResult {
@@ -42,12 +48,27 @@ export function matchImportedRows(
   const unmatchedRows = [...rows]
   const matchedIndices = new Set<number>()
 
-  // Pass 1: High confidence — exact category match + exact amount
+  // Type-aware matching: when the imported row has an original sign hint,
+  // prefer matching to expenses of the corresponding type.
+  // Negative amounts in bank statements typically mean credits/income.
+  function isTypeCompatible(row: ImportedRow, exp: Expense): boolean {
+    if (!row.originalSign) return true // no hint, match anything
+    const expectedType = row.originalSign === 'negative' ? 'income' : 'expense'
+    return (exp.type ?? 'expense') === expectedType
+  }
+
+  // Pass 1: High confidence — exact category match + exact amount + type-compatible
   for (let i = 0; i < unmatchedRows.length; i++) {
     if (matchedIndices.has(i)) continue
     const row = unmatchedRows[i]!
 
+    // Try type-compatible first, then fall back to any type
     const match = expenses.find((exp) =>
+      !usedExpenses.has(`${exp.id}-${row.date}`) &&
+      exp.category.toLowerCase() === row.category.toLowerCase() &&
+      Math.abs(exp.amount - row.amount) < 0.01 &&
+      isTypeCompatible(row, exp)
+    ) ?? expenses.find((exp) =>
       !usedExpenses.has(`${exp.id}-${row.date}`) &&
       exp.category.toLowerCase() === row.category.toLowerCase() &&
       Math.abs(exp.amount - row.amount) < 0.01
@@ -70,9 +91,10 @@ export function matchImportedRows(
     if (matchedIndices.has(i)) continue
     const row = unmatchedRows[i]!
 
-    const match = expenses.find((exp) => {
+    const matchFn = (exp: Expense, requireTypeCompat: boolean) => {
       if (usedExpenses.has(`${exp.id}-${row.date}`)) return false
       if (Math.abs(exp.amount - row.amount) >= 0.01) return false
+      if (requireTypeCompat && !isTypeCompatible(row, exp)) return false
 
       // Require best-of-both: use Math.max so BOTH category and description
       // must be reasonable, not just one. Math.min was a bug — it let garbage
@@ -82,7 +104,11 @@ export function matchImportedRows(
         fuzzyScore(row.description, exp.description),
       )
       return score <= 0.4
-    })
+    }
+
+    // Type-compatible first, then fall back
+    const match = expenses.find((exp) => matchFn(exp, true))
+      ?? expenses.find((exp) => matchFn(exp, false))
 
     if (match) {
       results.push({
@@ -102,15 +128,19 @@ export function matchImportedRows(
     const row = unmatchedRows[i]!
     const rowMonth = row.date.slice(0, 7)
 
-    const match = expenses.find((exp) => {
+    const matchFn = (exp: Expense, requireTypeCompat: boolean) => {
       if (usedExpenses.has(`${exp.id}-${row.date}`)) return false
       if (Math.abs(exp.amount - row.amount) >= 0.01) return false
+      if (requireTypeCompat && !isTypeCompatible(row, exp)) return false
 
       // Check expense is active in the same month
       const expStartMonth = exp.startDate.slice(0, 7)
       const expEndMonth = exp.endDate ? exp.endDate.slice(0, 7) : '9999-12'
       return rowMonth >= expStartMonth && rowMonth <= expEndMonth
-    })
+    }
+
+    const match = expenses.find((exp) => matchFn(exp, true))
+      ?? expenses.find((exp) => matchFn(exp, false))
 
     if (match) {
       results.push({

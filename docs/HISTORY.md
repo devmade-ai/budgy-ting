@@ -4,6 +4,17 @@
 
 ## 2026-02-25
 
+- **Type-Aware Actuals Splitting:**
+  - All engines now classify actuals as income or expense via `actual.expenseId → expense.type` lookup
+  - Cashflow engine: `actualSpend` replaced with `actualIncome`/`actualExpenses`; effective net independently uses actual values where available
+  - Envelope engine: filters to expense-type actuals only for spend tracking (burn rate, depletion date)
+  - Variance engine: excludes income actuals from line item, category, monthly, and total variance calculations
+  - Matching engine: added `originalSign` to `ImportedRow`, `isTypeCompatible()` prefers same-type matches (negative CSV amounts → income), falls back to any type
+  - ImportStepMapping: preserves `originalSign` from parsed amounts before `Math.abs()`
+  - CashflowTab/CompareTab: updated to pass expenses to engines
+  - Fixed variable ordering bug in variance.ts (`expenseActuals` used before definition)
+  - 92 unit tests across 7 files (was 86) — new tests for income splitting, type-compatible matching, income exclusion
+
 - **Cashflow Pivot:**
   - Added `LineType = 'income' | 'expense'` type and `type` field to Expense model
   - DB schema v3 migration — renames `totalBudget` → `startingBalance`, adds `type: 'expense'` default

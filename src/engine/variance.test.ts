@@ -146,4 +146,31 @@ describe('calculateComparison', () => {
     expect(feb?.actual).toBe(0)
     expect(feb?.hasActuals).toBe(false)
   })
+
+  it('excludes income-type actuals from expense variance tracking', () => {
+    const expenses = [
+      makeExpense({ id: 'e1', description: 'Rent', category: 'Housing', amount: 1000 }),
+      makeExpense({ id: 'e2', description: 'Salary', category: 'Income', amount: 3000, type: 'income' }),
+    ]
+    const actuals = [
+      makeActual({ id: 'a1', expenseId: 'e1', date: '2026-01-15', amount: 1000 }),
+      // Salary actual — should NOT inflate totalActual or monthly expense variance
+      makeActual({ id: 'a2', expenseId: 'e2', date: '2026-01-05', amount: 3500 }),
+    ]
+    const projection = calculateProjection(expenses, '2026-01-01', '2026-01-31')
+
+    const result = calculateComparison(projection, actuals, expenses)
+
+    // Line items should only include expense lines, not income
+    expect(result.lineItems).toHaveLength(1)
+    expect(result.lineItems[0]!.description).toBe('Rent')
+
+    // Total actual should only count expense actuals (1000), not income (3500)
+    expect(result.totalActual).toBe(1000)
+
+    // Monthly variance should only reflect expense actuals
+    const jan = result.monthly.find((m) => m.month === '2026-01')
+    expect(jan?.actual).toBe(1000)
+    expect(jan?.hasActuals).toBe(true)
+  })
 })

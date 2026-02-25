@@ -13,7 +13,7 @@
  */
 
 import type { ProjectionResult } from './projection'
-import type { Actual } from '@/types/models'
+import type { Actual, Expense } from '@/types/models'
 
 export interface EnvelopeMonth {
   /** ISO month string: YYYY-MM */
@@ -57,18 +57,35 @@ const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Se
 
 /**
  * Calculate envelope budget status given a fixed total, projection, and actuals.
+ *
+ * Only expense-type actuals count as "spend". Income-type actuals (matched to income
+ * expense lines) are excluded from burn rate and spend tracking, since the envelope
+ * tracks how fast you're burning through your starting balance via expenses.
  */
 export function calculateEnvelope(
   startingBalance: number,
   projection: ProjectionResult,
   actuals: Actual[],
   todayISO: string,
+  expenses: Expense[] = [],
 ): EnvelopeResult {
-  // Group actuals by month
+  // Build expense type lookup so we can split actuals by type
+  const typeLookup = new Map<string, 'income' | 'expense'>()
+  for (const exp of expenses) {
+    typeLookup.set(exp.id, exp.type ?? 'expense')
+  }
+
+  // Only count expense-type actuals as "spend" — income actuals are excluded
+  const expenseActuals = actuals.filter((a) => {
+    const type = a.expenseId ? (typeLookup.get(a.expenseId) ?? 'expense') : 'expense'
+    return type === 'expense'
+  })
+
+  // Group expense actuals by month
   const actualsByMonth = new Map<string, number>()
   let totalSpent = 0
 
-  for (const actual of actuals) {
+  for (const actual of expenseActuals) {
     const month = actual.date.slice(0, 7)
     actualsByMonth.set(month, (actualsByMonth.get(month) ?? 0) + actual.amount)
     totalSpent += actual.amount
@@ -107,9 +124,9 @@ export function calculateEnvelope(
   let depletionDate: string | null = null
   let daysRemaining: number | null = null
 
-  if (actuals.length > 0 && totalSpent > 0) {
-    // Find date range of actuals
-    const sortedDates = actuals.map((a) => a.date).sort()
+  if (expenseActuals.length > 0 && totalSpent > 0) {
+    // Find date range of expense actuals (not income)
+    const sortedDates = expenseActuals.map((a) => a.date).sort()
     const firstActualDate = sortedDates[0]!
     const lastDate = currentMonth <= todayISO.slice(0, 10) ? todayISO : sortedDates[sortedDates.length - 1]!
 

@@ -46,7 +46,7 @@ const cashflow = computed<CashflowResult | null>(() => {
 
   const { startDate, endDate } = resolveBudgetPeriod(props.budget)
   const projection = calculateProjection(expenses.value, startDate, endDate)
-  return calculateCashflow(props.budget.startingBalance, projection, actuals.value)
+  return calculateCashflow(props.budget.startingBalance, projection, actuals.value, expenses.value)
 })
 
 const hasIncomeLines = computed(() => {
@@ -172,11 +172,19 @@ const noBalance = computed(() => {
               <td class="py-2 pr-4 font-medium text-gray-900 sticky left-0 bg-white">
                 {{ m.monthLabel }}
               </td>
-              <td class="text-right py-2 px-2 tabular-nums" :class="m.projectedIncome > 0 ? 'text-green-600' : 'text-gray-300'">
-                {{ m.projectedIncome > 0 ? '+' + formatAmount(m.projectedIncome) : '—' }}
+              <td class="text-right py-2 px-2 tabular-nums" :class="(m.actualIncome ?? m.projectedIncome) > 0 ? 'text-green-600' : 'text-gray-300'">
+                <template v-if="(m.actualIncome ?? m.projectedIncome) > 0">
+                  +{{ formatAmount(m.actualIncome ?? m.projectedIncome) }}
+                  <span v-if="m.actualIncome !== null" class="text-[10px] text-green-400 block">actual</span>
+                </template>
+                <template v-else>—</template>
               </td>
-              <td class="text-right py-2 px-2 tabular-nums" :class="m.projectedExpenses > 0 ? 'text-red-600' : 'text-gray-300'">
-                {{ m.projectedExpenses > 0 ? '-' + formatAmount(m.projectedExpenses) : '—' }}
+              <td class="text-right py-2 px-2 tabular-nums" :class="(m.actualExpenses ?? m.projectedExpenses) > 0 ? 'text-red-600' : 'text-gray-300'">
+                <template v-if="(m.actualExpenses ?? m.projectedExpenses) > 0">
+                  -{{ formatAmount(m.actualExpenses ?? m.projectedExpenses) }}
+                  <span v-if="m.actualExpenses !== null" class="text-[10px] text-red-400 block">actual</span>
+                </template>
+                <template v-else>—</template>
               </td>
               <td
                 class="text-right py-2 px-2 tabular-nums font-medium"

@@ -93,6 +93,9 @@ function handleSubmit() {
       category: categoryColumn.value ? (row[categoryColumn.value] ?? '') : '',
       description: descriptionColumn.value ? (row[descriptionColumn.value] ?? '') : '',
       originalRow: row,
+      // Preserve original sign as a hint for type-aware matching.
+      // Negative amounts in bank statements typically mean credits/income.
+      originalSign: parsedAmountVal < 0 ? 'negative' : 'positive',
     })
   }
 

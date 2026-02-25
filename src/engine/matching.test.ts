@@ -95,6 +95,36 @@ describe('matchImportedRows', () => {
     expect(results).toHaveLength(2)
     expect(results.filter((r) => r.confidence === 'high')).toHaveLength(2)
   })
+
+  it('prefers type-compatible match when originalSign is provided', () => {
+    const expenses = [
+      makeExpense({ id: 'e1', category: 'Salary', amount: 5000, type: 'income' }),
+      makeExpense({ id: 'e2', category: 'Salary', amount: 5000, type: 'expense' }),
+    ]
+    // Row with negative sign (credit) should prefer income expense
+    const rows = [
+      makeRow({ category: 'Salary', amount: 5000, originalSign: 'negative' as const }),
+    ]
+
+    const results = matchImportedRows(rows, expenses)
+    expect(results).toHaveLength(1)
+    expect(results[0]!.matchedExpense?.id).toBe('e1') // income match
+    expect(results[0]!.confidence).toBe('high')
+  })
+
+  it('falls back to any type when no type-compatible match exists', () => {
+    const expenses = [
+      makeExpense({ id: 'e1', category: 'Salary', amount: 5000, type: 'expense' }),
+    ]
+    // Row with negative sign but only expense-type lines exist
+    const rows = [
+      makeRow({ category: 'Salary', amount: 5000, originalSign: 'negative' as const }),
+    ]
+
+    const results = matchImportedRows(rows, expenses)
+    expect(results).toHaveLength(1)
+    expect(results[0]!.matchedExpense?.id).toBe('e1') // still matches
+  })
 })
 
 describe('detectDateFormat', () => {

@@ -6,14 +6,17 @@
  *   a cashflow forecast.
  * Approach: Take starting balance + projection (with income/expense split) + actuals,
  *   produce a running balance timeline with net cashflow per month.
+ *   Actuals are split into income vs expense based on their linked expense's type.
  * Alternatives:
  *   - Merge into envelope.ts: Rejected — envelope tracks expense-only burn against a
  *     fixed budget; cashflow tracks income vs expenses over time. Different mental models.
  *   - Compute in component: Rejected — engine should be testable independently
+ *   - Treat all actuals as expenses: Rejected — wrong for cashflow; a salary deposit
+ *     would inflate expenses instead of counting as income
  */
 
 import type { ProjectionResult } from './projection'
-import type { Actual } from '@/types/models'
+import type { Actual, Expense } from '@/types/models'
 
 export interface CashflowMonth {
   /** ISO month string: YYYY-MM */
@@ -26,8 +29,10 @@ export interface CashflowMonth {
   projectedExpenses: number
   /** Projected net (income - expenses) */
   projectedNet: number
-  /** Actual spend for this month (from imported actuals). Null if no actuals. */
-  actualSpend: number | null
+  /** Actual income for this month. Null if no income actuals. */
+  actualIncome: number | null
+  /** Actual expenses for this month. Null if no expense actuals. */
+  actualExpenses: number | null
   /** Effective net used for balance calculation (actual-adjusted where available) */
   effectiveNet: number
   /** Running balance at end of this month */
@@ -62,22 +67,46 @@ export interface CashflowResult {
 const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 /**
+ * Build a lookup from expense ID → expense type.
+ * Unlinked actuals (expenseId === null) default to 'expense' (conservative).
+ */
+function buildExpenseTypeLookup(expenses: Expense[]): Map<string, 'income' | 'expense'> {
+  const map = new Map<string, 'income' | 'expense'>()
+  for (const exp of expenses) {
+    map.set(exp.id, exp.type ?? 'expense')
+  }
+  return map
+}
+
+/**
  * Calculate cashflow projection given a starting balance, projection, and actuals.
  *
  * @param startingBalance - Current account balance to forecast from
  * @param projection - Projection result with income/expense split
  * @param actuals - Imported actual transactions
+ * @param expenses - Expense lines (needed to look up type for each actual)
  */
 export function calculateCashflow(
   startingBalance: number,
   projection: ProjectionResult,
   actuals: Actual[],
+  expenses: Expense[],
 ): CashflowResult {
-  // Group actuals by month
-  const actualsByMonth = new Map<string, number>()
+  const typeLookup = buildExpenseTypeLookup(expenses)
+
+  // Split actuals into income vs expense by month, using linked expense type
+  const actualIncomeByMonth = new Map<string, number>()
+  const actualExpenseByMonth = new Map<string, number>()
+
   for (const actual of actuals) {
     const month = actual.date.slice(0, 7)
-    actualsByMonth.set(month, (actualsByMonth.get(month) ?? 0) + actual.amount)
+    const type = actual.expenseId ? (typeLookup.get(actual.expenseId) ?? 'expense') : 'expense'
+
+    if (type === 'income') {
+      actualIncomeByMonth.set(month, (actualIncomeByMonth.get(month) ?? 0) + actual.amount)
+    } else {
+      actualExpenseByMonth.set(month, (actualExpenseByMonth.get(month) ?? 0) + actual.amount)
+    }
   }
 
   let runningBalance = startingBalance
@@ -91,13 +120,15 @@ export function calculateCashflow(
     const projectedExpenses = projection.monthlyTotals.get(slot.month) ?? 0
     const projectedNet = projectedIncome - projectedExpenses
 
-    // If we have actuals for this month, use them to adjust
-    const actualSpend = actualsByMonth.has(slot.month) ? actualsByMonth.get(slot.month)! : null
-    // When actuals exist, replace projected expenses with actual spend.
-    // Income is still projected (actuals represent outflows/spend).
-    const effectiveNet = actualSpend !== null
-      ? projectedIncome - actualSpend
-      : projectedNet
+    const hasActualIncome = actualIncomeByMonth.has(slot.month)
+    const hasActualExpenses = actualExpenseByMonth.has(slot.month)
+    const actualIncome = hasActualIncome ? actualIncomeByMonth.get(slot.month)! : null
+    const actualExpenses = hasActualExpenses ? actualExpenseByMonth.get(slot.month)! : null
+
+    // Use actuals where available, projected where not — independently for income and expenses
+    const effectiveIncome = actualIncome !== null ? actualIncome : projectedIncome
+    const effectiveExpense = actualExpenses !== null ? actualExpenses : projectedExpenses
+    const effectiveNet = effectiveIncome - effectiveExpense
 
     runningBalance += effectiveNet
 
@@ -123,7 +154,8 @@ export function calculateCashflow(
       projectedIncome,
       projectedExpenses,
       projectedNet,
-      actualSpend,
+      actualIncome,
+      actualExpenses,
       effectiveNet,
       balance: runningBalance,
     }

@@ -59,7 +59,7 @@ const envelope = computed<EnvelopeResult | null>(() => {
 
   const { startDate, endDate } = resolveBudgetPeriod(props.budget)
   const projection = calculateProjection(expenses.value, startDate, endDate)
-  return calculateEnvelope(props.budget.startingBalance, projection, actuals.value, todayISO())
+  return calculateEnvelope(props.budget.startingBalance, projection, actuals.value, todayISO(), expenses.value)
 })
 
 const viewMode = ref<'items' | 'categories' | 'monthly'>('items')
