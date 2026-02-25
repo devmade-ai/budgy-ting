@@ -224,6 +224,8 @@ Click the toggle buttons to switch between views:
 
 The import wizard lets you upload your bank statement or spending data and match it against your budget. It's a 4-step process.
 
+For details on file format, supported columns, and a ready-to-copy AI prompt for converting bank statements, open **Import Format** from the menu. A **Sample CSV** is also available there to test with.
+
 ### Step 1: Upload File
 
 1. From the budget detail page, click **Import**
@@ -301,3 +303,5 @@ Click the **menu** icon (hamburger) in the top-right corner to access:
 - **How it works** — Reopens the step-by-step tutorial walkthrough
 - **User Guide** — Opens this guide in a slide-out panel within the app
 - **Test Scenarios** — Opens the manual testing checklist in a slide-out panel
+- **Import Format** — Shows what your import file should look like, with examples and an AI conversion prompt
+- **Sample CSV** — A ready-to-use sample import file you can copy

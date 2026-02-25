@@ -21,10 +21,12 @@ Run through this checklist after any change to verify nothing is broken:
 - [ ] Can export a budget as JSON
 - [ ] Can restore a budget from exported JSON
 - [ ] Can delete a budget (confirm dialog appears)
-- [ ] Menu opens via hamburger icon, shows 3 items
+- [ ] Menu opens via hamburger icon, shows 5 items (with divider)
 - [ ] Tutorial opens via menu → "How it works"
 - [ ] User Guide drawer opens via menu → "User Guide"
 - [ ] Test Scenarios drawer opens via menu → "Test Scenarios"
+- [ ] Import Format drawer opens via menu → "Import Format"
+- [ ] Sample CSV drawer opens via menu → "Sample CSV"
 - [ ] Build passes: `npm run build`
 - [ ] Type-check passes: `npm run type-check`
 - [ ] Unit tests pass: `npm run test`
@@ -690,7 +692,7 @@ Run through this checklist after any change to verify nothing is broken:
 1. Click the **hamburger menu** icon in the top-right corner
 
 **Expected:**
-- Dropdown shows 3 items: "How it works", "User Guide", "Test Scenarios"
+- Dropdown shows 5 items with a divider: "How it works", "User Guide", "Test Scenarios" | "Import Format", "Sample CSV"
 - Clicking outside the dropdown closes it
 
 **Steps (Tutorial):**
@@ -721,6 +723,24 @@ Run through this checklist after any change to verify nothing is broken:
 - Title shows "Test Scenarios"
 - Testing guide markdown rendered correctly
 - Checkboxes visible in checklist items
+
+**Steps (Import Format):**
+5. Open menu, click **Import Format**
+
+**Expected:**
+- Slide-out drawer appears from right
+- Title shows "Import Format"
+- Shows column requirements table, CSV and JSON examples, date formats, AI prompt
+- Code blocks are rendered with monospace styling
+
+**Steps (Sample CSV):**
+6. Open menu, click **Sample CSV**
+
+**Expected:**
+- Slide-out drawer appears from right
+- Title shows "Sample CSV"
+- Shows intro text and a code block with CSV data
+- CSV content is selectable/copyable
 
 #### 7.4 Browser Back/Forward
 
