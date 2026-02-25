@@ -21,7 +21,10 @@ Run through this checklist after any change to verify nothing is broken:
 - [ ] Can export a budget as JSON
 - [ ] Can restore a budget from exported JSON
 - [ ] Can delete a budget (confirm dialog appears)
-- [ ] Tutorial opens via ? button
+- [ ] Menu opens via hamburger icon, shows 3 items
+- [ ] Tutorial opens via menu → "How it works"
+- [ ] User Guide drawer opens via menu → "User Guide"
+- [ ] Test Scenarios drawer opens via menu → "Test Scenarios"
 - [ ] Build passes: `npm run build`
 - [ ] Type-check passes: `npm run type-check`
 - [ ] Unit tests pass: `npm run test`
@@ -681,17 +684,43 @@ Run through this checklist after any change to verify nothing is broken:
 - Active tab is visually highlighted
 - URL updates to match the tab
 
-#### 7.3 Tutorial Modal
+#### 7.3 Help Menu
 
 **Steps:**
-1. Click **?** in top-right corner
-2. Tutorial opens with welcome step
+1. Click the **hamburger menu** icon in the top-right corner
 
 **Expected:**
+- Dropdown shows 3 items: "How it works", "User Guide", "Test Scenarios"
+- Clicking outside the dropdown closes it
+
+**Steps (Tutorial):**
+2. Click **How it works**
+
+**Expected:**
+- Tutorial modal opens with welcome step
 - 6 tutorial steps navigable via Next/Back buttons
 - Step dots at bottom are clickable
 - Last step has **Get started** button
 - Clicking Get started or closing dismisses the modal
+
+**Steps (User Guide):**
+3. Open menu, click **User Guide**
+
+**Expected:**
+- Slide-out drawer appears from right
+- Title shows "User Guide"
+- Markdown content rendered with headings, lists, bold text
+- Scrollable for long content
+- Click X or backdrop to close, drawer slides out
+
+**Steps (Test Scenarios):**
+4. Open menu, click **Test Scenarios**
+
+**Expected:**
+- Slide-out drawer appears from right
+- Title shows "Test Scenarios"
+- Testing guide markdown rendered correctly
+- Checkboxes visible in checklist items
 
 #### 7.4 Browser Back/Forward
 

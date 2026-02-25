@@ -8,7 +8,7 @@ Everything you need to know about using budgy-ting to plan and track your spendi
 
 budgy-ting is a budgeting tool that runs entirely on your device. No accounts, no cloud, no sign-ups. Your data stays in your browser and never leaves your device.
 
-When you first open the app, a short tutorial walks you through the basics. You can reopen it any time by clicking the **?** button in the top-right corner.
+When you first open the app, a short tutorial walks you through the basics. You can reopen it any time from the **menu** (hamburger icon) in the top-right corner.
 
 ---
 
@@ -294,6 +294,10 @@ After your first visit, the app works fully offline. A green notification confir
 - On budget pages, click **Budgets** in the breadcrumb to return to the budget list
 - Use the tab bar (Expenses, Projected, Cashflow, Compare) to switch between views within a budget
 
-### Help
+### Help Menu
 
-Click the **?** button in the top-right corner to reopen the tutorial walkthrough at any time.
+Click the **menu** icon (hamburger) in the top-right corner to access:
+
+- **How it works** — Reopens the step-by-step tutorial walkthrough
+- **User Guide** — Opens this guide in a slide-out panel within the app
+- **Test Scenarios** — Opens the manual testing checklist in a slide-out panel

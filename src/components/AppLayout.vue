@@ -1,24 +1,74 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+/**
+ * Requirement: Burger menu in header for accessing tutorial, user guide, and testing guide
+ * Approach: Replace standalone "?" button with a menu icon that opens a dropdown.
+ *   Dropdown items open the tutorial modal (existing) or a HelpDrawer with markdown content.
+ *   Markdown files imported at build time via Vite ?raw to avoid runtime fetching.
+ * Alternatives:
+ *   - Keep "?" as tutorial only, add separate icons: Rejected — clutters header
+ *   - Full sidebar navigation: Rejected — overkill for 3 menu items
+ */
+
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePWAUpdate } from '@/composables/usePWAUpdate'
 import { useTutorial } from '@/composables/useTutorial'
 import InstallPrompt from '@/components/InstallPrompt.vue'
 import InstallInstructionsModal from '@/components/InstallInstructionsModal.vue'
 import TutorialModal from '@/components/TutorialModal.vue'
+import HelpDrawer from '@/components/HelpDrawer.vue'
+
+// Build-time markdown imports — bundled as strings, no runtime fetch
+import userGuideMd from '../../docs/USER_GUIDE.md?raw'
+import testingGuideMd from '../../docs/TESTING_GUIDE.md?raw'
 
 const router = useRouter()
 const { hasUpdate, offlineReady, updateApp } = usePWAUpdate()
 const { showTutorial, showIfFirstVisit, openTutorial, dismissTutorial } = useTutorial()
 
 const showInstructions = ref(false)
+const menuOpen = ref(false)
+const menuRef = ref<HTMLElement | null>(null)
+
+// Help drawer state
+type DrawerContent = 'user-guide' | 'testing-guide' | null
+const activeDrawer = ref<DrawerContent>(null)
 
 onMounted(() => {
   showIfFirstVisit()
+  document.addEventListener('click', handleOutsideClick)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleOutsideClick)
 })
 
 function goHome() {
   router.push({ name: 'budget-list' })
+}
+
+function toggleMenu() {
+  menuOpen.value = !menuOpen.value
+}
+
+function handleOutsideClick(e: MouseEvent) {
+  if (menuOpen.value && menuRef.value && !menuRef.value.contains(e.target as Node)) {
+    menuOpen.value = false
+  }
+}
+
+function handleTutorial() {
+  menuOpen.value = false
+  openTutorial()
+}
+
+function openDrawer(content: DrawerContent) {
+  menuOpen.value = false
+  activeDrawer.value = content
+}
+
+function closeDrawer() {
+  activeDrawer.value = null
 }
 </script>
 
@@ -58,14 +108,52 @@ function goHome() {
         >
           budgy-ting
         </button>
-        <button
-          class="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-brand-600 hover:bg-brand-50 transition-colors"
-          title="How it works"
-          aria-label="How it works"
-          @click="openTutorial"
-        >
-          <span class="i-lucide-circle-help text-lg" aria-hidden="true" />
-        </button>
+
+        <!-- Menu button + dropdown -->
+        <div ref="menuRef" class="relative">
+          <button
+            class="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-brand-600 hover:bg-brand-50 transition-colors"
+            title="Menu"
+            aria-label="Menu"
+            aria-haspopup="true"
+            :aria-expanded="menuOpen"
+            @click="toggleMenu"
+          >
+            <span class="i-lucide-menu text-lg" aria-hidden="true" />
+          </button>
+
+          <!-- Dropdown menu -->
+          <div
+            v-if="menuOpen"
+            class="absolute right-0 top-full mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20"
+            role="menu"
+          >
+            <button
+              class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+              role="menuitem"
+              @click="handleTutorial"
+            >
+              <span class="i-lucide-circle-help text-base text-gray-400" aria-hidden="true" />
+              How it works
+            </button>
+            <button
+              class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+              role="menuitem"
+              @click="openDrawer('user-guide')"
+            >
+              <span class="i-lucide-book-open text-base text-gray-400" aria-hidden="true" />
+              User Guide
+            </button>
+            <button
+              class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+              role="menuitem"
+              @click="openDrawer('testing-guide')"
+            >
+              <span class="i-lucide-test-tubes text-base text-gray-400" aria-hidden="true" />
+              Test Scenarios
+            </button>
+          </div>
+        </div>
       </div>
     </header>
 
@@ -80,10 +168,24 @@ function goHome() {
       @close="showInstructions = false"
     />
 
-    <!-- Tutorial modal (first visit + re-accessible from help button) -->
+    <!-- Tutorial modal (first visit + re-accessible from menu) -->
     <TutorialModal
       v-if="showTutorial"
       @close="dismissTutorial"
+    />
+
+    <!-- Help drawers -->
+    <HelpDrawer
+      v-if="activeDrawer === 'user-guide'"
+      title="User Guide"
+      :markdown="userGuideMd"
+      @close="closeDrawer"
+    />
+    <HelpDrawer
+      v-if="activeDrawer === 'testing-guide'"
+      title="Test Scenarios"
+      :markdown="testingGuideMd"
+      @close="closeDrawer"
     />
   </div>
 </template>

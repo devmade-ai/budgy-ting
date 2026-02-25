@@ -195,7 +195,7 @@ export async function importBudget(
 
     // Backward compat: old exports have totalBudget instead of startingBalance,
     // and expenses may lack a type field.
-    const rawBudget = data.budget as Record<string, unknown>
+    const rawBudget = data.budget as unknown as Record<string, unknown>
     const budgetToAdd = {
       ...data.budget,
       startingBalance: data.budget.startingBalance ?? (rawBudget['totalBudget'] as number | null) ?? null,
