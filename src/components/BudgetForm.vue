@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Requirement: Create/edit budget form with name, currency, period type, dates, optional total budget
+ * Requirement: Create/edit budget form with name, currency, period type, dates, optional starting balance
  * Approach: Single form component reused for create and edit via optional budget prop
  * Alternatives:
  *   - Separate create/edit components: Rejected — too much duplication
@@ -22,7 +22,7 @@ const emit = defineEmits<{
     periodType: PeriodType
     startDate: string
     endDate: string | null
-    totalBudget: number | null
+    startingBalance: number | null
   }]
   cancel: []
 }>()
@@ -32,8 +32,8 @@ const currencyLabel = ref(props.budget?.currencyLabel ?? 'R')
 const periodType = ref<PeriodType>(props.budget?.periodType ?? 'monthly')
 const startDate = ref(props.budget?.startDate ?? todayISO())
 const endDate = ref(props.budget?.endDate ?? '')
-const hasTotalBudget = ref(props.budget?.totalBudget != null)
-const totalBudgetStr = ref(props.budget?.totalBudget?.toString() ?? '')
+const hasStartingBalance = ref(props.budget?.startingBalance != null)
+const startingBalanceStr = ref(props.budget?.startingBalance?.toString() ?? '')
 
 const isEditing = computed(() => !!props.budget)
 
@@ -43,7 +43,7 @@ const budgetAmountError = ref('')
 
 watch(name, () => { nameError.value = '' })
 watch([startDate, endDate], () => { dateError.value = '' })
-watch(totalBudgetStr, () => { budgetAmountError.value = '' })
+watch(startingBalanceStr, () => { budgetAmountError.value = '' })
 
 function validate(): boolean {
   let valid = true
@@ -63,9 +63,9 @@ function validate(): boolean {
     }
   }
 
-  if (hasTotalBudget.value) {
-    const num = parseFloat(totalBudgetStr.value)
-    if (!totalBudgetStr.value || isNaN(num) || num <= 0) {
+  if (hasStartingBalance.value) {
+    const num = parseFloat(startingBalanceStr.value)
+    if (!startingBalanceStr.value || isNaN(num) || num <= 0) {
       budgetAmountError.value = 'Enter a positive amount'
       valid = false
     }
@@ -83,7 +83,7 @@ function handleSubmit() {
     periodType: periodType.value,
     startDate: startDate.value,
     endDate: periodType.value === 'custom' && endDate.value ? endDate.value : null,
-    totalBudget: hasTotalBudget.value ? parseFloat(totalBudgetStr.value) : null,
+    startingBalance: hasStartingBalance.value ? parseFloat(startingBalanceStr.value) : null,
   })
 }
 </script>
@@ -122,26 +122,26 @@ function handleSubmit() {
       <p class="text-xs text-gray-400 mt-1">Display only — shown next to amounts</p>
     </div>
 
-    <!-- Total budget (envelope mode) -->
+    <!-- Starting balance (cashflow tracking) -->
     <div>
       <div class="flex items-center gap-2 mb-2">
         <input
-          id="has-total-budget"
-          v-model="hasTotalBudget"
+          id="has-starting-balance"
+          v-model="hasStartingBalance"
           type="checkbox"
           class="w-4 h-4 text-brand-600 rounded border-gray-300 focus:ring-brand-500"
         />
-        <label class="text-sm font-medium text-gray-700" for="has-total-budget">
-          I have a set amount to spend
+        <label class="text-sm font-medium text-gray-700" for="has-starting-balance">
+          I know my current balance
         </label>
       </div>
-      <div v-if="hasTotalBudget" class="ml-6">
-        <label class="block text-sm text-gray-600 mb-1" for="total-budget">
-          Total budget amount
+      <div v-if="hasStartingBalance" class="ml-6">
+        <label class="block text-sm text-gray-600 mb-1" for="starting-balance">
+          Starting balance
         </label>
         <input
-          id="total-budget"
-          v-model="totalBudgetStr"
+          id="starting-balance"
+          v-model="startingBalanceStr"
           type="number"
           step="0.01"
           min="0.01"
@@ -149,7 +149,7 @@ function handleSubmit() {
           placeholder="0.00"
         />
         <p class="text-xs text-gray-400 mt-1">
-          Track how much you have left as you spend
+          Your current account balance — we'll forecast from here
         </p>
         <p v-if="budgetAmountError" class="text-sm text-red-500 mt-1">{{ budgetAmountError }}</p>
       </div>

@@ -6,7 +6,7 @@
 
 import { ref, computed, watch } from 'vue'
 import { useCategoryAutocomplete } from '@/composables/useCategoryAutocomplete'
-import type { Budget, Expense, Frequency } from '@/types/models'
+import type { Budget, Expense, Frequency, LineType } from '@/types/models'
 
 const props = defineProps<{
   budget: Budget
@@ -19,12 +19,14 @@ const emit = defineEmits<{
     category: string
     amount: number
     frequency: Frequency
+    type: LineType
     startDate: string
     endDate: string | null
   }]
   cancel: []
 }>()
 
+const lineType = ref<LineType>(props.expense?.type ?? 'expense')
 const description = ref(props.expense?.description ?? '')
 const amount = ref(props.expense?.amount?.toString() ?? '')
 const frequency = ref<Frequency>(props.expense?.frequency ?? 'monthly')
@@ -82,6 +84,7 @@ function handleSubmit() {
     category: categoryQuery.value.trim(),
     amount: parseFloat(amount.value),
     frequency: frequency.value,
+    type: lineType.value,
     startDate: startDate.value,
     endDate: endDate.value || null,
   })
@@ -121,6 +124,37 @@ function selectCategory(cat: string) {
 
 <template>
   <form class="space-y-5" @submit.prevent="handleSubmit">
+    <!-- Income / Expense toggle -->
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-2">
+        Type
+      </label>
+      <div class="flex gap-2">
+        <button
+          type="button"
+          class="btn flex-1 text-sm"
+          :class="lineType === 'expense'
+            ? 'bg-red-50 text-red-700 border border-red-300'
+            : 'bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100'"
+          @click="lineType = 'expense'"
+        >
+          <span class="i-lucide-arrow-down-circle mr-1" />
+          Expense
+        </button>
+        <button
+          type="button"
+          class="btn flex-1 text-sm"
+          :class="lineType === 'income'
+            ? 'bg-green-50 text-green-700 border border-green-300'
+            : 'bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100'"
+          @click="lineType = 'income'"
+        >
+          <span class="i-lucide-arrow-up-circle mr-1" />
+          Income
+        </button>
+      </div>
+    </div>
+
     <!-- Description -->
     <div>
       <label class="block text-sm font-medium text-gray-700 mb-1" for="expense-desc">
@@ -262,7 +296,7 @@ function selectCategory(cat: string) {
     <!-- Actions -->
     <div class="flex gap-3 pt-2">
       <button type="submit" class="btn-primary flex-1">
-        {{ isEditing ? 'Save changes' : 'Add expense' }}
+        {{ isEditing ? 'Save changes' : lineType === 'income' ? 'Add income' : 'Add expense' }}
       </button>
       <button type="button" class="btn-secondary" @click="emit('cancel')">
         Cancel

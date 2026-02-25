@@ -45,16 +45,26 @@ const groupedExpenses = computed(() => {
   return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b))
 })
 
-const totalMonthly = computed(() => {
-  return expenses.value.reduce((sum, exp) => {
-    if (exp.frequency === 'monthly') return sum + exp.amount
-    if (exp.frequency === 'once-off') return sum + exp.amount
-    if (exp.frequency === 'daily') return sum + exp.amount * 30
-    if (exp.frequency === 'weekly') return sum + exp.amount * 4.33
-    if (exp.frequency === 'quarterly') return sum + exp.amount / 3
-    if (exp.frequency === 'annually') return sum + exp.amount / 12
-    return sum
-  }, 0)
+function monthlyEquivalent(exp: Expense): number {
+  if (exp.frequency === 'monthly') return exp.amount
+  if (exp.frequency === 'once-off') return exp.amount
+  if (exp.frequency === 'daily') return exp.amount * 30
+  if (exp.frequency === 'weekly') return exp.amount * 4.33
+  if (exp.frequency === 'quarterly') return exp.amount / 3
+  if (exp.frequency === 'annually') return exp.amount / 12
+  return 0
+}
+
+const totalMonthlyExpenses = computed(() => {
+  return expenses.value
+    .filter((e) => e.type !== 'income')
+    .reduce((sum, exp) => sum + monthlyEquivalent(exp), 0)
+})
+
+const totalMonthlyIncome = computed(() => {
+  return expenses.value
+    .filter((e) => e.type === 'income')
+    .reduce((sum, exp) => sum + monthlyEquivalent(exp), 0)
 })
 
 function frequencyLabel(f: string): string {
@@ -105,13 +115,16 @@ async function confirmDelete() {
     <div class="flex items-center justify-between mb-4">
       <p class="text-sm text-gray-500">
         <template v-if="expenses.length > 0">
-          {{ expenses.length }} expense{{ expenses.length === 1 ? '' : 's' }}
-          &middot; ~{{ props.budget.currencyLabel }}{{ formatAmount(totalMonthly) }}/month
+          {{ expenses.length }} item{{ expenses.length === 1 ? '' : 's' }}
+          <template v-if="totalMonthlyIncome > 0">
+            &middot; <span class="text-green-600">+{{ props.budget.currencyLabel }}{{ formatAmount(totalMonthlyIncome) }}</span>
+          </template>
+          &middot; <span class="text-red-600">-{{ props.budget.currencyLabel }}{{ formatAmount(totalMonthlyExpenses) }}</span>/month
         </template>
       </p>
       <button class="btn-primary text-sm" @click="addExpense">
         <span class="i-lucide-plus mr-1" />
-        Add Expense
+        Add Item
       </button>
     </div>
 
@@ -122,10 +135,10 @@ async function confirmDelete() {
     <EmptyState
       v-else-if="expenses.length === 0"
       icon="i-lucide-list"
-      title="No expenses yet"
-      description="Add expense lines to start planning your budget"
+      title="No items yet"
+      description="Add income and expense lines to start planning your cashflow"
     >
-      <button class="btn-primary" @click="addExpense">Add your first expense</button>
+      <button class="btn-primary" @click="addExpense">Add your first item</button>
     </EmptyState>
 
     <!-- Grouped expense list -->
@@ -139,9 +152,12 @@ async function confirmDelete() {
             class="card flex items-center justify-between"
           >
             <div class="min-w-0 flex-1">
-              <p class="font-medium text-gray-900 truncate">{{ exp.description }}</p>
-              <p class="text-sm text-gray-500">
-                {{ props.budget.currencyLabel }}{{ formatAmount(exp.amount) }}
+              <p class="font-medium text-gray-900 truncate">
+                {{ exp.description }}
+                <span v-if="exp.type === 'income'" class="text-xs text-green-600 font-normal ml-1">income</span>
+              </p>
+              <p class="text-sm" :class="exp.type === 'income' ? 'text-green-600' : 'text-gray-500'">
+                {{ exp.type === 'income' ? '+' : '' }}{{ props.budget.currencyLabel }}{{ formatAmount(exp.amount) }}
                 <span class="text-gray-400">{{ frequencyLabel(exp.frequency) }}</span>
               </p>
             </div>

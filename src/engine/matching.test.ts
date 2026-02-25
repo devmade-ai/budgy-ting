@@ -16,6 +16,7 @@ function makeExpense(overrides: Partial<Expense> = {}): Expense {
     category: 'Food',
     amount: 500,
     frequency: 'monthly',
+    type: 'expense',
     startDate: '2026-01-01',
     endDate: null,
     createdAt: '2026-01-01T00:00:00Z',

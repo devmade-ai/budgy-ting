@@ -48,4 +48,29 @@ db.version(2).stores({
   })
 })
 
+// Schema v3: cashflow pivot — rename totalBudget → startingBalance, add type to expenses
+// Requirement: Pivot from budgeting app to cashflow app with income tracking
+// Approach: Rename field on budgets, add 'type' field defaulting to 'expense' on expenses
+// Alternatives:
+//   - Separate income table: Rejected — income uses same frequency/amount model as expenses
+//   - Keep totalBudget name: Rejected — "starting balance" reflects cashflow semantics better
+db.version(3).stores({
+  budgets: 'id, name, createdAt',
+  expenses: 'id, budgetId, category, type, createdAt',
+  actuals: 'id, budgetId, expenseId, category, date',
+  categoryCache: 'category, lastUsed',
+}).upgrade((tx) => {
+  return Promise.all([
+    tx.table('budgets').toCollection().modify((budget) => {
+      budget.startingBalance = budget.totalBudget ?? null
+      delete budget.totalBudget
+    }),
+    tx.table('expenses').toCollection().modify((expense) => {
+      if (expense.type === undefined) {
+        expense.type = 'expense'
+      }
+    }),
+  ])
+})
+
 export { db }

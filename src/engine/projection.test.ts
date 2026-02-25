@@ -10,6 +10,7 @@ function makeExpense(overrides: Partial<Expense> = {}): Expense {
     category: 'General',
     amount: 100,
     frequency: 'monthly',
+    type: 'expense',
     startDate: '2026-01-01',
     endDate: null,
     createdAt: '2026-01-01T00:00:00Z',
@@ -159,5 +160,46 @@ describe('calculateProjection', () => {
 
     const transport = result.categoryRollup.get('Transport')
     expect(transport?.get('2026-01')).toBe(50)
+  })
+
+  it('separates income from expense in monthly totals', () => {
+    const expenses = [
+      makeExpense({ id: 'e1', amount: 500, type: 'expense' }),
+      makeExpense({ id: 'e2', amount: 3000, type: 'income', category: 'Salary' }),
+    ]
+    const result = calculateProjection(expenses, '2026-01-01', '2026-01-31')
+
+    // monthlyTotals tracks expenses only
+    expect(result.monthlyTotals.get('2026-01')).toBe(500)
+    // monthlyIncome tracks income only
+    expect(result.monthlyIncome.get('2026-01')).toBe(3000)
+    // monthlyNet = income - expenses
+    expect(result.monthlyNet.get('2026-01')).toBe(2500)
+    // grandTotal is expense-only
+    expect(result.grandTotal).toBe(500)
+    expect(result.totalIncome).toBe(3000)
+    expect(result.totalNet).toBe(2500)
+  })
+
+  it('tracks type on projected rows', () => {
+    const expenses = [
+      makeExpense({ id: 'e1', amount: 500, type: 'expense' }),
+      makeExpense({ id: 'e2', amount: 3000, type: 'income' }),
+    ]
+    const result = calculateProjection(expenses, '2026-01-01', '2026-01-31')
+
+    expect(result.rows[0]!.type).toBe('expense')
+    expect(result.rows[1]!.type).toBe('income')
+  })
+
+  it('excludes income from category rollup', () => {
+    const expenses = [
+      makeExpense({ id: 'e1', amount: 500, type: 'expense', category: 'Food' }),
+      makeExpense({ id: 'e2', amount: 3000, type: 'income', category: 'Salary' }),
+    ]
+    const result = calculateProjection(expenses, '2026-01-01', '2026-01-31')
+
+    expect(result.categoryRollup.has('Food')).toBe(true)
+    expect(result.categoryRollup.has('Salary')).toBe(false)
   })
 })

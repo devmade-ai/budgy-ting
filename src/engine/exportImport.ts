@@ -193,11 +193,24 @@ export async function importBudget(
       await db.budgets.delete(data.budget.id)
     }
 
-    // Ensure totalBudget field exists (backward compat with v1 exports)
-    const budgetToAdd = { ...data.budget, totalBudget: data.budget.totalBudget ?? null }
+    // Backward compat: old exports have totalBudget instead of startingBalance,
+    // and expenses may lack a type field.
+    const rawBudget = data.budget as Record<string, unknown>
+    const budgetToAdd = {
+      ...data.budget,
+      startingBalance: data.budget.startingBalance ?? (rawBudget['totalBudget'] as number | null) ?? null,
+    }
+    // Remove legacy field if present
+    delete (budgetToAdd as Record<string, unknown>)['totalBudget']
     await db.budgets.add(budgetToAdd)
-    if (data.expenses.length > 0) {
-      await db.expenses.bulkAdd(data.expenses)
+
+    // Ensure all expenses have a type field (default to 'expense' for old exports)
+    const expensesToAdd = data.expenses.map((exp) => ({
+      ...exp,
+      type: exp.type ?? 'expense' as const,
+    }))
+    if (expensesToAdd.length > 0) {
+      await db.expenses.bulkAdd(expensesToAdd)
     }
     if (data.actuals.length > 0) {
       await db.actuals.bulkAdd(data.actuals)

@@ -11,7 +11,7 @@ function makeBudget(overrides: Partial<Budget> = {}): Budget {
     periodType: 'monthly',
     startDate: '2026-01-01',
     endDate: null,
-    totalBudget: null,
+    startingBalance: null,
     createdAt: '2026-01-01T00:00:00Z',
     updatedAt: '2026-01-01T00:00:00Z',
     ...overrides,
@@ -26,6 +26,7 @@ function makeExpense(overrides: Partial<Expense> = {}): Expense {
     category: 'General',
     amount: 1000,
     frequency: 'monthly',
+    type: 'expense',
     startDate: '2026-01-01',
     endDate: null,
     createdAt: '2026-01-01T00:00:00Z',
@@ -173,12 +174,12 @@ describe('validateImport', () => {
     expect(result.valid).toBe(true)
   })
 
-  it('accepts valid export with totalBudget', () => {
+  it('accepts valid export with startingBalance', () => {
     const result = validateImport(makeValidExport({
-      budget: makeBudget({ totalBudget: 50000 }),
+      budget: makeBudget({ startingBalance: 50000 }),
     }))
     expect(result.valid).toBe(true)
-    expect(result.data!.budget.totalBudget).toBe(50000)
+    expect(result.data!.budget.startingBalance).toBe(50000)
   })
 
   it('accepts valid export with comparison data', () => {

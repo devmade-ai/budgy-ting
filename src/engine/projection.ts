@@ -35,20 +35,31 @@ export interface ProjectedRow {
   description: string
   category: string
   frequency: string
-  /** Amount per month slot */
+  /** Whether this is income (money in) or expense (money out) */
+  type: 'income' | 'expense'
+  /** Amount per month slot (always positive) */
   amounts: Map<string, number>
-  /** Total across all months */
+  /** Total across all months (always positive) */
   total: number
 }
 
 export interface ProjectionResult {
   months: MonthSlot[]
   rows: ProjectedRow[]
-  /** Category → month → total */
+  /** Category → month → total (expense amounts only, for backward compat) */
   categoryRollup: Map<string, Map<string, number>>
-  /** Month → total */
+  /** Month → total expense (outflows only, for backward compat with variance/envelope) */
   monthlyTotals: Map<string, number>
+  /** Grand total expenses (outflows only) */
   grandTotal: number
+  /** Month → total income */
+  monthlyIncome: Map<string, number>
+  /** Month → net cashflow (income - expenses) */
+  monthlyNet: Map<string, number>
+  /** Grand total income */
+  totalIncome: number
+  /** Grand total net (income - expenses) */
+  totalNet: number
 }
 
 /**
@@ -214,31 +225,44 @@ export function calculateProjection(
   const rows: ProjectedRow[] = []
   const categoryRollup = new Map<string, Map<string, number>>()
   const monthlyTotals = new Map<string, number>()
+  const monthlyIncome = new Map<string, number>()
+  const monthlyNet = new Map<string, number>()
   let grandTotal = 0
+  let totalIncome = 0
 
   // Initialize monthly totals
   for (const slot of months) {
     monthlyTotals.set(slot.month, 0)
+    monthlyIncome.set(slot.month, 0)
+    monthlyNet.set(slot.month, 0)
   }
 
   for (const expense of expenses) {
     const amounts = new Map<string, number>()
     let rowTotal = 0
+    const isIncome = expense.type === 'income'
 
     for (const slot of months) {
       const amount = calculateMonthAmount(expense, slot, endDate)
       amounts.set(slot.month, amount)
       rowTotal += amount
 
-      // Update monthly totals
-      monthlyTotals.set(slot.month, (monthlyTotals.get(slot.month) ?? 0) + amount)
+      if (isIncome) {
+        // Track income separately
+        monthlyIncome.set(slot.month, (monthlyIncome.get(slot.month) ?? 0) + amount)
+        monthlyNet.set(slot.month, (monthlyNet.get(slot.month) ?? 0) + amount)
+      } else {
+        // Track expenses (outflows) — these feed into variance/envelope engines
+        monthlyTotals.set(slot.month, (monthlyTotals.get(slot.month) ?? 0) + amount)
+        monthlyNet.set(slot.month, (monthlyNet.get(slot.month) ?? 0) - amount)
 
-      // Update category rollup
-      if (!categoryRollup.has(expense.category)) {
-        categoryRollup.set(expense.category, new Map())
+        // Category rollup only tracks expenses (not income)
+        if (!categoryRollup.has(expense.category)) {
+          categoryRollup.set(expense.category, new Map())
+        }
+        const catMap = categoryRollup.get(expense.category)!
+        catMap.set(slot.month, (catMap.get(slot.month) ?? 0) + amount)
       }
-      const catMap = categoryRollup.get(expense.category)!
-      catMap.set(slot.month, (catMap.get(slot.month) ?? 0) + amount)
     }
 
     rows.push({
@@ -246,12 +270,22 @@ export function calculateProjection(
       description: expense.description,
       category: expense.category,
       frequency: expense.frequency,
+      type: isIncome ? 'income' : 'expense',
       amounts,
       total: rowTotal,
     })
 
-    grandTotal += rowTotal
+    if (isIncome) {
+      totalIncome += rowTotal
+    } else {
+      grandTotal += rowTotal
+    }
   }
 
-  return { months, rows, categoryRollup, monthlyTotals, grandTotal }
+  const totalNet = totalIncome - grandTotal
+
+  return {
+    months, rows, categoryRollup, monthlyTotals, grandTotal,
+    monthlyIncome, monthlyNet, totalIncome, totalNet,
+  }
 }

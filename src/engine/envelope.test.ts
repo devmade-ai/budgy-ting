@@ -11,6 +11,7 @@ function makeExpense(overrides: Partial<Expense> = {}): Expense {
     category: 'General',
     amount: 1000,
     frequency: 'monthly',
+    type: 'expense',
     startDate: '2026-01-01',
     endDate: null,
     createdAt: '2026-01-01T00:00:00Z',
@@ -44,7 +45,7 @@ describe('calculateEnvelope', () => {
 
     const result = calculateEnvelope(5000, projection, [], '2026-01-15')
 
-    expect(result.totalBudget).toBe(5000)
+    expect(result.startingBalance).toBe(5000)
     expect(result.totalSpent).toBe(0)
     expect(result.remainingBalance).toBe(5000)
     expect(result.totalProjected).toBe(3000) // 1000 × 3 months

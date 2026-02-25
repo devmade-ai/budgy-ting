@@ -59,6 +59,11 @@ const router = createRouter({
           name: 'budget-compare',
           component: () => import('@/views/CompareTab.vue'),
         },
+        {
+          path: 'cashflow',
+          name: 'budget-cashflow',
+          component: () => import('@/views/CashflowTab.vue'),
+        },
       ],
     },
     {

@@ -7,7 +7,7 @@ import { touchCategory } from '@/composables/useCategoryAutocomplete'
 import ExpenseForm from '@/components/ExpenseForm.vue'
 import ErrorAlert from '@/components/ErrorAlert.vue'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
-import type { Budget, Expense, Frequency } from '@/types/models'
+import type { Budget, Expense, Frequency, LineType } from '@/types/models'
 
 const props = defineProps<{ id: string; expenseId: string }>()
 const router = useRouter()
@@ -43,6 +43,7 @@ async function handleSubmit(data: {
   category: string
   amount: number
   frequency: Frequency
+  type: LineType
   startDate: string
   endDate: string | null
 }) {
@@ -52,6 +53,7 @@ async function handleSubmit(data: {
       category: data.category,
       amount: data.amount,
       frequency: data.frequency,
+      type: data.type,
       startDate: data.startDate,
       endDate: data.endDate,
       updatedAt: nowISO(),

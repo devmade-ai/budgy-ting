@@ -32,12 +32,12 @@ export interface EnvelopeMonth {
 
 export interface EnvelopeResult {
   /** The fixed total budget amount */
-  totalBudget: number
+  startingBalance: number
   /** Total spent so far (sum of all actuals) */
   totalSpent: number
   /** Total projected spend across the budget period */
   totalProjected: number
-  /** Current remaining balance (totalBudget - totalSpent) */
+  /** Current remaining balance (startingBalance - totalSpent) */
   remainingBalance: number
   /** Average daily spend based on actuals (null if no actuals) */
   dailyBurnRate: number | null
@@ -59,7 +59,7 @@ const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Se
  * Calculate envelope budget status given a fixed total, projection, and actuals.
  */
 export function calculateEnvelope(
-  totalBudget: number,
+  startingBalance: number,
   projection: ProjectionResult,
   actuals: Actual[],
   todayISO: string,
@@ -75,11 +75,11 @@ export function calculateEnvelope(
   }
 
   const currentMonth = todayISO.slice(0, 7)
-  const remainingBalance = totalBudget - totalSpent
+  const remainingBalance = startingBalance - totalSpent
   const totalProjected = projection.grandTotal
 
   // Build month-by-month breakdown with running balance
-  let runningBalance = totalBudget
+  let runningBalance = startingBalance
   const months: EnvelopeMonth[] = projection.months.map((slot) => {
     const projected = projection.monthlyTotals.get(slot.month) ?? 0
     const actual = actualsByMonth.has(slot.month) ? actualsByMonth.get(slot.month)! : null
@@ -133,11 +133,11 @@ export function calculateEnvelope(
   // Calculate projected surplus/deficit
   // Use effective spend (actuals where available, projected where not) for total forecast
   const totalEffectiveSpend = months.reduce((sum, m) => sum + m.effectiveSpend, 0)
-  const projectedSurplus = totalBudget - totalEffectiveSpend
+  const projectedSurplus = startingBalance - totalEffectiveSpend
   const willExceed = projectedSurplus < 0
 
   return {
-    totalBudget,
+    startingBalance,
     totalSpent,
     totalProjected,
     remainingBalance,

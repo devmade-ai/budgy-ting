@@ -54,12 +54,12 @@ const comparison = computed<ComparisonResult | null>(() => {
 })
 
 const envelope = computed<EnvelopeResult | null>(() => {
-  if (props.budget.totalBudget == null) return null
+  if (props.budget.startingBalance == null) return null
   if (expenses.value.length === 0 && actuals.value.length === 0) return null
 
   const { startDate, endDate } = resolveBudgetPeriod(props.budget)
   const projection = calculateProjection(expenses.value, startDate, endDate)
-  return calculateEnvelope(props.budget.totalBudget, projection, actuals.value, todayISO())
+  return calculateEnvelope(props.budget.startingBalance, projection, actuals.value, todayISO())
 })
 
 const viewMode = ref<'items' | 'categories' | 'monthly'>('items')
@@ -101,9 +101,9 @@ function goToImport() {
       <div v-if="envelope" class="card mb-4 border-2" :class="envelope.willExceed ? 'border-red-200 bg-red-50/30' : 'border-brand-200 bg-brand-50/30'">
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
           <div>
-            <p class="text-xs text-gray-400 uppercase tracking-wide">Total Budget</p>
+            <p class="text-xs text-gray-400 uppercase tracking-wide">Starting Balance</p>
             <p class="text-lg font-semibold text-gray-900">
-              {{ props.budget.currencyLabel }}{{ formatAmount(envelope.totalBudget) }}
+              {{ props.budget.currencyLabel }}{{ formatAmount(envelope.startingBalance) }}
             </p>
           </div>
           <div>

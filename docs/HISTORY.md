@@ -4,6 +4,19 @@
 
 ## 2026-02-25
 
+- **Cashflow Pivot:**
+  - Added `LineType = 'income' | 'expense'` type and `type` field to Expense model
+  - DB schema v3 migration — renames `totalBudget` → `startingBalance`, adds `type: 'expense'` default
+  - Income/expense toggle on ExpenseForm (red/green buttons with icons)
+  - Extended projection engine — tracks income/expense separately (`monthlyIncome`, `monthlyNet`, `totalIncome`, `totalNet`)
+  - New `engine/cashflow.ts` — running balance timeline, zero-crossing detection, income vs expense breakdown
+  - New `CashflowTab.vue` — summary cards, monthly running balance table, balance forecast bar chart
+  - Updated `ProjectedTab` — income rows in green, separate sections, income/expense/net footer totals
+  - Updated `ExpensesTab` — income badge, green amounts, income/expense monthly summaries
+  - Renamed all `totalBudget` → `startingBalance` across envelope engine, views, export/import
+  - Backward-compatible import handles both old `totalBudget` and new `startingBalance` + missing `type` field
+  - 86 unit tests across 7 files (was 75) — new cashflow.test.ts (8 tests), 3 new projection tests
+
 - **Technical Debt Cleanup:**
   - Split `ImportWizardView.vue` (747 lines) into 4 step sub-components:
     - `import-steps/ImportStepUpload.vue` — file upload with auto-detection

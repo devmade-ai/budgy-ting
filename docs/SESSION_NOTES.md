@@ -4,40 +4,44 @@
 
 ## Worked on
 
-Technical debt cleanup — component extraction, shared components migration, error boundary, tests, autocomplete optimization.
+Cashflow pivot — transforming the app from budgeting-only to a cashflow-focused tool with income tracking, running balance, and cashflow forecasting.
 
 ## Accomplished
 
-- **ImportWizardView split:** 747-line component refactored into 4 step sub-components + orchestrator (~130 lines)
-- **Shared component migration:** All 9 view files migrated from inline error/loading/empty-state markup to ErrorAlert/LoadingSpinner/EmptyState components
-- **Error boundary:** New ErrorBoundary.vue wraps RouterView — catches unhandled errors, shows recovery UI
-- **ExportImport tests:** 19 new unit tests for validateImport covering all validation paths
-- **Autocomplete optimization:** useCategoryAutocomplete now uses Dexie startsWithIgnoreCase index query + capped substring fallback
-- **Total tests:** 75 across 6 files, all passing
+- **Data model:** Added `LineType = 'income' | 'expense'` and `type` field to Expense model
+- **DB migration:** Schema v3 — renames `totalBudget` → `startingBalance` on budgets, adds `type: 'expense'` default to existing expenses
+- **BudgetForm:** Renamed all `totalBudget` refs to `startingBalance` with updated labels ("I know my current balance", "Starting balance")
+- **ExpenseForm:** Added income/expense toggle (red expense button, green income button with icons)
+- **Projection engine:** Extended to track income vs expense separately — new `monthlyIncome`, `monthlyNet`, `totalIncome`, `totalNet` fields; `type` on `ProjectedRow`
+- **Cashflow engine:** New `src/engine/cashflow.ts` — running balance timeline, zero-crossing detection, income vs expense breakdown per month
+- **CashflowTab:** New tab with summary cards (starting balance, income, expenses, ending balance), monthly running balance table, balance forecast bar chart
+- **ProjectedTab:** Income rows shown in green with separate Income/Expenses section headers, footer shows income/expense/net totals
+- **ExpensesTab:** Updated to show income badge, income amounts in green, separate income/expense monthly summaries
+- **CompareTab + envelope.ts:** Updated all `totalBudget` → `startingBalance` references
+- **Export/import:** Backward compat for old exports (handles both `totalBudget` and `startingBalance`, defaults missing `type` to `'expense'`)
+- **Tests:** 86 tests across 7 files (was 75), all passing — new cashflow.test.ts (8 tests), projection income tests (3 new), updated all makeExpense helpers
 
 ## Current state
 
-All code type-checks and builds. 75 unit tests pass. Dependencies installed.
+All code type-checks and builds. 86 unit tests pass. DB schema v3.
 
 Working features:
-- Full budget CRUD with optional fixed total amount (envelope mode)
-- Expense CRUD with category autocomplete (keyboard navigable, index-optimized)
-- Projection engine showing month-by-month breakdown + envelope depletion tracking
-- Import wizard split into 4 step sub-components with pagination, skipped row feedback
-- Comparison views with envelope remaining balance, burn rate, depletion date
-- Export/import with backward compatibility for totalBudget field
-- All views using shared ErrorAlert/LoadingSpinner/EmptyState components
-- Error boundary preventing white-screen crashes
-- All modals with focus trapping, Escape key, ARIA roles
-- PWA install + service worker updates
-- Tutorial modal for first-time users
+- Income + expense tracking with type toggle on form
+- Starting balance (formerly totalBudget) for cashflow forecasting
+- Projection engine with income/expense/net breakdown
+- Cashflow tab showing running balance forecast, zero-crossing detection
+- Projected tab with income (green) vs expense sections, net totals
+- Envelope engine using startingBalance semantics
+- Backward-compatible export/import (handles old totalBudget exports)
+- All previous features intact (CRUD, autocomplete, import wizard, comparison, PWA, tutorial)
 
 ## Key context
 
-- Import wizard: parent `ImportWizardView.vue` orchestrates 4 step components in `views/import-steps/`
-- `ErrorBoundary.vue` wraps `<RouterView>` in `App.vue` — uses `onErrorCaptured` to catch child errors
-- Category autocomplete uses 2-tier query: prefix match via index first, then capped substring scan
-- `Budget.totalBudget` is `number | null` — null means no envelope (backward compatible)
-- DB schema is v2 (Dexie migration handler sets null for existing budgets)
-- vitest configured in `vite.config.ts` test section, tests in `src/engine/*.test.ts`
-- Remaining TODOs in `docs/TODO.md`: ApexCharts, Papa Parse, storage indicator, maskable icon, success toasts, virtual scrolling, keyboard shortcuts, debug system removal
+- `Budget.startingBalance` (was `totalBudget`) — `number | null`, null means no balance tracking
+- `Expense.type` — `'income' | 'expense'`, defaults to `'expense'`
+- DB schema v3: migration renames totalBudget → startingBalance, adds type to expenses
+- Projection engine: `monthlyTotals` = expenses only, `monthlyIncome` = income only, `monthlyNet` = income - expenses
+- Cashflow engine: takes starting balance + projection → running balance with zero-crossing date
+- 4 tabs: Expenses, Projected, Cashflow, Compare
+- Route: `/budget/:id/cashflow` → `CashflowTab.vue`
+- All `makeExpense` test helpers now include `type: 'expense'`

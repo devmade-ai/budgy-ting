@@ -35,6 +35,7 @@ onMounted(async () => {
 const tabs = [
   { name: 'budget-expenses', label: 'Expenses', icon: 'i-lucide-list' },
   { name: 'budget-projected', label: 'Projected', icon: 'i-lucide-trending-up' },
+  { name: 'budget-cashflow', label: 'Cashflow', icon: 'i-lucide-wallet' },
   { name: 'budget-compare', label: 'Compare', icon: 'i-lucide-bar-chart-3' },
 ] as const
 
