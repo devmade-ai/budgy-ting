@@ -2,11 +2,17 @@
 /**
  * Requirement: Step 3 of import wizard — match review with pagination
  * Approach: Extracted from ImportWizardView to reduce component size
+ *
+ * Requirement: Allow creating new income/expense lines during import review
+ * Approach: Inline modal form pre-filled from imported row data, emits to parent for DB save
+ * Alternatives:
+ *   - Navigate away to expense form: Rejected — loses import wizard state
+ *   - Reuse full ExpenseForm component: Rejected — too heavy for inline use, needs budget context wiring
  */
 
 import { ref, computed } from 'vue'
 import { formatAmount } from '@/composables/useFormat'
-import type { Budget, Expense } from '@/types/models'
+import type { Budget, Expense, Frequency, LineType } from '@/types/models'
 import type { MatchResult } from '@/engine/matching'
 
 const props = defineProps<{
@@ -20,6 +26,14 @@ const props = defineProps<{
 const emit = defineEmits<{
   confirm: []
   back: []
+  'create-expense': [data: {
+    matchIndex: number
+    description: string
+    category: string
+    amount: number
+    frequency: Frequency
+    type: LineType
+  }]
 }>()
 
 const MATCHES_PER_PAGE = 50
@@ -81,6 +95,81 @@ function confidenceColor(c: string): string {
     unmatched: 'bg-gray-100 text-gray-600',
   }
   return colors[c] ?? 'bg-gray-100 text-gray-600'
+}
+
+// ── "Create new" inline form ──
+
+const creatingForIndex = ref<number | null>(null)
+const newType = ref<LineType>('expense')
+const newDescription = ref('')
+const newCategory = ref('')
+const newAmount = ref('')
+const newFrequency = ref<Frequency>('monthly')
+const newErrors = ref<Record<string, string>>({})
+
+const frequencies: { value: Frequency; label: string }[] = [
+  { value: 'once-off', label: 'Once-off' },
+  { value: 'daily', label: 'Daily' },
+  { value: 'weekly', label: 'Weekly' },
+  { value: 'monthly', label: 'Monthly' },
+  { value: 'quarterly', label: 'Quarterly' },
+  { value: 'annually', label: 'Annually' },
+]
+
+function openCreateForm(matchIndex: number) {
+  const row = props.matchResults[matchIndex]?.importedRow
+  if (!row) return
+
+  creatingForIndex.value = matchIndex
+  // Pre-fill from imported row data
+  newDescription.value = row.description || ''
+  newCategory.value = row.category || ''
+  newAmount.value = row.amount ? String(row.amount) : ''
+  // Use CSV sign as hint: negative typically means income in bank statements
+  newType.value = row.originalSign === 'negative' ? 'income' : 'expense'
+  newFrequency.value = 'monthly'
+  newErrors.value = {}
+}
+
+function cancelCreate() {
+  creatingForIndex.value = null
+  newErrors.value = {}
+}
+
+function submitCreate() {
+  if (creatingForIndex.value === null) return
+
+  const errors: Record<string, string> = {}
+  if (!newDescription.value.trim()) errors['description'] = 'Description is required'
+  if (!newCategory.value.trim()) errors['category'] = 'Category is required'
+  const parsedAmount = parseFloat(newAmount.value)
+  if (!newAmount.value || isNaN(parsedAmount) || parsedAmount <= 0) {
+    errors['amount'] = 'Enter a positive amount'
+  }
+  if (Object.keys(errors).length > 0) {
+    newErrors.value = errors
+    return
+  }
+
+  emit('create-expense', {
+    matchIndex: creatingForIndex.value,
+    description: newDescription.value.trim(),
+    category: newCategory.value.trim(),
+    amount: parsedAmount,
+    frequency: newFrequency.value,
+    type: newType.value,
+  })
+
+  creatingForIndex.value = null
+  newErrors.value = {}
+}
+
+function handleDropdownChange(matchIndex: number, value: string) {
+  if (value === '__create__') {
+    openCreateForm(matchIndex)
+  } else {
+    reassignExpense(matchIndex, value || null)
+  }
 }
 </script>
 
@@ -169,9 +258,10 @@ function confidenceColor(c: string): string {
               class="text-xs border border-gray-200 rounded px-1 py-0.5"
               aria-label="Assign to expense"
               :value="result.matchedExpense?.id ?? ''"
-              @change="reassignExpense(matchPage * MATCHES_PER_PAGE + i, ($event.target as HTMLSelectElement).value || null)"
+              @change="handleDropdownChange(matchPage * MATCHES_PER_PAGE + i, ($event.target as HTMLSelectElement).value)"
             >
               <option value="">Unbudgeted</option>
+              <option value="__create__">+ Create new...</option>
               <option
                 v-for="exp in expenses"
                 :key="exp.id"
@@ -228,5 +318,125 @@ function confidenceColor(c: string): string {
         Back
       </button>
     </div>
+
+    <!-- Create new income/expense modal -->
+    <Teleport to="body">
+      <div
+        v-if="creatingForIndex !== null"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+        @click.self="cancelCreate"
+      >
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-sm mx-4 p-5" role="dialog" aria-label="Create new income or expense">
+          <h2 class="text-lg font-semibold text-gray-900 mb-4">Create new line</h2>
+
+          <!-- Type toggle -->
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Type</label>
+            <div class="flex gap-2">
+              <button
+                type="button"
+                class="btn flex-1 text-sm"
+                :class="newType === 'expense'
+                  ? 'bg-red-50 text-red-700 border border-red-300'
+                  : 'bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100'"
+                @click="newType = 'expense'"
+              >
+                Expense
+              </button>
+              <button
+                type="button"
+                class="btn flex-1 text-sm"
+                :class="newType === 'income'
+                  ? 'bg-green-50 text-green-700 border border-green-300'
+                  : 'bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100'"
+                @click="newType = 'income'"
+              >
+                Income
+              </button>
+            </div>
+          </div>
+
+          <!-- Description -->
+          <div class="mb-3">
+            <label class="block text-sm font-medium text-gray-700 mb-1" for="new-desc">Description</label>
+            <input
+              id="new-desc"
+              v-model="newDescription"
+              type="text"
+              class="input-field text-sm"
+              placeholder="e.g. Salary, Netflix"
+            />
+            <p v-if="newErrors['description']" class="text-xs text-red-500 mt-1">{{ newErrors['description'] }}</p>
+          </div>
+
+          <!-- Category -->
+          <div class="mb-3">
+            <label class="block text-sm font-medium text-gray-700 mb-1" for="new-cat">Category</label>
+            <input
+              id="new-cat"
+              v-model="newCategory"
+              type="text"
+              class="input-field text-sm"
+              placeholder="e.g. Income, Entertainment"
+            />
+            <p v-if="newErrors['category']" class="text-xs text-red-500 mt-1">{{ newErrors['category'] }}</p>
+          </div>
+
+          <!-- Amount -->
+          <div class="mb-3">
+            <label class="block text-sm font-medium text-gray-700 mb-1" for="new-amount">
+              Amount ({{ budget.currencyLabel }})
+            </label>
+            <input
+              id="new-amount"
+              v-model="newAmount"
+              type="number"
+              step="0.01"
+              min="0.01"
+              class="input-field text-sm"
+              placeholder="0.00"
+            />
+            <p v-if="newErrors['amount']" class="text-xs text-red-500 mt-1">{{ newErrors['amount'] }}</p>
+          </div>
+
+          <!-- Frequency -->
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">How often?</label>
+            <div class="grid grid-cols-3 gap-1.5">
+              <button
+                v-for="f in frequencies"
+                :key="f.value"
+                type="button"
+                class="btn text-xs py-1.5"
+                :class="newFrequency === f.value
+                  ? 'bg-brand-50 text-brand-700 border border-brand-300'
+                  : 'bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100'"
+                @click="newFrequency = f.value"
+              >
+                {{ f.label }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="flex gap-3">
+            <button
+              type="button"
+              class="btn-primary flex-1 text-sm"
+              @click="submitCreate"
+            >
+              Create &amp; assign
+            </button>
+            <button
+              type="button"
+              class="btn-secondary text-sm"
+              @click="cancelCreate"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>

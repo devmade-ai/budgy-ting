@@ -18,7 +18,7 @@ import ImportStepUpload from './import-steps/ImportStepUpload.vue'
 import ImportStepMapping from './import-steps/ImportStepMapping.vue'
 import ImportStepReview from './import-steps/ImportStepReview.vue'
 import ImportStepComplete from './import-steps/ImportStepComplete.vue'
-import type { Budget, Expense } from '@/types/models'
+import type { Budget, Expense, Frequency, LineType } from '@/types/models'
 import type { ParsedCSV } from '@/engine/csvParser'
 import type { MatchResult } from '@/engine/matching'
 
@@ -122,6 +122,53 @@ async function handleConfirmImport() {
   }
 }
 
+/**
+ * Requirement: Create a new income/expense line from the import review screen
+ * Approach: Save to DB, push to local expenses array, update match result to point to new expense
+ * Alternatives:
+ *   - Navigate to expense create page: Rejected — loses wizard state
+ */
+async function handleCreateExpense(data: {
+  matchIndex: number
+  description: string
+  category: string
+  amount: number
+  frequency: Frequency
+  type: LineType
+}) {
+  if (!budget.value) return
+
+  const now = nowISO()
+  const newExpense: Expense = {
+    id: useId(),
+    budgetId: budget.value.id,
+    description: data.description,
+    category: data.category,
+    amount: data.amount,
+    frequency: data.frequency,
+    type: data.type,
+    startDate: budget.value.startDate,
+    endDate: null,
+    createdAt: now,
+    updatedAt: now,
+  }
+
+  try {
+    await db.expenses.add(newExpense)
+    expenses.value.push(newExpense)
+
+    // Assign the imported row to the newly created expense
+    const result = matchResults.value[data.matchIndex]
+    if (result) {
+      result.matchedExpense = newExpense
+      result.confidence = 'manual'
+      result.approved = true
+    }
+  } catch {
+    error.value = 'Couldn\'t create the new line. Please try again.'
+  }
+}
+
 function goBack() {
   if (step.value > 1) {
     step.value = (step.value - 1) as 1 | 2 | 3
@@ -200,6 +247,7 @@ function finish() {
         :skipped-rows="skippedRows"
         :saving="saving"
         @confirm="handleConfirmImport"
+        @create-expense="handleCreateExpense"
         @back="step = 2"
       />
 

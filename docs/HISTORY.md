@@ -4,6 +4,13 @@
 
 ## 2026-02-25
 
+- **Import Review — Create New Income/Expense:**
+  - Added "Create new..." option to the reassign dropdown on each import review row
+  - Modal form with type toggle (income/expense), description, category, amount, frequency
+  - Pre-fills from imported row data (description, category, amount, originalSign → type hint)
+  - Creates expense in DB immediately, adds to local list, auto-assigns to the import row
+  - ImportStepReview emits `create-expense` → ImportWizardView handles DB save + state update
+
 - **Type-Aware Actuals Splitting:**
   - All engines now classify actuals as income or expense via `actual.expenseId → expense.type` lookup
   - Cashflow engine: `actualSpend` replaced with `actualIncome`/`actualExpenses`; effective net independently uses actual values where available
