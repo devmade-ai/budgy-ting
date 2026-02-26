@@ -118,17 +118,45 @@ const browser = ref<BrowserType>('unknown')
 const dismissed = ref(false)
 const installed = ref(false)
 
+// Consume beforeinstallprompt event that may have been captured by the inline
+// script in index.html before Vue modules loaded (repeat-visit race condition).
+// See: glow-props CLAUDE.md "PWA Install Prompt Race Condition"
+function consumeEarlyCapturedEvent(): (Event & { prompt: () => Promise<void> }) | null {
+  const win = window as unknown as Record<string, unknown>
+  const captured = win.__pwaInstallPromptEvent as
+    | (Event & { prompt: () => Promise<void> })
+    | undefined
+  if (captured) {
+    delete win.__pwaInstallPromptEvent
+    return captured
+  }
+  return null
+}
+
 // Set up global listeners once at module load
 if (typeof window !== 'undefined') {
   browser.value = detectBrowser()
   dismissed.value = isDismissed()
   installed.value = isStandalone()
 
+  // Check for early-captured event first (repeat visit with cached SW)
+  const early = consumeEarlyCapturedEvent()
+  if (early) {
+    deferredPrompt = early
+    canNativeInstall.value = true
+    debugLog('pwa', 'info', 'beforeinstallprompt consumed from early capture', {
+      browser: browser.value,
+    })
+  }
+
+  // Fallback listener for first-visit case (SW registers after mount)
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault()
     deferredPrompt = e as Event & { prompt: () => Promise<void> }
     canNativeInstall.value = true
-    debugLog('pwa', 'info', 'beforeinstallprompt captured', { browser: browser.value })
+    debugLog('pwa', 'info', 'beforeinstallprompt captured via listener', {
+      browser: browser.value,
+    })
   })
 
   window.addEventListener('appinstalled', () => {
