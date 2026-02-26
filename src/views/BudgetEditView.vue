@@ -3,11 +3,15 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { db } from '@/db'
 import { nowISO } from '@/composables/useTimestamp'
+import { useToast } from '@/composables/useToast'
 import BudgetForm from '@/components/BudgetForm.vue'
+import ErrorAlert from '@/components/ErrorAlert.vue'
+import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import type { Budget, PeriodType } from '@/types/models'
 
 const props = defineProps<{ id: string }>()
 const router = useRouter()
+const { show: showToast } = useToast()
 
 const budget = ref<Budget | null>(null)
 const loading = ref(true)
@@ -34,6 +38,7 @@ async function handleSubmit(data: {
   periodType: PeriodType
   startDate: string
   endDate: string | null
+  startingBalance: number | null
 }) {
   try {
     await db.budgets.update(props.id, {
@@ -42,9 +47,11 @@ async function handleSubmit(data: {
       periodType: data.periodType,
       startDate: data.startDate,
       endDate: data.endDate,
+      startingBalance: data.startingBalance,
       updatedAt: nowISO(),
     })
 
+    showToast('Budget saved')
     router.push({ name: 'budget-detail', params: { id: props.id } })
   } catch {
     error.value = 'Couldn\'t save changes. Please try again.'
@@ -66,14 +73,9 @@ function handleCancel() {
       Back
     </button>
 
-    <div v-if="error" class="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-center justify-between">
-      <span>{{ error }}</span>
-      <button class="text-red-400 hover:text-red-600" @click="error = ''">
-        <span class="i-lucide-x" />
-      </button>
-    </div>
+    <ErrorAlert v-if="error" :message="error" @dismiss="error = ''" />
 
-    <div v-if="loading" class="text-center py-12 text-gray-400">Loading...</div>
+    <LoadingSpinner v-if="loading" />
 
     <template v-else-if="budget">
       <h1 class="page-title mb-6">Edit Budget</h1>

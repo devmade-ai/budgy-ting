@@ -8,7 +8,8 @@
 
 import { ref } from 'vue'
 
-const STORAGE_KEY = 'budgy-ting-tutorial-dismissed'
+// Namespace all localStorage keys with 'budgy-ting:' prefix (colon separator)
+const STORAGE_KEY = 'budgy-ting:tutorial-dismissed'
 
 /** Module-level shared state (same pattern as usePWAInstall) */
 const showTutorial = ref(false)

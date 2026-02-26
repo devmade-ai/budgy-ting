@@ -14,6 +14,9 @@ export type Frequency =
   | 'quarterly'
   | 'annually'
 
+/** Whether an expense line represents money coming in or going out */
+export type LineType = 'income' | 'expense'
+
 export type MatchConfidence = 'high' | 'medium' | 'low' | 'manual' | 'unmatched'
 
 export interface Budget {
@@ -23,6 +26,8 @@ export interface Budget {
   periodType: PeriodType
   startDate: string
   endDate: string | null
+  /** Starting balance (e.g. "I have R100k right now"). Null = no balance tracking. */
+  startingBalance: number | null
   createdAt: string
   updatedAt: string
 }
@@ -34,6 +39,8 @@ export interface Expense {
   category: string
   amount: number
   frequency: Frequency
+  /** Whether this is income (money in) or expense (money out). Defaults to 'expense'. */
+  type: LineType
   startDate: string
   endDate: string | null
   createdAt: string

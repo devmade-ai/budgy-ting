@@ -4,6 +4,9 @@
  * Approach: Reusable modal dialog with configurable title, message, and actions
  */
 
+import { ref } from 'vue'
+import { useDialogA11y } from '@/composables/useDialogA11y'
+
 defineProps<{
   title: string
   message: string
@@ -15,6 +18,9 @@ const emit = defineEmits<{
   confirm: []
   cancel: []
 }>()
+
+const dialogRef = ref<HTMLElement | null>(null)
+useDialogA11y(dialogRef, () => emit('cancel'))
 </script>
 
 <template>
@@ -23,11 +29,18 @@ const emit = defineEmits<{
       <!-- Backdrop -->
       <div
         class="absolute inset-0 bg-black/40"
+        aria-hidden="true"
         @click="emit('cancel')"
       />
 
       <!-- Dialog -->
-      <div class="relative bg-white rounded-xl shadow-xl max-w-sm w-full p-6">
+      <div
+        ref="dialogRef"
+        role="alertdialog"
+        :aria-label="title"
+        aria-modal="true"
+        class="relative bg-white rounded-xl shadow-xl max-w-sm w-full p-6"
+      >
         <h3 class="text-lg font-semibold text-gray-900 mb-2">{{ title }}</h3>
         <p class="text-sm text-gray-600 mb-6">{{ message }}</p>
         <div class="flex gap-3">

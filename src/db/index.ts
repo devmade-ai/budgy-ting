@@ -29,4 +29,48 @@ db.version(1).stores({
   categoryCache: 'category, lastUsed',
 })
 
+// Schema v2: add totalBudget field (envelope mode)
+// Requirement: Users can set a fixed total budget to track remaining balance
+// Approach: Dexie upgrade handler — set null for existing budgets (no envelope by default)
+// Alternatives:
+//   - New table for envelope data: Rejected — totalBudget belongs on the budget record
+//   - Breaking migration: Rejected — must preserve existing user data
+db.version(2).stores({
+  budgets: 'id, name, createdAt',
+  expenses: 'id, budgetId, category, createdAt',
+  actuals: 'id, budgetId, expenseId, category, date',
+  categoryCache: 'category, lastUsed',
+}).upgrade((tx) => {
+  return tx.table('budgets').toCollection().modify((budget) => {
+    if (budget.totalBudget === undefined) {
+      budget.totalBudget = null
+    }
+  })
+})
+
+// Schema v3: cashflow pivot — rename totalBudget → startingBalance, add type to expenses
+// Requirement: Pivot from budgeting app to cashflow app with income tracking
+// Approach: Rename field on budgets, add 'type' field defaulting to 'expense' on expenses
+// Alternatives:
+//   - Separate income table: Rejected — income uses same frequency/amount model as expenses
+//   - Keep totalBudget name: Rejected — "starting balance" reflects cashflow semantics better
+db.version(3).stores({
+  budgets: 'id, name, createdAt',
+  expenses: 'id, budgetId, category, type, createdAt',
+  actuals: 'id, budgetId, expenseId, category, date',
+  categoryCache: 'category, lastUsed',
+}).upgrade((tx) => {
+  return Promise.all([
+    tx.table('budgets').toCollection().modify((budget) => {
+      budget.startingBalance = budget.totalBudget ?? null
+      delete budget.totalBudget
+    }),
+    tx.table('expenses').toCollection().modify((expense) => {
+      if (expense.type === undefined) {
+        expense.type = 'expense'
+      }
+    }),
+  ])
+})
+
 export { db }

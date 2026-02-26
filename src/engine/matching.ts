@@ -19,6 +19,12 @@ export interface ImportedRow {
   category: string
   description: string
   originalRow: Record<string, string>
+  /**
+   * Original sign from the CSV before Math.abs().
+   * Negative typically means a credit/income in bank statements.
+   * Used as a hint for type-aware matching.
+   */
+  originalSign?: 'positive' | 'negative'
 }
 
 export interface MatchResult {
@@ -42,12 +48,27 @@ export function matchImportedRows(
   const unmatchedRows = [...rows]
   const matchedIndices = new Set<number>()
 
-  // Pass 1: High confidence — exact category match + exact amount
+  // Type-aware matching: when the imported row has an original sign hint,
+  // prefer matching to expenses of the corresponding type.
+  // Negative amounts in bank statements typically mean credits/income.
+  function isTypeCompatible(row: ImportedRow, exp: Expense): boolean {
+    if (!row.originalSign) return true // no hint, match anything
+    const expectedType = row.originalSign === 'negative' ? 'income' : 'expense'
+    return (exp.type ?? 'expense') === expectedType
+  }
+
+  // Pass 1: High confidence — exact category match + exact amount + type-compatible
   for (let i = 0; i < unmatchedRows.length; i++) {
     if (matchedIndices.has(i)) continue
     const row = unmatchedRows[i]!
 
+    // Try type-compatible first, then fall back to any type
     const match = expenses.find((exp) =>
+      !usedExpenses.has(`${exp.id}-${row.date}`) &&
+      exp.category.toLowerCase() === row.category.toLowerCase() &&
+      Math.abs(exp.amount - row.amount) < 0.01 &&
+      isTypeCompatible(row, exp)
+    ) ?? expenses.find((exp) =>
       !usedExpenses.has(`${exp.id}-${row.date}`) &&
       exp.category.toLowerCase() === row.category.toLowerCase() &&
       Math.abs(exp.amount - row.amount) < 0.01
@@ -70,17 +91,24 @@ export function matchImportedRows(
     if (matchedIndices.has(i)) continue
     const row = unmatchedRows[i]!
 
-    const match = expenses.find((exp) => {
+    const matchFn = (exp: Expense, requireTypeCompat: boolean) => {
       if (usedExpenses.has(`${exp.id}-${row.date}`)) return false
       if (Math.abs(exp.amount - row.amount) >= 0.01) return false
+      if (requireTypeCompat && !isTypeCompatible(row, exp)) return false
 
-      // Fuzzy match on category or description
-      const score = Math.min(
+      // Require best-of-both: use Math.max so BOTH category and description
+      // must be reasonable, not just one. Math.min was a bug — it let garbage
+      // descriptions through as long as category was a perfect match.
+      const score = Math.max(
         fuzzyScore(row.category, exp.category),
         fuzzyScore(row.description, exp.description),
       )
-      return score <= 0.3
-    })
+      return score <= 0.4
+    }
+
+    // Type-compatible first, then fall back
+    const match = expenses.find((exp) => matchFn(exp, true))
+      ?? expenses.find((exp) => matchFn(exp, false))
 
     if (match) {
       results.push({
@@ -100,15 +128,19 @@ export function matchImportedRows(
     const row = unmatchedRows[i]!
     const rowMonth = row.date.slice(0, 7)
 
-    const match = expenses.find((exp) => {
+    const matchFn = (exp: Expense, requireTypeCompat: boolean) => {
       if (usedExpenses.has(`${exp.id}-${row.date}`)) return false
       if (Math.abs(exp.amount - row.amount) >= 0.01) return false
+      if (requireTypeCompat && !isTypeCompatible(row, exp)) return false
 
       // Check expense is active in the same month
       const expStartMonth = exp.startDate.slice(0, 7)
       const expEndMonth = exp.endDate ? exp.endDate.slice(0, 7) : '9999-12'
       return rowMonth >= expStartMonth && rowMonth <= expEndMonth
-    })
+    }
+
+    const match = expenses.find((exp) => matchFn(exp, true))
+      ?? expenses.find((exp) => matchFn(exp, false))
 
     if (match) {
       results.push({
@@ -137,11 +169,17 @@ export function matchImportedRows(
 }
 
 /**
- * Simple fuzzy scoring (0 = perfect match, 1 = no match).
- * Approximates Fuse.js behavior for basic cases.
+ * Fuzzy scoring using Levenshtein distance (0 = perfect match, 1 = no match).
  * Will be replaced by Fuse.js when available.
+ *
+ * Requirement: Score how similar two strings are for matching imported rows
+ * Approach: Levenshtein distance normalized by max string length
+ * Alternatives:
+ *   - Character presence check: Rejected — order-blind, "abc" vs "cba" scored as perfect
+ *   - Jaccard index on character sets: Rejected — loses positional information
  */
 function fuzzyScore(a: string, b: string): number {
+  if (!a && !b) return 0
   if (!a || !b) return 1
 
   const al = a.toLowerCase().trim()
@@ -150,19 +188,29 @@ function fuzzyScore(a: string, b: string): number {
   if (al === bl) return 0
   if (al.includes(bl) || bl.includes(al)) return 0.1
 
-  // Simple character-by-character comparison (normalized Levenshtein-like)
-  const maxLen = Math.max(al.length, bl.length)
+  const m = al.length
+  const n = bl.length
+  const maxLen = Math.max(m, n)
   if (maxLen === 0) return 0
 
-  let matches = 0
-  const shorter = al.length <= bl.length ? al : bl
-  const longer = al.length > bl.length ? al : bl
+  // Levenshtein with single-row DP for memory efficiency
+  let prev: number[] = Array.from({ length: n + 1 }, (_, j) => j)
+  let curr: number[] = new Array(n + 1)
 
-  for (const char of shorter) {
-    if (longer.includes(char)) matches++
+  for (let i = 1; i <= m; i++) {
+    curr[0] = i
+    for (let j = 1; j <= n; j++) {
+      const cost = al[i - 1] === bl[j - 1] ? 0 : 1
+      curr[j] = Math.min(
+        prev[j]! + 1,      // deletion
+        curr[j - 1]! + 1,  // insertion
+        prev[j - 1]! + cost // substitution
+      )
+    }
+    ;[prev, curr] = [curr, prev]
   }
 
-  return 1 - (matches / maxLen)
+  return prev[n]! / maxLen
 }
 
 /**

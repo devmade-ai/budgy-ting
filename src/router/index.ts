@@ -59,6 +59,11 @@ const router = createRouter({
           name: 'budget-compare',
           component: () => import('@/views/CompareTab.vue'),
         },
+        {
+          path: 'cashflow',
+          name: 'budget-cashflow',
+          component: () => import('@/views/CashflowTab.vue'),
+        },
       ],
     },
     {
@@ -78,6 +83,11 @@ const router = createRouter({
       name: 'import-actuals',
       component: () => import('@/views/ImportWizardView.vue'),
       props: true,
+    },
+    {
+      path: '/:pathMatch(.*)*',
+      name: 'not-found',
+      redirect: { name: 'budget-list' },
     },
   ],
 })

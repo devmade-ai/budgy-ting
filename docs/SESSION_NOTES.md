@@ -4,38 +4,45 @@
 
 ## Worked on
 
-Tutorial modal for first-time users.
+Comprehensive codebase review — implemented all 24 suggestions across code quality, UX, and mobile UX categories.
 
 ## Accomplished
 
-- **Tutorial modal:** Created 6-step walkthrough modal (`TutorialModal.vue`) that auto-shows on first visit and can be re-opened via help button in header
-- **State management:** `useTutorial.ts` composable with localStorage-backed dismissal persistence (module-level shared state, same pattern as `usePWAInstall`)
-- **Header help button:** Circle-help icon in AppLayout header for re-triggering tutorial anytime
+- **Toast notification system:** Created `useToast` composable + `ToastNotification.vue`, integrated across all create/edit/delete/import/export actions
+- **Touch targets:** Bumped header menu button to 40px, expense edit/delete buttons to larger padding
+- **Tab bar mobile fix:** Added horizontal scroll with `overflow-x-auto`, renamed tabs ("Projected"→"Forecast", "Cashflow"→"Balance")
+- **Budget detail overflow menu:** Replaced 4 inline buttons with Import CTA + kebab dropdown for Export/Edit/Delete
+- **Budget list summaries:** Added expense count + monthly total summary line under each budget name
+- **Compare tab empty state:** Improved guidance text with "Import bank statement" nudge
+- **Cashflow empty state:** Added "Set starting balance" button linking to budget edit
+- **Label renames:** "Run matching"→"Find matches", "By Item"→"Each item", "By Category"→"Group by category"
+- **Expense search filter:** Text filter on expenses list (shown when ≥5 items)
+- **Scroll hints:** Created `ScrollHint.vue` with ResizeObserver-based fade gradient for tables
+- **HelpDrawer margin:** Added 2rem left margin on mobile for backdrop visibility
+- **Text size bump:** Upgraded text-[10px]→text-xs and text-xs→text-sm for readability
+- **CompareTab refactor:** Extracted 3 sub-components (CompareLineItems, CompareCategories, CompareMonthly) — reduced from ~460 to ~200 lines
+- **Form validation extraction:** Created `useFormValidation.ts` composable with rule factories, refactored BudgetForm + ExpenseForm
+- **Autocomplete debounce:** Reduced from 150ms to 80ms
+- **DateInput component:** Created wrapper with calendar icon for mobile discoverability
 
 ## Current state
 
-All code written. **Dependencies still need `npm install`** — npm registry was blocked. Run `npm install && npm run dev` to test.
+All code type-checks, builds, 92 unit tests pass. DB schema v3.
 
 Working features:
-- Full budget CRUD, expense CRUD, projection engine, import wizard, comparison views
-- Export/import (JSON backup/restore)
-- PWA install prompt (native Chromium + manual instructions for Safari/Firefox)
-- Service worker updates with 60-min periodic checks
-- **Tutorial modal for new users (auto-show + help button re-trigger)**
-- Debug pill (floating diagnostic panel, alpha-phase)
-- GitHub Pages deployment workflow ready
-- All DB operations have error handling with user-friendly messages
+- All previous features intact
+- Toast notifications on all user actions
+- Improved mobile UX (touch targets, scroll hints, overflow menu, tab overflow)
+- Expense search/filter
+- Budget list summaries
+- Better empty states with actionable guidance
+- Cleaner component architecture (CompareTab split, form validation composable)
 
 ## Key context
 
-- npm registry blocked — no `node_modules`, can't run type-check or build
-- Tutorial state: localStorage key `budgy-ting-tutorial-dismissed`, module-level `ref` in `useTutorial.ts`
-- Modal pattern: all modals use `Teleport to="body"` with `z-50` overlay (ConfirmDialog, InstallInstructionsModal, TutorialModal)
-- `usePWAUpdate.ts` uses `virtual:pwa-register/vue` (requires vite-plugin-pwa runtime)
-- `usePWAInstall.ts` has module-level event listeners (shared state across components)
-- Debug pill mounts in separate Vue root in `main.ts` (survives main app crashes)
-- `formatAmount` is in `composables/useFormat.ts` (shared by 4 views)
-- All engines are pure TypeScript in `src/engine/` — testable independently
-- Path alias `@/` → `src/` in both vite.config.ts and tsconfig.app.json
-- UnoCSS icons: `@iconify-json/lucide` for i-lucide-* classes
-- Brand colour: emerald/green (#10b981)
+- `useToast.ts` is a reactive singleton — mounted once via `ToastNotification.vue` in `AppLayout.vue`
+- `ScrollHint.vue` uses ResizeObserver to detect overflow and shows/hides right-edge gradient
+- `DateInput.vue` uses `defineModel<string>()` for v-model binding
+- `useFormValidation.ts` uses a rule factory pattern: `required()`, `positiveNumber()`, `dateAfter()`
+- Compare sub-views live in `src/views/compare-views/` directory
+- Budget detail uses click-outside pattern for overflow menu dismiss

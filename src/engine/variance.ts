@@ -58,9 +58,12 @@ export interface ComparisonResult {
   totalVariance: number
 }
 
+// Half-cent rounding tolerance — amounts below this are treated as zero variance.
+// Display-level tolerance (e.g. 5% threshold for colour coding) is handled in CompareTab.
+const ROUNDING_TOLERANCE = 0.005
+
 function getDirection(variance: number): 'over' | 'under' | 'neutral' {
-  if (Math.abs(variance) < 0.005) return 'neutral'
-  // Tolerance of 5% is handled at display level, not calculation
+  if (Math.abs(variance) < ROUNDING_TOLERANCE) return 'neutral'
   return variance > 0 ? 'over' : 'under'
 }
 
@@ -85,8 +88,19 @@ export function calculateComparison(
     actualsByExpense.get(key)!.push(actual)
   }
 
-  // ── Line item variance ──
-  const lineItems: LineItemVariance[] = projection.rows.map((row) => {
+  // Build expense type lookup to filter out income-matched actuals
+  const typeLookup = new Map<string, 'income' | 'expense'>()
+  for (const exp of expenses) {
+    typeLookup.set(exp.id, exp.type ?? 'expense')
+  }
+  const expenseActuals = actuals.filter((a) => {
+    const type = a.expenseId ? (typeLookup.get(a.expenseId) ?? 'expense') : 'expense'
+    return type === 'expense'
+  })
+
+  // ── Line item variance (expense lines only — income lines excluded) ──
+  const expenseRows = projection.rows.filter((r) => r.type !== 'income')
+  const lineItems: LineItemVariance[] = expenseRows.map((row) => {
     const matchedActuals = actualsByExpense.get(row.expenseId) ?? []
     const actualTotal = matchedActuals.reduce((sum, a) => sum + a.amount, 0)
     const variance = actualTotal - row.total
@@ -103,16 +117,16 @@ export function calculateComparison(
     }
   })
 
-  // ── Category variance ──
+  // ── Category variance (expense categories only) ──
   const categoryMap = new Map<string, { budgeted: number; actual: number }>()
 
-  for (const row of projection.rows) {
+  for (const row of expenseRows) {
     const cat = row.category
     if (!categoryMap.has(cat)) categoryMap.set(cat, { budgeted: 0, actual: 0 })
     categoryMap.get(cat)!.budgeted += row.total
   }
 
-  for (const actual of actuals) {
+  for (const actual of expenseActuals) {
     if (!actual.expenseId) continue // unbudgeted, handled separately
     const expense = expenses.find((e) => e.id === actual.expenseId)
     if (!expense) continue
@@ -136,11 +150,13 @@ export function calculateComparison(
     })
 
   // ── Monthly variance ──
+  // Comparison tracks expense lines only — income actuals are excluded so
+  // a salary deposit doesn't inflate "actual spend" in the monthly breakdown.
   const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
-  // Group actuals by month
+  // Group expense-only actuals by month
   const actualsByMonth = new Map<string, number>()
-  for (const actual of actuals) {
+  for (const actual of expenseActuals) {
     const month = actual.date.slice(0, 7)
     actualsByMonth.set(month, (actualsByMonth.get(month) ?? 0) + actual.amount)
   }
@@ -151,9 +167,9 @@ export function calculateComparison(
     const hasActuals = actualsByMonth.has(slot.month)
     const variance = actualAmount - projected
 
-    const m = parseInt(slot.month.split('-')[1]!, 10)
-    const y = slot.month.split('-')[0]!.slice(2)
-    const monthLabel = `${monthLabels[m - 1]} ${y}`
+    const m = slot.monthNum
+    const y = String(slot.year).slice(2)
+    const monthLabel = `${monthLabels[m - 1] ?? 'Unknown'} ${y}`
 
     return {
       month: slot.month,
@@ -175,9 +191,9 @@ export function calculateComparison(
     description: a.description,
   }))
 
-  // ── Totals ──
+  // ── Totals (expense-only — income actuals excluded) ──
   const totalBudgeted = projection.grandTotal
-  const totalActual = actuals.reduce((sum, a) => sum + a.amount, 0)
+  const totalActual = expenseActuals.reduce((sum, a) => sum + a.amount, 0)
   const totalVariance = totalActual - totalBudgeted
 
   return {

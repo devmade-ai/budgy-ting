@@ -4,9 +4,11 @@
  * Approach: Reusable form with all expense fields, autocomplete dropdown for category
  */
 
-import { ref, computed, watch } from 'vue'
+import { ref, computed } from 'vue'
 import { useCategoryAutocomplete } from '@/composables/useCategoryAutocomplete'
-import type { Budget, Expense, Frequency } from '@/types/models'
+import { useFormValidation, required, positiveNumber, dateAfter } from '@/composables/useFormValidation'
+import DateInput from '@/components/DateInput.vue'
+import type { Budget, Expense, Frequency, LineType } from '@/types/models'
 
 const props = defineProps<{
   budget: Budget
@@ -19,12 +21,14 @@ const emit = defineEmits<{
     category: string
     amount: number
     frequency: Frequency
+    type: LineType
     startDate: string
     endDate: string | null
   }]
   cancel: []
 }>()
 
+const lineType = ref<LineType>(props.expense?.type ?? 'expense')
 const description = ref(props.expense?.description ?? '')
 const amount = ref(props.expense?.amount?.toString() ?? '')
 const frequency = ref<Frequency>(props.expense?.frequency ?? 'monthly')
@@ -45,35 +49,17 @@ const frequencies: { value: Frequency; label: string }[] = [
   { value: 'annually', label: 'Annually' },
 ]
 
-const errors = ref<Record<string, string>>({})
-
-watch([description, categoryQuery, amount, startDate], () => {
-  errors.value = {}
-})
-
-function validate(): boolean {
-  const e: Record<string, string> = {}
-
-  if (!description.value.trim()) e['description'] = 'Description is required'
-  if (!categoryQuery.value.trim()) e['category'] = 'Category is required'
-
-  const numAmount = parseFloat(amount.value)
-  if (!amount.value || isNaN(numAmount) || numAmount <= 0) {
-    e['amount'] = 'Enter a positive amount'
-  }
-
-  if (!startDate.value) e['startDate'] = 'Start date is required'
-
-  if (endDate.value && startDate.value && endDate.value < startDate.value) {
-    e['endDate'] = 'End date must be after start date'
-  }
-
-  errors.value = e
-  return Object.keys(e).length === 0
-}
+const { errors, validate } = useFormValidation([description, categoryQuery, amount, startDate])
 
 function handleSubmit() {
-  if (!validate()) return
+  const valid = validate([
+    required('description', description, 'Description is required'),
+    required('category', categoryQuery, 'Category is required'),
+    positiveNumber('amount', amount),
+    required('startDate', startDate, 'Start date is required'),
+    dateAfter('endDate', startDate, endDate),
+  ])
+  if (!valid) return
 
   close()
 
@@ -82,22 +68,77 @@ function handleSubmit() {
     category: categoryQuery.value.trim(),
     amount: parseFloat(amount.value),
     frequency: frequency.value,
+    type: lineType.value,
     startDate: startDate.value,
     endDate: endDate.value || null,
   })
 }
 
+const BLUR_DELAY_MS = 150
+const highlightIndex = ref(-1)
+
 function handleCategoryBlur() {
-  window.setTimeout(() => close(), 150)
+  window.setTimeout(() => close(), BLUR_DELAY_MS)
+}
+
+function handleCategoryKeydown(e: KeyboardEvent) {
+  if (!isOpen.value || suggestions.value.length === 0) return
+
+  if (e.key === 'ArrowDown') {
+    e.preventDefault()
+    highlightIndex.value = Math.min(highlightIndex.value + 1, suggestions.value.length - 1)
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault()
+    highlightIndex.value = Math.max(highlightIndex.value - 1, 0)
+  } else if (e.key === 'Enter' && highlightIndex.value >= 0) {
+    e.preventDefault()
+    const selected = suggestions.value[highlightIndex.value]
+    if (selected) selectCategory(selected)
+  } else if (e.key === 'Escape') {
+    close()
+    highlightIndex.value = -1
+  }
 }
 
 function selectCategory(cat: string) {
   select(cat)
+  highlightIndex.value = -1
 }
 </script>
 
 <template>
   <form class="space-y-5" @submit.prevent="handleSubmit">
+    <!-- Income / Expense toggle -->
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-2">
+        Type
+      </label>
+      <div class="flex gap-2">
+        <button
+          type="button"
+          class="btn flex-1 text-sm"
+          :class="lineType === 'expense'
+            ? 'bg-red-50 text-red-700 border border-red-300'
+            : 'bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100'"
+          @click="lineType = 'expense'"
+        >
+          <span class="i-lucide-arrow-down-circle mr-1" />
+          Expense
+        </button>
+        <button
+          type="button"
+          class="btn flex-1 text-sm"
+          :class="lineType === 'income'
+            ? 'bg-green-50 text-green-700 border border-green-300'
+            : 'bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100'"
+          @click="lineType = 'income'"
+        >
+          <span class="i-lucide-arrow-up-circle mr-1" />
+          Income
+        </button>
+      </div>
+    </div>
+
     <!-- Description -->
     <div>
       <label class="block text-sm font-medium text-gray-700 mb-1" for="expense-desc">
@@ -128,19 +169,30 @@ function selectCategory(cat: string) {
         class="input-field"
         placeholder="e.g. Venue, Marketing, Software"
         autocomplete="off"
+        role="combobox"
+        :aria-expanded="isOpen"
+        aria-controls="category-listbox"
+        :aria-activedescendant="highlightIndex >= 0 ? `category-option-${highlightIndex}` : undefined"
         @focus="isOpen = suggestions.length > 0"
         @blur="handleCategoryBlur"
+        @keydown="handleCategoryKeydown"
       />
       <!-- Autocomplete dropdown -->
       <div
         v-if="isOpen"
+        id="category-listbox"
+        role="listbox"
         class="absolute z-20 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto"
       >
         <button
-          v-for="cat in suggestions"
+          v-for="(cat, idx) in suggestions"
+          :id="`category-option-${idx}`"
           :key="cat"
           type="button"
-          class="w-full text-left px-3 py-2 text-sm hover:bg-brand-50 transition-colors"
+          role="option"
+          :aria-selected="idx === highlightIndex"
+          class="w-full text-left px-3 py-2 text-sm transition-colors"
+          :class="idx === highlightIndex ? 'bg-brand-50 text-brand-700' : 'hover:bg-brand-50'"
           @mousedown.prevent="selectCategory(cat)"
         >
           {{ cat }}
@@ -197,12 +249,7 @@ function selectCategory(cat: string) {
         <label class="block text-sm font-medium text-gray-700 mb-1" for="expense-start">
           Start date
         </label>
-        <input
-          id="expense-start"
-          v-model="startDate"
-          type="date"
-          class="input-field"
-        />
+        <DateInput id="expense-start" v-model="startDate" />
         <p v-if="errors['startDate']" class="text-sm text-red-500 mt-1">
           {{ errors['startDate'] }}
         </p>
@@ -212,13 +259,7 @@ function selectCategory(cat: string) {
           End date
           <span class="text-gray-400 font-normal">(optional)</span>
         </label>
-        <input
-          id="expense-end"
-          v-model="endDate"
-          type="date"
-          class="input-field"
-          :min="startDate"
-        />
+        <DateInput id="expense-end" v-model="endDate" :min="startDate" />
         <p v-if="errors['endDate']" class="text-sm text-red-500 mt-1">
           {{ errors['endDate'] }}
         </p>
@@ -228,7 +269,7 @@ function selectCategory(cat: string) {
     <!-- Actions -->
     <div class="flex gap-3 pt-2">
       <button type="submit" class="btn-primary flex-1">
-        {{ isEditing ? 'Save changes' : 'Add expense' }}
+        {{ isEditing ? 'Save changes' : lineType === 'income' ? 'Add income' : 'Add expense' }}
       </button>
       <button type="button" class="btn-secondary" @click="emit('cancel')">
         Cancel

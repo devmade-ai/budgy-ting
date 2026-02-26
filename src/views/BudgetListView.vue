@@ -11,16 +11,50 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { db } from '@/db'
 import { validateImport, importBudget } from '@/engine/exportImport'
+import { useToast } from '@/composables/useToast'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
-import type { Budget } from '@/types/models'
+import ErrorAlert from '@/components/ErrorAlert.vue'
+import LoadingSpinner from '@/components/LoadingSpinner.vue'
+import EmptyState from '@/components/EmptyState.vue'
+import { formatAmount } from '@/composables/useFormat'
+import type { Budget, Expense } from '@/types/models'
 import type { ExportSchema } from '@/engine/exportImport'
 
 const router = useRouter()
+const { show: showToast } = useToast()
 const budgets = ref<Budget[]>([])
 const loading = ref(true)
 
+// Summary data per budget (expense count + monthly total)
+const budgetSummaries = ref<Record<string, { count: number; monthlyTotal: number }>>({})
+
+function monthlyEquivalent(exp: Expense): number {
+  if (exp.frequency === 'monthly') return exp.amount
+  if (exp.frequency === 'once-off') return exp.amount
+  if (exp.frequency === 'daily') return exp.amount * 30
+  if (exp.frequency === 'weekly') return exp.amount * 4.33
+  if (exp.frequency === 'quarterly') return exp.amount / 3
+  if (exp.frequency === 'annually') return exp.amount / 12
+  return 0
+}
+
+async function loadSummaries(budgetList: Budget[]) {
+  const summaries: Record<string, { count: number; monthlyTotal: number }> = {}
+  for (const b of budgetList) {
+    try {
+      const expenses = await db.expenses.where('budgetId').equals(b.id).toArray()
+      const monthlyTotal = expenses
+        .filter((e) => e.type !== 'income')
+        .reduce((sum, e) => sum + monthlyEquivalent(e), 0)
+      summaries[b.id] = { count: expenses.length, monthlyTotal }
+    } catch {
+      summaries[b.id] = { count: 0, monthlyTotal: 0 }
+    }
+  }
+  budgetSummaries.value = summaries
+}
+
 // Restore state
-const importMessage = ref('')
 const importError = ref('')
 const showReplaceConfirm = ref(false)
 const pendingImportData = ref<ExportSchema | null>(null)
@@ -31,6 +65,7 @@ const error = ref('')
 onMounted(async () => {
   try {
     budgets.value = await db.budgets.orderBy('createdAt').reverse().toArray()
+    loadSummaries(budgets.value)
   } catch {
     error.value = 'Couldn\'t load your budgets. Please refresh the page and try again.'
   } finally {
@@ -41,6 +76,7 @@ onMounted(async () => {
 async function refreshList() {
   try {
     budgets.value = await db.budgets.orderBy('createdAt').reverse().toArray()
+    loadSummaries(budgets.value)
   } catch {
     error.value = 'Couldn\'t refresh the list. Please refresh the page and try again.'
   }
@@ -59,7 +95,6 @@ function handleRestoreFile(event: Event) {
   const file = input.files?.[0]
   if (!file) return
 
-  importMessage.value = ''
   importError.value = ''
 
   const reader = new FileReader()
@@ -87,7 +122,7 @@ function handleRestoreFile(event: Event) {
         showReplaceConfirm.value = true
       } else {
         const importResult = await importBudget(result.data, 'merge')
-        importMessage.value = importResult.message
+        showToast(importResult.message)
         await refreshList()
       }
     } catch {
@@ -107,7 +142,7 @@ async function confirmReplace() {
   if (!pendingImportData.value) return
   try {
     const result = await importBudget(pendingImportData.value, 'replace')
-    importMessage.value = result.message
+    showToast(result.message)
     pendingImportData.value = null
     showReplaceConfirm.value = false
     await refreshList()
@@ -126,7 +161,7 @@ async function handleClearAll() {
       await db.categoryCache.clear()
     })
     await refreshList()
-    importMessage.value = 'All data cleared'
+    showToast('All data cleared')
   } catch {
     error.value = 'Couldn\'t clear data. Please try again.'
   }
@@ -157,43 +192,17 @@ const showClearConfirm = ref(false)
       </div>
     </div>
 
-    <!-- General error -->
-    <div v-if="error" class="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-center justify-between">
-      <span>{{ error }}</span>
-      <button class="text-red-400 hover:text-red-600" @click="error = ''">
-        <span class="i-lucide-x" />
-      </button>
-    </div>
+    <ErrorAlert v-if="error" :message="error" @dismiss="error = ''" />
+    <ErrorAlert v-if="importError" :message="importError" @dismiss="importError = ''" />
 
-    <!-- Success/error messages -->
-    <div v-if="importMessage" class="mb-4 p-3 bg-green-50 text-green-700 text-sm rounded-lg flex items-center justify-between">
-      <span>{{ importMessage }}</span>
-      <button class="text-green-500 hover:text-green-700" @click="importMessage = ''">
-        <span class="i-lucide-x" />
-      </button>
-    </div>
-    <div v-if="importError" class="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-center justify-between">
-      <span>{{ importError }}</span>
-      <button class="text-red-400 hover:text-red-600" @click="importError = ''">
-        <span class="i-lucide-x" />
-      </button>
-    </div>
+    <LoadingSpinner v-if="loading" />
 
-    <!-- Loading state -->
-    <div v-if="loading" class="text-center py-12 text-gray-400">
-      Loading...
-    </div>
-
-    <!-- Empty state -->
-    <div
+    <EmptyState
       v-else-if="budgets.length === 0"
-      class="text-center py-16"
+      icon="i-lucide-wallet"
+      title="No budgets yet"
+      description="Create your first budget or restore from a backup"
     >
-      <div class="i-lucide-wallet text-5xl text-gray-300 mx-auto mb-4" />
-      <p class="text-gray-500 text-lg mb-2">No budgets yet</p>
-      <p class="text-gray-400 text-sm mb-6">
-        Create your first budget or restore from a backup
-      </p>
       <div class="flex gap-3 justify-center">
         <button class="btn-primary" @click="createBudget">
           Create your first budget
@@ -208,7 +217,7 @@ const showClearConfirm = ref(false)
           />
         </label>
       </div>
-    </div>
+    </EmptyState>
 
     <!-- Budget list -->
     <template v-else>
@@ -220,13 +229,19 @@ const showClearConfirm = ref(false)
           @click="openBudget(budget.id)"
         >
           <div class="flex items-center justify-between">
-            <div>
-              <h2 class="font-semibold text-gray-900">{{ budget.name }}</h2>
+            <div class="min-w-0">
+              <h2 class="font-semibold text-gray-900 truncate">{{ budget.name }}</h2>
               <p class="text-sm text-gray-500 mt-0.5">
                 {{ budget.periodType === 'monthly' ? 'Monthly' : 'Custom period' }}
                 <span v-if="budget.currencyLabel" class="ml-1">
                   &middot; {{ budget.currencyLabel }}
                 </span>
+                <template v-if="budgetSummaries[budget.id]">
+                  &middot; {{ budgetSummaries[budget.id].count }} item{{ budgetSummaries[budget.id].count === 1 ? '' : 's' }}
+                  <template v-if="budgetSummaries[budget.id].monthlyTotal > 0">
+                    &middot; {{ budget.currencyLabel }}{{ formatAmount(budgetSummaries[budget.id].monthlyTotal) }}/mo
+                  </template>
+                </template>
               </p>
             </div>
             <span class="i-lucide-chevron-right text-gray-400" />

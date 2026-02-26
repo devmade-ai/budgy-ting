@@ -4,10 +4,13 @@ import { useRouter } from 'vue-router'
 import { db } from '@/db'
 import { useId } from '@/composables/useId'
 import { nowISO, todayISO } from '@/composables/useTimestamp'
+import { useToast } from '@/composables/useToast'
 import BudgetForm from '@/components/BudgetForm.vue'
+import ErrorAlert from '@/components/ErrorAlert.vue'
 import type { PeriodType } from '@/types/models'
 
 const router = useRouter()
+const { show: showToast } = useToast()
 const error = ref('')
 
 async function handleSubmit(data: {
@@ -16,6 +19,7 @@ async function handleSubmit(data: {
   periodType: PeriodType
   startDate: string
   endDate: string | null
+  startingBalance: number | null
 }) {
   try {
     const now = nowISO()
@@ -28,10 +32,12 @@ async function handleSubmit(data: {
       periodType: data.periodType,
       startDate: data.periodType === 'monthly' ? todayISO() : data.startDate,
       endDate: data.endDate,
+      startingBalance: data.startingBalance,
       createdAt: now,
       updatedAt: now,
     })
 
+    showToast('Budget created')
     router.push({ name: 'budget-detail', params: { id } })
   } catch {
     error.value = 'Couldn\'t create the budget. Please check your storage and try again.'
@@ -53,12 +59,7 @@ function handleCancel() {
       Back
     </button>
     <h1 class="page-title mb-6">New Budget</h1>
-    <div v-if="error" class="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-center justify-between">
-      <span>{{ error }}</span>
-      <button class="text-red-400 hover:text-red-600" @click="error = ''">
-        <span class="i-lucide-x" />
-      </button>
-    </div>
+    <ErrorAlert v-if="error" :message="error" @dismiss="error = ''" />
     <BudgetForm @submit="handleSubmit" @cancel="handleCancel" />
   </div>
 </template>

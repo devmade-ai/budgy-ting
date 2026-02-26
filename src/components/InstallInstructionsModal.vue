@@ -8,14 +8,17 @@
  *   - External link to docs: Rejected — user stays in-app, instructions are contextual
  */
 
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { usePWAInstall } from '@/composables/usePWAInstall'
+import { useDialogA11y } from '@/composables/useDialogA11y'
 
 const emit = defineEmits<{
   close: []
 }>()
 
 const { browser } = usePWAInstall()
+const dialogRef = ref<HTMLElement | null>(null)
+useDialogA11y(dialogRef, () => emit('close'))
 
 interface InstructionStep {
   step: number
@@ -83,10 +86,16 @@ const instructions = computed<{ title: string; steps: InstructionStep[] }>(() =>
   <Teleport to="body">
     <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
       <!-- Backdrop -->
-      <div class="absolute inset-0 bg-black/40" @click="emit('close')" />
+      <div class="absolute inset-0 bg-black/40" aria-hidden="true" @click="emit('close')" />
 
       <!-- Dialog -->
-      <div class="relative bg-white rounded-xl shadow-xl max-w-sm w-full p-6">
+      <div
+        ref="dialogRef"
+        role="dialog"
+        :aria-label="instructions.title"
+        aria-modal="true"
+        class="relative bg-white rounded-xl shadow-xl max-w-sm w-full p-6"
+      >
         <h3 class="text-lg font-semibold text-gray-900 mb-4">
           {{ instructions.title }}
         </h3>
@@ -103,7 +112,7 @@ const instructions = computed<{ title: string; steps: InstructionStep[] }>(() =>
               {{ step.step }}
             </span>
             <div class="flex items-center gap-2 text-sm text-gray-700">
-              <span v-if="step.icon" :class="step.icon" class="text-gray-400 shrink-0" />
+              <span v-if="step.icon" :class="step.icon" class="text-gray-400 shrink-0" aria-hidden="true" />
               <span>{{ step.text }}</span>
             </div>
           </li>

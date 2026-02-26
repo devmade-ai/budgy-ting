@@ -4,11 +4,15 @@ import { useRouter } from 'vue-router'
 import { db } from '@/db'
 import { nowISO } from '@/composables/useTimestamp'
 import { touchCategory } from '@/composables/useCategoryAutocomplete'
+import { useToast } from '@/composables/useToast'
 import ExpenseForm from '@/components/ExpenseForm.vue'
-import type { Budget, Expense, Frequency } from '@/types/models'
+import ErrorAlert from '@/components/ErrorAlert.vue'
+import LoadingSpinner from '@/components/LoadingSpinner.vue'
+import type { Budget, Expense, Frequency, LineType } from '@/types/models'
 
 const props = defineProps<{ id: string; expenseId: string }>()
 const router = useRouter()
+const { show: showToast } = useToast()
 
 const budget = ref<Budget | null>(null)
 const expense = ref<Expense | null>(null)
@@ -41,6 +45,7 @@ async function handleSubmit(data: {
   category: string
   amount: number
   frequency: Frequency
+  type: LineType
   startDate: string
   endDate: string | null
 }) {
@@ -50,12 +55,14 @@ async function handleSubmit(data: {
       category: data.category,
       amount: data.amount,
       frequency: data.frequency,
+      type: data.type,
       startDate: data.startDate,
       endDate: data.endDate,
       updatedAt: nowISO(),
     })
 
     await touchCategory(data.category)
+    showToast('Expense saved')
     router.push({ name: 'budget-expenses', params: { id: props.id } })
   } catch {
     error.value = 'Couldn\'t save changes. Please try again.'
@@ -77,14 +84,9 @@ function handleCancel() {
       Back to expenses
     </button>
 
-    <div v-if="error" class="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-center justify-between">
-      <span>{{ error }}</span>
-      <button class="text-red-400 hover:text-red-600" @click="error = ''">
-        <span class="i-lucide-x" />
-      </button>
-    </div>
+    <ErrorAlert v-if="error" :message="error" @dismiss="error = ''" />
 
-    <div v-if="loading" class="text-center py-12 text-gray-400">Loading...</div>
+    <LoadingSpinner v-if="loading" />
 
     <template v-else-if="budget && expense">
       <h1 class="page-title mb-6">Edit Expense</h1>

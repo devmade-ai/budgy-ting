@@ -140,9 +140,30 @@ export function validateImport(data: unknown): { valid: boolean; error?: string;
     return { valid: false, error: 'Missing actuals data in file' }
   }
 
-  const budget = obj['budget'] as Budget
-  if (!budget.id || !budget.name) {
-    return { valid: false, error: 'Budget data is incomplete (missing id or name)' }
+  const budget = obj['budget'] as Record<string, unknown>
+  if (!budget['id'] || typeof budget['id'] !== 'string') {
+    return { valid: false, error: 'Budget data is incomplete (missing id)' }
+  }
+  if (!budget['name'] || typeof budget['name'] !== 'string') {
+    return { valid: false, error: 'Budget data is incomplete (missing name)' }
+  }
+  if (!budget['periodType'] || !['monthly', 'custom'].includes(budget['periodType'] as string)) {
+    return { valid: false, error: 'Budget data is incomplete (missing or invalid periodType)' }
+  }
+  if (!budget['startDate'] || typeof budget['startDate'] !== 'string') {
+    return { valid: false, error: 'Budget data is incomplete (missing startDate)' }
+  }
+  if (!budget['createdAt'] || typeof budget['createdAt'] !== 'string') {
+    return { valid: false, error: 'Budget data is incomplete (missing createdAt)' }
+  }
+
+  // Validate expenses have required fields
+  const expenses = obj['expenses'] as Record<string, unknown>[]
+  for (let i = 0; i < Math.min(expenses.length, 5); i++) {
+    const exp = expenses[i]!
+    if (!exp['id'] || !exp['budgetId'] || !exp['description'] || typeof exp['amount'] !== 'number') {
+      return { valid: false, error: `Expense at index ${i} is missing required fields (id, budgetId, description, amount)` }
+    }
   }
 
   return { valid: true, data: data as ExportSchema }
@@ -172,9 +193,24 @@ export async function importBudget(
       await db.budgets.delete(data.budget.id)
     }
 
-    await db.budgets.add(data.budget)
-    if (data.expenses.length > 0) {
-      await db.expenses.bulkAdd(data.expenses)
+    // Backward compat: old exports have totalBudget instead of startingBalance,
+    // and expenses may lack a type field.
+    const rawBudget = data.budget as unknown as Record<string, unknown>
+    const budgetToAdd = {
+      ...data.budget,
+      startingBalance: data.budget.startingBalance ?? (rawBudget['totalBudget'] as number | null) ?? null,
+    }
+    // Remove legacy field if present
+    delete (budgetToAdd as Record<string, unknown>)['totalBudget']
+    await db.budgets.add(budgetToAdd)
+
+    // Ensure all expenses have a type field (default to 'expense' for old exports)
+    const expensesToAdd = data.expenses.map((exp) => ({
+      ...exp,
+      type: exp.type ?? 'expense' as const,
+    }))
+    if (expensesToAdd.length > 0) {
+      await db.expenses.bulkAdd(expensesToAdd)
     }
     if (data.actuals.length > 0) {
       await db.actuals.bulkAdd(data.actuals)
