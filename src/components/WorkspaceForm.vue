@@ -1,20 +1,20 @@
 <script setup lang="ts">
 /**
- * Requirement: Create/edit budget form with name, currency, period type, dates, optional starting balance
- * Approach: Single form component reused for create and edit via optional budget prop
+ * Requirement: Create/edit workspace form with name, currency, period type, dates, optional starting balance
+ * Approach: Single form component reused for create and edit via optional workspace prop
  * Alternatives:
  *   - Separate create/edit components: Rejected — too much duplication
  *   - Modal form: Rejected — full page form is simpler on mobile
  */
 
 import { ref, computed } from 'vue'
-import type { Budget, PeriodType } from '@/types/models'
+import type { Workspace, PeriodType } from '@/types/models'
 import { todayISO } from '@/composables/useTimestamp'
-import { useFormValidation, required, positiveNumber, dateAfter } from '@/composables/useFormValidation'
+import { useFormValidation, required, dateAfter } from '@/composables/useFormValidation'
 import DateInput from '@/components/DateInput.vue'
 
 const props = defineProps<{
-  budget?: Budget
+  workspace?: Workspace
 }>()
 
 const emit = defineEmits<{
@@ -29,21 +29,21 @@ const emit = defineEmits<{
   cancel: []
 }>()
 
-const name = ref(props.budget?.name ?? '')
-const currencyLabel = ref(props.budget?.currencyLabel ?? 'R')
-const periodType = ref<PeriodType>(props.budget?.periodType ?? 'monthly')
-const startDate = ref(props.budget?.startDate ?? todayISO())
-const endDate = ref(props.budget?.endDate ?? '')
-const hasStartingBalance = ref(props.budget?.startingBalance != null)
-const startingBalanceStr = ref(props.budget?.startingBalance?.toString() ?? '')
+const name = ref(props.workspace?.name ?? '')
+const currencyLabel = ref(props.workspace?.currencyLabel ?? 'R')
+const periodType = ref<PeriodType>(props.workspace?.periodType ?? 'monthly')
+const startDate = ref(props.workspace?.startDate ?? todayISO())
+const endDate = ref(props.workspace?.endDate ?? '')
+const hasStartingBalance = ref(props.workspace?.startingBalance != null)
+const startingBalanceStr = ref(props.workspace?.startingBalance?.toString() ?? '')
 
-const isEditing = computed(() => !!props.budget)
+const isEditing = computed(() => !!props.workspace)
 
 const { errors, validate } = useFormValidation([name, startDate, endDate, startingBalanceStr])
 
 function runValidation(): boolean {
   return validate([
-    required('name', name, 'Budget name is required'),
+    required('name', name, 'Workspace name is required'),
     // Custom period requires a start date
     {
       field: 'dates',
@@ -76,17 +76,17 @@ function handleSubmit() {
 
 <template>
   <form class="space-y-5" @submit.prevent="handleSubmit">
-    <!-- Budget name -->
+    <!-- Workspace name -->
     <div>
-      <label class="block text-sm font-medium text-gray-700 mb-1" for="budget-name">
-        Budget name
+      <label class="block text-sm font-medium text-gray-700 mb-1" for="workspace-name">
+        Workspace name
       </label>
       <input
-        id="budget-name"
+        id="workspace-name"
         v-model="name"
         type="text"
         class="input-field"
-        placeholder="e.g. Wedding Budget, Q1 Marketing"
+        placeholder="e.g. Household, Side Hustle, Wedding"
         autofocus
       />
       <p v-if="errors['name']" class="text-sm text-red-500 mt-1">{{ errors['name'] }}</p>
@@ -144,7 +144,7 @@ function handleSubmit() {
     <!-- Period type -->
     <div>
       <label class="block text-sm font-medium text-gray-700 mb-2">
-        Budget period
+        Period
       </label>
       <div class="flex gap-2">
         <button
@@ -190,7 +190,7 @@ function handleSubmit() {
     <!-- Actions -->
     <div class="flex gap-3 pt-2">
       <button type="submit" class="btn-primary flex-1">
-        {{ isEditing ? 'Save changes' : 'Create budget' }}
+        {{ isEditing ? 'Save changes' : 'Create workspace' }}
       </button>
       <button type="button" class="btn-secondary" @click="emit('cancel')">
         Cancel

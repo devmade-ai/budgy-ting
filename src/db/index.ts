@@ -9,10 +9,10 @@
  */
 
 import Dexie, { type EntityTable } from 'dexie'
-import type { Budget, Expense, Actual, CategoryCache } from '@/types/models'
+import type { Workspace, Expense, Actual, CategoryCache } from '@/types/models'
 
 const db = new Dexie('budgy-ting') as Dexie & {
-  budgets: EntityTable<Budget, 'id'>
+  workspaces: EntityTable<Workspace, 'id'>
   expenses: EntityTable<Expense, 'id'>
   actuals: EntityTable<Actual, 'id'>
   categoryCache: EntityTable<CategoryCache, 'category'>
@@ -69,6 +69,43 @@ db.version(3).stores({
       if (expense.type === undefined) {
         expense.type = 'expense'
       }
+    }),
+  ])
+})
+
+// Schema v4: Rename budgets → workspaces, budgetId → workspaceId
+// Requirement: Rename "budget" to "workspace" across the app — reflects cashflow/workspace mental model
+// Approach: Create new workspaces table, migrate data from budgets, rename foreign keys on expenses/actuals
+// Alternatives:
+//   - Keep old table names with new TypeScript types: Rejected — confusing mismatch between DB and code
+//   - Breaking reset: Rejected — must preserve existing user data
+db.version(4).stores({
+  workspaces: 'id, name, createdAt',
+  expenses: 'id, workspaceId, category, type, createdAt',
+  actuals: 'id, workspaceId, expenseId, category, date',
+  categoryCache: 'category, lastUsed',
+  budgets: null, // Delete old budgets table
+}).upgrade((tx) => {
+  return Promise.all([
+    // Migrate budgets → workspaces (add isDemo field)
+    tx.table('budgets').toCollection().toArray().then((budgets) => {
+      const workspaces = budgets.map((b) => ({
+        ...b,
+        isDemo: false,
+      }))
+      if (workspaces.length > 0) {
+        return tx.table('workspaces').bulkAdd(workspaces)
+      }
+    }),
+    // Rename budgetId → workspaceId on expenses
+    tx.table('expenses').toCollection().modify((expense) => {
+      expense.workspaceId = expense.budgetId
+      delete expense.budgetId
+    }),
+    // Rename budgetId → workspaceId on actuals
+    tx.table('actuals').toCollection().modify((actual) => {
+      actual.workspaceId = actual.budgetId
+      delete actual.budgetId
     }),
   ])
 })

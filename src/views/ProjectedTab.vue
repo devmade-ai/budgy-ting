@@ -6,13 +6,13 @@
 
 import { ref, computed, onMounted } from 'vue'
 import { db } from '@/db'
-import { calculateProjection, resolveBudgetPeriod } from '@/engine/projection'
+import { calculateProjection, resolveWorkspacePeriod } from '@/engine/projection'
 import { formatAmount } from '@/composables/useFormat'
 import ErrorAlert from '@/components/ErrorAlert.vue'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import ScrollHint from '@/components/ScrollHint.vue'
-import type { Budget, Expense } from '@/types/models'
+import type { Workspace, Expense } from '@/types/models'
 import type { ProjectionResult } from '@/engine/projection'
 
 /**
@@ -22,7 +22,7 @@ import type { ProjectionResult } from '@/engine/projection'
  *   - Reuse envelope engine: Rejected here — envelope needs actuals; projected tab is pre-actuals
  */
 
-const props = defineProps<{ budget: Budget }>()
+const props = defineProps<{ workspace: Workspace }>()
 
 const expenses = ref<Expense[]>([])
 const loading = ref(true)
@@ -31,8 +31,8 @@ const error = ref('')
 onMounted(async () => {
   try {
     expenses.value = await db.expenses
-      .where('budgetId')
-      .equals(props.budget.id)
+      .where('workspaceId')
+      .equals(props.workspace.id)
       .toArray()
   } catch {
     error.value = 'Couldn\'t load projections. Please refresh and try again.'
@@ -44,7 +44,7 @@ onMounted(async () => {
 const projection = computed<ProjectionResult | null>(() => {
   if (expenses.value.length === 0) return null
 
-  const { startDate, endDate } = resolveBudgetPeriod(props.budget)
+  const { startDate, endDate } = resolveWorkspacePeriod(props.workspace)
   return calculateProjection(expenses.value, startDate, endDate)
 })
 
@@ -68,9 +68,9 @@ const expenseRows = computed(() => projection.value?.rows.filter((r) => r.type =
 
 /** Envelope summary based on projections only (no actuals yet) */
 const envelopeSummary = computed(() => {
-  if (props.budget.startingBalance == null || !projection.value) return null
+  if (props.workspace.startingBalance == null || !projection.value) return null
 
-  const total = props.budget.startingBalance
+  const total = props.workspace.startingBalance
   const projected = projection.value.grandTotal
   // Net considers income: starting balance + total income - total expenses
   const netProjected = projection.value.totalIncome - projected
@@ -115,25 +115,25 @@ const envelopeSummary = computed(() => {
           <div>
             <p class="text-xs text-gray-400 uppercase tracking-wide">Starting Balance</p>
             <p class="text-lg font-semibold text-gray-900">
-              {{ props.budget.currencyLabel }}{{ formatAmount(envelopeSummary.total) }}
+              {{ props.workspace.currencyLabel }}{{ formatAmount(envelopeSummary.total) }}
             </p>
           </div>
           <div>
             <p class="text-xs text-gray-400 uppercase tracking-wide">Income</p>
             <p class="text-lg font-semibold text-green-600">
-              +{{ props.budget.currencyLabel }}{{ formatAmount(envelopeSummary.totalIncome) }}
+              +{{ props.workspace.currencyLabel }}{{ formatAmount(envelopeSummary.totalIncome) }}
             </p>
           </div>
           <div>
             <p class="text-xs text-gray-400 uppercase tracking-wide">Expenses</p>
             <p class="text-lg font-semibold text-red-600">
-              -{{ props.budget.currencyLabel }}{{ formatAmount(envelopeSummary.projected) }}
+              -{{ props.workspace.currencyLabel }}{{ formatAmount(envelopeSummary.projected) }}
             </p>
           </div>
           <div>
             <p class="text-xs text-gray-400 uppercase tracking-wide">Ending Balance</p>
             <p class="text-lg font-semibold" :class="envelopeSummary.endingBalance >= 0 ? 'text-brand-600' : 'text-red-600'">
-              {{ props.budget.currencyLabel }}{{ formatAmount(envelopeSummary.endingBalance) }}
+              {{ props.workspace.currencyLabel }}{{ formatAmount(envelopeSummary.endingBalance) }}
             </p>
           </div>
         </div>
@@ -149,12 +149,12 @@ const envelopeSummary = computed(() => {
       <div class="flex items-center justify-between mb-4">
         <div class="text-sm text-gray-500">
           <span v-if="projection.totalIncome > 0">
-            Income: <span class="text-green-600">{{ props.budget.currencyLabel }}{{ formatAmount(projection.totalIncome) }}</span>
+            Income: <span class="text-green-600">{{ props.workspace.currencyLabel }}{{ formatAmount(projection.totalIncome) }}</span>
             &middot;
           </span>
-          Expenses: <span class="text-red-600">{{ props.budget.currencyLabel }}{{ formatAmount(projection.grandTotal) }}</span>
+          Expenses: <span class="text-red-600">{{ props.workspace.currencyLabel }}{{ formatAmount(projection.grandTotal) }}</span>
           <span v-if="projection.totalIncome > 0">
-            &middot; Net: <span :class="projection.totalNet >= 0 ? 'text-green-600' : 'text-red-600'">{{ projection.totalNet > 0 ? '+' : '' }}{{ props.budget.currencyLabel }}{{ formatAmount(projection.totalNet) }}</span>
+            &middot; Net: <span :class="projection.totalNet >= 0 ? 'text-green-600' : 'text-red-600'">{{ projection.totalNet > 0 ? '+' : '' }}{{ props.workspace.currencyLabel }}{{ formatAmount(projection.totalNet) }}</span>
           </span>
         </div>
         <div class="flex gap-1">

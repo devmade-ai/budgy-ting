@@ -1,22 +1,23 @@
 /**
- * Export/import engine for budget data backup and restore.
+ * Export/import engine for workspace data backup and restore.
  *
- * Requirement: JSON export that can be re-imported to restore a budget
- * Approach: Schema-versioned JSON with all budget data, comparison snapshot included
+ * Requirement: JSON export that can be re-imported to restore a workspace
+ * Approach: Schema-versioned JSON with all workspace data, comparison snapshot included
  * Alternatives:
  *   - Binary format: Rejected — not human-readable, harder to debug
  *   - CSV export: Rejected — loses relational structure
  */
 
 import { db } from '@/db'
-import { calculateProjection, resolveBudgetPeriod } from './projection'
+import { calculateProjection, resolveWorkspacePeriod } from './projection'
 import { calculateComparison } from './variance'
-import type { Budget, Expense, Actual } from '@/types/models'
+import type { Workspace, Expense, Actual } from '@/types/models'
 
 export interface ExportSchema {
   version: 1
   exportedAt: string
-  budget: Budget
+  /** Workspace data. Named 'workspace' in new exports, 'budget' in old exports (backward compat). */
+  workspace: Workspace
   expenses: Expense[]
   actuals: Actual[]
   comparison: {
@@ -43,22 +44,22 @@ export interface ExportSchema {
 }
 
 /**
- * Export a budget with all its data to a JSON object.
+ * Export a workspace with all its data to a JSON object.
  */
-export async function exportBudget(budgetId: string): Promise<ExportSchema | null> {
-  const budget = await db.budgets.get(budgetId)
-  if (!budget) return null
+export async function exportWorkspace(workspaceId: string): Promise<ExportSchema | null> {
+  const workspace = await db.workspaces.get(workspaceId)
+  if (!workspace) return null
 
   const [expenses, actuals] = await Promise.all([
-    db.expenses.where('budgetId').equals(budgetId).toArray(),
-    db.actuals.where('budgetId').equals(budgetId).toArray(),
+    db.expenses.where('workspaceId').equals(workspaceId).toArray(),
+    db.actuals.where('workspaceId').equals(workspaceId).toArray(),
   ])
 
   // Generate comparison snapshot if data exists
   let comparison: ExportSchema['comparison'] = null
 
   if (expenses.length > 0) {
-    const { startDate, endDate } = resolveBudgetPeriod(budget)
+    const { startDate, endDate } = resolveWorkspacePeriod(workspace)
     const projection = calculateProjection(expenses, startDate, endDate)
     const comp = calculateComparison(projection, actuals, expenses)
 
@@ -88,7 +89,7 @@ export async function exportBudget(budgetId: string): Promise<ExportSchema | nul
   return {
     version: 1,
     exportedAt: new Date().toISOString(),
-    budget,
+    workspace,
     expenses,
     actuals,
     comparison,
@@ -98,13 +99,13 @@ export async function exportBudget(budgetId: string): Promise<ExportSchema | nul
 /**
  * Trigger a JSON file download in the browser.
  */
-export function downloadJSON(data: ExportSchema, budgetName: string): void {
+export function downloadJSON(data: ExportSchema, workspaceName: string): void {
   const json = JSON.stringify(data, null, 2)
   const blob = new Blob([json], { type: 'application/json' })
   const url = URL.createObjectURL(blob)
 
   const dateStr = new Date().toISOString().slice(0, 10)
-  const safeName = budgetName.replace(/[^a-zA-Z0-9-_ ]/g, '').replace(/\s+/g, '-').toLowerCase()
+  const safeName = workspaceName.replace(/[^a-zA-Z0-9-_ ]/g, '').replace(/\s+/g, '-').toLowerCase()
   const filename = `budgy-ting-${safeName}-${dateStr}.json`
 
   const a = document.createElement('a')
@@ -116,6 +117,7 @@ export function downloadJSON(data: ExportSchema, budgetName: string): void {
 
 /**
  * Validate an imported JSON file matches the export schema.
+ * Backward compat: accepts both 'workspace' and 'budget' keys.
  */
 export function validateImport(data: unknown): { valid: boolean; error?: string; data?: ExportSchema } {
   if (!data || typeof data !== 'object') {
@@ -128,8 +130,10 @@ export function validateImport(data: unknown): { valid: boolean; error?: string;
     return { valid: false, error: `Unsupported format version: ${obj['version']}. This app supports version 1.` }
   }
 
-  if (!obj['budget'] || typeof obj['budget'] !== 'object') {
-    return { valid: false, error: 'Missing budget data in file' }
+  // Backward compat: accept both 'workspace' and 'budget' keys
+  const wsData = (obj['workspace'] ?? obj['budget']) as Record<string, unknown> | undefined
+  if (!wsData || typeof wsData !== 'object') {
+    return { valid: false, error: 'Missing workspace data in file' }
   }
 
   if (!Array.isArray(obj['expenses'])) {
@@ -140,85 +144,100 @@ export function validateImport(data: unknown): { valid: boolean; error?: string;
     return { valid: false, error: 'Missing actuals data in file' }
   }
 
-  const budget = obj['budget'] as Record<string, unknown>
-  if (!budget['id'] || typeof budget['id'] !== 'string') {
-    return { valid: false, error: 'Budget data is incomplete (missing id)' }
+  if (!wsData['id'] || typeof wsData['id'] !== 'string') {
+    return { valid: false, error: 'Workspace data is incomplete (missing id)' }
   }
-  if (!budget['name'] || typeof budget['name'] !== 'string') {
-    return { valid: false, error: 'Budget data is incomplete (missing name)' }
+  if (!wsData['name'] || typeof wsData['name'] !== 'string') {
+    return { valid: false, error: 'Workspace data is incomplete (missing name)' }
   }
-  if (!budget['periodType'] || !['monthly', 'custom'].includes(budget['periodType'] as string)) {
-    return { valid: false, error: 'Budget data is incomplete (missing or invalid periodType)' }
+  if (!wsData['periodType'] || !['monthly', 'custom'].includes(wsData['periodType'] as string)) {
+    return { valid: false, error: 'Workspace data is incomplete (missing or invalid periodType)' }
   }
-  if (!budget['startDate'] || typeof budget['startDate'] !== 'string') {
-    return { valid: false, error: 'Budget data is incomplete (missing startDate)' }
+  if (!wsData['startDate'] || typeof wsData['startDate'] !== 'string') {
+    return { valid: false, error: 'Workspace data is incomplete (missing startDate)' }
   }
-  if (!budget['createdAt'] || typeof budget['createdAt'] !== 'string') {
-    return { valid: false, error: 'Budget data is incomplete (missing createdAt)' }
+  if (!wsData['createdAt'] || typeof wsData['createdAt'] !== 'string') {
+    return { valid: false, error: 'Workspace data is incomplete (missing createdAt)' }
   }
 
-  // Validate expenses have required fields
+  // Validate expenses have required fields (accept both budgetId and workspaceId for backward compat)
   const expenses = obj['expenses'] as Record<string, unknown>[]
   for (let i = 0; i < Math.min(expenses.length, 5); i++) {
     const exp = expenses[i]!
-    if (!exp['id'] || !exp['budgetId'] || !exp['description'] || typeof exp['amount'] !== 'number') {
-      return { valid: false, error: `Expense at index ${i} is missing required fields (id, budgetId, description, amount)` }
+    if (!exp['id'] || !(exp['workspaceId'] || exp['budgetId']) || !exp['description'] || typeof exp['amount'] !== 'number') {
+      return { valid: false, error: `Expense at index ${i} is missing required fields (id, workspaceId, description, amount)` }
     }
   }
 
-  return { valid: true, data: data as ExportSchema }
+  // Normalize: ensure 'workspace' key exists for downstream code
+  const normalized = { ...obj, workspace: wsData } as unknown as ExportSchema
+  return { valid: true, data: normalized }
 }
 
 /**
- * Import a budget from an export file.
+ * Import a workspace from an export file.
  *
  * @param data - Validated export data
- * @param mode - 'replace' overwrites existing budget with same ID, 'merge' skips if exists
+ * @param mode - 'replace' overwrites existing workspace with same ID, 'merge' skips if exists
  */
-export async function importBudget(
+export async function importWorkspace(
   data: ExportSchema,
   mode: 'replace' | 'merge',
 ): Promise<{ imported: boolean; message: string }> {
-  const existing = await db.budgets.get(data.budget.id)
+  const existing = await db.workspaces.get(data.workspace.id)
 
   if (existing && mode === 'merge') {
-    return { imported: false, message: `Budget "${existing.name}" already exists. Skipped.` }
+    return { imported: false, message: `Workspace "${existing.name}" already exists. Skipped.` }
   }
 
-  await db.transaction('rw', [db.budgets, db.expenses, db.actuals], async () => {
+  await db.transaction('rw', [db.workspaces, db.expenses, db.actuals], async () => {
     if (existing) {
       // Replace: clear existing data first
-      await db.actuals.where('budgetId').equals(data.budget.id).delete()
-      await db.expenses.where('budgetId').equals(data.budget.id).delete()
-      await db.budgets.delete(data.budget.id)
+      await db.actuals.where('workspaceId').equals(data.workspace.id).delete()
+      await db.expenses.where('workspaceId').equals(data.workspace.id).delete()
+      await db.workspaces.delete(data.workspace.id)
     }
 
     // Backward compat: old exports have totalBudget instead of startingBalance,
-    // and expenses may lack a type field.
-    const rawBudget = data.budget as unknown as Record<string, unknown>
-    const budgetToAdd = {
-      ...data.budget,
-      startingBalance: data.budget.startingBalance ?? (rawBudget['totalBudget'] as number | null) ?? null,
+    // and expenses may lack a type field, and may use budgetId instead of workspaceId.
+    const rawWorkspace = data.workspace as unknown as Record<string, unknown>
+    const workspaceToAdd = {
+      ...data.workspace,
+      startingBalance: data.workspace.startingBalance ?? (rawWorkspace['totalBudget'] as number | null) ?? null,
+      isDemo: data.workspace.isDemo ?? false,
     }
     // Remove legacy field if present
-    delete (budgetToAdd as Record<string, unknown>)['totalBudget']
-    await db.budgets.add(budgetToAdd)
+    delete (workspaceToAdd as Record<string, unknown>)['totalBudget']
+    await db.workspaces.add(workspaceToAdd)
 
-    // Ensure all expenses have a type field (default to 'expense' for old exports)
-    const expensesToAdd = data.expenses.map((exp) => ({
-      ...exp,
-      type: exp.type ?? 'expense' as const,
-    }))
+    // Ensure all expenses have type and workspaceId (backward compat from budgetId)
+    const expensesToAdd = data.expenses.map((exp) => {
+      const raw = exp as unknown as Record<string, unknown>
+      return {
+        ...exp,
+        workspaceId: exp.workspaceId || (raw['budgetId'] as string),
+        type: exp.type ?? 'expense' as const,
+      }
+    })
     if (expensesToAdd.length > 0) {
       await db.expenses.bulkAdd(expensesToAdd)
     }
-    if (data.actuals.length > 0) {
-      await db.actuals.bulkAdd(data.actuals)
+
+    // Backward compat: actuals may use budgetId
+    const actualsToAdd = data.actuals.map((act) => {
+      const raw = act as unknown as Record<string, unknown>
+      return {
+        ...act,
+        workspaceId: act.workspaceId || (raw['budgetId'] as string),
+      }
+    })
+    if (actualsToAdd.length > 0) {
+      await db.actuals.bulkAdd(actualsToAdd)
     }
   })
 
   return {
     imported: true,
-    message: `Imported "${data.budget.name}" with ${data.expenses.length} expenses and ${data.actuals.length} actuals.`,
+    message: `Imported "${data.workspace.name}" with ${data.expenses.length} expenses and ${data.actuals.length} actuals.`,
   }
 }

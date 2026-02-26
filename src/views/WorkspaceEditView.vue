@@ -4,29 +4,29 @@ import { useRouter } from 'vue-router'
 import { db } from '@/db'
 import { nowISO } from '@/composables/useTimestamp'
 import { useToast } from '@/composables/useToast'
-import BudgetForm from '@/components/BudgetForm.vue'
+import WorkspaceForm from '@/components/WorkspaceForm.vue'
 import ErrorAlert from '@/components/ErrorAlert.vue'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
-import type { Budget, PeriodType } from '@/types/models'
+import type { Workspace, PeriodType } from '@/types/models'
 
 const props = defineProps<{ id: string }>()
 const router = useRouter()
 const { show: showToast } = useToast()
 
-const budget = ref<Budget | null>(null)
+const workspace = ref<Workspace | null>(null)
 const loading = ref(true)
 const error = ref('')
 
 onMounted(async () => {
   try {
-    const found = await db.budgets.get(props.id)
+    const found = await db.workspaces.get(props.id)
     if (!found) {
-      router.replace({ name: 'budget-list' })
+      router.replace({ name: 'workspace-list' })
       return
     }
-    budget.value = found
+    workspace.value = found
   } catch {
-    error.value = 'Couldn\'t load this budget. Please go back and try again.'
+    error.value = 'Couldn\'t load this workspace. Please go back and try again.'
   } finally {
     loading.value = false
   }
@@ -41,7 +41,7 @@ async function handleSubmit(data: {
   startingBalance: number | null
 }) {
   try {
-    await db.budgets.update(props.id, {
+    await db.workspaces.update(props.id, {
       name: data.name,
       currencyLabel: data.currencyLabel,
       periodType: data.periodType,
@@ -51,15 +51,15 @@ async function handleSubmit(data: {
       updatedAt: nowISO(),
     })
 
-    showToast('Budget saved')
-    router.push({ name: 'budget-detail', params: { id: props.id } })
+    showToast('Workspace saved')
+    router.push({ name: 'workspace-detail', params: { id: props.id } })
   } catch {
     error.value = 'Couldn\'t save changes. Please try again.'
   }
 }
 
 function handleCancel() {
-  router.push({ name: 'budget-detail', params: { id: props.id } })
+  router.push({ name: 'workspace-detail', params: { id: props.id } })
 }
 </script>
 
@@ -77,9 +77,9 @@ function handleCancel() {
 
     <LoadingSpinner v-if="loading" />
 
-    <template v-else-if="budget">
-      <h1 class="page-title mb-6">Edit Budget</h1>
-      <BudgetForm :budget="budget" @submit="handleSubmit" @cancel="handleCancel" />
+    <template v-else-if="workspace">
+      <h1 class="page-title mb-6">Edit Workspace</h1>
+      <WorkspaceForm :workspace="workspace" @submit="handleSubmit" @cancel="handleCancel" />
     </template>
   </div>
 </template>

@@ -9,18 +9,18 @@ Manual test scenarios for verifying budgy-ting works correctly. Run through thes
 Run through this checklist after any change to verify nothing is broken:
 
 - [ ] App loads without errors (no console errors)
-- [ ] Home page lists existing budgets
-- [ ] Can create a new budget (both monthly and custom period types)
-- [ ] Can open a budget and see all 4 tabs (Expenses, Projected, Cashflow, Compare)
+- [ ] Home page lists existing workspaces (demo workspace on first visit)
+- [ ] Can create a new workspace (both monthly and custom period types)
+- [ ] Can open a workspace and see all 4 tabs (Expenses, Projected, Cashflow, Compare)
 - [ ] Can add an expense item
 - [ ] Can add an income item
 - [ ] Projected tab shows monthly breakdown
 - [ ] Cashflow tab shows running balance (requires starting balance)
 - [ ] Can import a CSV file through the 4-step wizard
 - [ ] Compare tab shows budget vs actuals after import
-- [ ] Can export a budget as JSON
-- [ ] Can restore a budget from exported JSON
-- [ ] Can delete a budget (confirm dialog appears)
+- [ ] Can export a workspace as JSON
+- [ ] Can restore a workspace from exported JSON
+- [ ] Can delete a workspace (confirm dialog appears)
 - [ ] Menu opens via hamburger icon, shows 5 items (with divider)
 - [ ] Tutorial opens via menu → "How it works"
 - [ ] User Guide drawer opens via menu → "User Guide"
@@ -35,29 +35,29 @@ Run through this checklist after any change to verify nothing is broken:
 
 ## Test Scenarios
 
-### 1. Budget Management
+### 1. Workspace Management
 
-#### 1.1 Create a Monthly Budget
+#### 1.1 Create a Monthly Workspace
 
 **Steps:**
 1. Go to home screen
-2. Click **New Budget**
+2. Click **New Workspace**
 3. Enter name: "Test Monthly"
 4. Leave currency as default ("R")
 5. Select **Monthly** period type
-6. Click **Create budget**
+6. Click **Create workspace**
 
 **Expected:**
-- Redirected to budget detail page
-- Budget name shows "Test Monthly" in header
+- Redirected to workspace detail page
+- Workspace name shows "Test Monthly" in header
 - "Monthly" period type displayed
 - Expenses tab is active and shows empty state: "No items yet"
 
-#### 1.2 Create a Custom-Period Budget with Starting Balance
+#### 1.2 Create a Custom-Period Workspace with Starting Balance
 
 **Steps:**
 1. Go to home screen
-2. Click **New Budget**
+2. Click **New Workspace**
 3. Enter name: "Test Custom"
 4. Change currency to "$"
 5. Select **Custom dates**
@@ -65,100 +65,112 @@ Run through this checklist after any change to verify nothing is broken:
 7. Set end date to 2026-06-30
 8. Check **I know my current balance**
 9. Enter starting balance: 10000
-10. Click **Create budget**
+10. Click **Create workspace**
 
 **Expected:**
-- Redirected to budget detail page
-- Budget name shows "Test Custom"
+- Redirected to workspace detail page
+- Workspace name shows "Test Custom"
 - "$" shown as currency
 - "Custom period" displayed
 - Cashflow tab shows balance data (not the "No starting balance" empty state)
 
-#### 1.3 Budget Validation Errors
+#### 1.3 Workspace Validation Errors
 
 **Steps:**
-1. Click **New Budget**
-2. Leave budget name empty
-3. Click **Create budget**
+1. Click **New Workspace**
+2. Leave workspace name empty
+3. Click **Create workspace**
 
 **Expected:**
-- Error shown: "Budget name is required"
+- Error shown: "Workspace name is required"
 - Form not submitted
 
 **Steps (continued):**
 4. Enter a name
 5. Select **Custom dates**
 6. Set end date before start date
-7. Click **Create budget**
+7. Click **Create workspace**
 
 **Expected:**
 - Error shown: "End date must be after start date"
 - Form not submitted
 
-#### 1.4 Edit a Budget
+#### 1.4 Edit a Workspace
 
 **Steps:**
-1. Open an existing budget
+1. Open an existing workspace
 2. Click the **Edit** button (pencil icon)
-3. Change the budget name
+3. Change the workspace name
 4. Click **Save changes**
 
 **Expected:**
-- Redirected back to budget detail
+- Redirected back to workspace detail
 - Updated name shown in header
 
-#### 1.5 Delete a Budget
+#### 1.5 Delete a Workspace
 
 **Steps:**
-1. Open a budget
+1. Open a workspace
 2. Click the **Delete** button (trash icon)
-3. Confirm dialog appears with budget name and warning text
+3. Confirm dialog appears with workspace name and warning text
 
 **Expected (Cancel):**
 4. Click **Cancel**
-5. Dialog closes, budget still exists
+5. Dialog closes, workspace still exists
 
 **Expected (Confirm):**
-4. Click **Delete budget**
+4. Click **Delete workspace**
 5. Redirected to home screen
-6. Deleted budget no longer in list
+6. Deleted workspace no longer in list
 
-#### 1.6 Export and Restore a Budget
+#### 1.6 Export and Restore a Workspace
 
 **Steps:**
-1. Create a budget with expenses and some imported data
+1. Create a workspace with expenses and some imported data
 2. Click **Export** — JSON file downloads
-3. Delete the budget
+3. Delete the workspace
 4. From home screen, click **Restore**
 5. Select the exported JSON file
 
 **Expected:**
-- Budget restored with all expenses and imported data intact
+- Workspace restored with all expenses and imported data intact
 - All tabs show the same data as before export
 
-#### 1.7 Restore Over Existing Budget
+#### 1.7 Restore Over Existing Workspace
 
 **Steps:**
-1. Have a budget named "Test Budget"
-2. Click **Restore** and select a file for a budget with the same name
+1. Have a workspace named "Test Workspace"
+2. Click **Restore** and select a file for a workspace with the same name
 
 **Expected:**
-- Dialog asks: "Replace existing budget?"
+- Dialog asks: "Replace existing workspace?"
 - Warning explains data will be overwritten
-- Clicking **Replace** overwrites the budget
+- Clicking **Replace** overwrites the workspace
 - Clicking **Cancel** keeps the original
 
 #### 1.8 Clear All Data
 
 **Steps:**
-1. Have at least one budget
+1. Have at least one workspace
 2. From home screen, click **Clear all data**
 3. Confirmation dialog appears
 
 **Expected (Confirm):**
 4. Click **Clear everything**
 5. Success message: "All data cleared"
-6. Home screen shows empty state: "No budgets yet"
+6. Home screen shows empty state: "No workspaces yet"
+
+#### 1.9 Demo Workspace
+
+**Steps:**
+1. Clear all data (or use a fresh browser)
+2. Reload the app
+
+**Expected:**
+- A "Demo Household" workspace appears automatically
+- Contains 16 items (salary, freelance, rent, groceries, etc.)
+- Starting balance of R45,000
+- All tabs functional with the demo data
 
 ---
 
@@ -167,7 +179,7 @@ Run through this checklist after any change to verify nothing is broken:
 #### 2.1 Add an Expense
 
 **Steps:**
-1. Open a budget, go to Expenses tab
+1. Open a workspace, go to Expenses tab
 2. Click **Add Item**
 3. Keep type as **Expense**
 4. Description: "Rent"
@@ -282,15 +294,15 @@ Run through this checklist after any change to verify nothing is broken:
 
 #### 3.1 Monthly Projections — By Item View
 
-**Pre-condition:** Budget with several expenses at different frequencies.
+**Pre-condition:** Workspace with several expenses at different frequencies.
 
 **Steps:**
-1. Open budget, click **Projected** tab
+1. Open workspace, click **Projected** tab
 2. Ensure **By Item** view is selected
 
 **Expected:**
 - Table shows one row per expense
-- Column per month (12 months for monthly budgets, or budget date range for custom)
+- Column per month (12 months for monthly workspaces, or workspace date range for custom)
 - Total column on the right
 - Monthly expenses show full amount each month
 - Weekly expenses show amount × weeks in month (varies slightly per month)
@@ -310,7 +322,7 @@ Run through this checklist after any change to verify nothing is broken:
 
 #### 3.3 Projections with Income
 
-**Pre-condition:** Budget has both income and expense items.
+**Pre-condition:** Workspace has both income and expense items.
 
 **Steps:**
 1. Open Projected tab
@@ -323,7 +335,7 @@ Run through this checklist after any change to verify nothing is broken:
 
 #### 3.4 Balance Summary with Negative Projection
 
-**Pre-condition:** Budget with starting balance where expenses exceed income + balance.
+**Pre-condition:** Workspace with starting balance where expenses exceed income + balance.
 
 **Steps:**
 1. Open Projected tab
@@ -336,7 +348,7 @@ Run through this checklist after any change to verify nothing is broken:
 #### 3.5 Empty State
 
 **Steps:**
-1. Open a budget with no expenses
+1. Open a workspace with no expenses
 2. Click **Projected** tab
 
 **Expected:**
@@ -348,10 +360,10 @@ Run through this checklist after any change to verify nothing is broken:
 
 #### 4.1 Cashflow with Starting Balance
 
-**Pre-condition:** Budget with starting balance of R10,000 and monthly expenses totalling R3,000.
+**Pre-condition:** Workspace with starting balance of R10,000 and monthly expenses totalling R3,000.
 
 **Steps:**
-1. Open budget, click **Cashflow** tab
+1. Open workspace, click **Cashflow** tab
 
 **Expected:**
 - Summary card shows Starting Balance: R10,000
@@ -363,7 +375,7 @@ Run through this checklist after any change to verify nothing is broken:
 
 #### 4.2 Cashflow with Actuals
 
-**Pre-condition:** Budget with starting balance, expenses, and imported actuals for at least one month.
+**Pre-condition:** Workspace with starting balance, expenses, and imported actuals for at least one month.
 
 **Steps:**
 1. Open Cashflow tab
@@ -375,7 +387,7 @@ Run through this checklist after any change to verify nothing is broken:
 
 #### 4.3 Balance Goes Negative
 
-**Pre-condition:** Budget where expenses will deplete balance.
+**Pre-condition:** Workspace where expenses will deplete balance.
 
 **Steps:**
 1. Open Cashflow tab
@@ -388,17 +400,18 @@ Run through this checklist after any change to verify nothing is broken:
 #### 4.4 Missing Starting Balance
 
 **Steps:**
-1. Open a budget without starting balance
+1. Open a workspace without starting balance
 2. Click **Cashflow** tab
 
 **Expected:**
 - Empty state: "No starting balance set"
-- Description: "Edit your budget and enter your current balance to see cashflow projections"
+- Description: "Enter your current account balance to see how your money flows over time"
+- Button: "Set starting balance" linking to workspace edit
 
 #### 4.5 No Expenses
 
 **Steps:**
-1. Open a budget with starting balance but no expenses
+1. Open a workspace with starting balance but no expenses
 2. Click **Cashflow** tab
 
 **Expected:**
@@ -412,17 +425,17 @@ Run through this checklist after any change to verify nothing is broken:
 #### 5.1 Empty State
 
 **Steps:**
-1. Open a budget with no imported actuals
+1. Open a workspace with no imported actuals
 2. Click **Compare** tab
 
 **Expected:**
 - Empty state: "Nothing to compare yet"
-- Description: "Add expenses and import actuals to see comparisons"
-- Button: "Import actuals"
+- Description: "Import your bank statement to see how your actual spending compares to your budget"
+- Button: "Import bank statement"
 
 #### 5.2 Line Items View
 
-**Pre-condition:** Budget with expenses and imported actuals.
+**Pre-condition:** Workspace with expenses and imported actuals.
 
 **Steps:**
 1. Open Compare tab
@@ -456,7 +469,7 @@ Run through this checklist after any change to verify nothing is broken:
 
 #### 5.5 Envelope Summary
 
-**Pre-condition:** Budget with starting balance and imported actuals.
+**Pre-condition:** Workspace with starting balance and imported actuals.
 
 **Steps:**
 1. Open Compare tab
@@ -476,7 +489,7 @@ Run through this checklist after any change to verify nothing is broken:
 **Pre-condition:** Have a CSV file with columns: Date, Description, Amount, Category.
 
 **Steps:**
-1. Open a budget, click **Import**
+1. Open a workspace, click **Import**
 2. Click **Choose a file** and select the CSV
 
 **Expected:**
@@ -667,18 +680,18 @@ Run through this checklist after any change to verify nothing is broken:
 #### 7.1 Home Navigation
 
 **Steps:**
-1. From any budget detail page, click **budgy-ting** in the header
+1. From any workspace detail page, click **budgy-ting** in the header
 
-**Expected:** Navigated to home screen with budget list
+**Expected:** Navigated to home screen with workspace list
 
-2. From any budget detail page, click **Budgets** breadcrumb
+2. From any workspace detail page, click **Workspaces** breadcrumb
 
 **Expected:** Navigated to home screen
 
 #### 7.2 Tab Navigation
 
 **Steps:**
-1. Open a budget
+1. Open a workspace
 2. Click each tab in order: Expenses → Projected → Cashflow → Compare
 
 **Expected:**
@@ -745,7 +758,7 @@ Run through this checklist after any change to verify nothing is broken:
 #### 7.4 Browser Back/Forward
 
 **Steps:**
-1. Navigate: Home → Budget → Expenses tab → Add Item → Back → Projected tab
+1. Navigate: Home → Workspace → Expenses tab → Add Item → Back → Projected tab
 2. Click browser back button multiple times
 
 **Expected:**
@@ -782,7 +795,7 @@ Run through this checklist after any change to verify nothing is broken:
 **Steps:**
 1. Load the app while online
 2. Disconnect from internet
-3. Continue using the app (create budget, add expenses, etc.)
+3. Continue using the app (create workspace, add expenses, etc.)
 
 **Expected:**
 - All local operations work without internet
@@ -793,13 +806,13 @@ Run through this checklist after any change to verify nothing is broken:
 
 ### 9. Edge Cases & Error Handling
 
-#### 9.1 Invalid Budget URL
+#### 9.1 Invalid Workspace URL
 
 **Steps:**
-1. Navigate to `/budget/nonexistent-id`
+1. Navigate to `/workspace/nonexistent-id`
 
 **Expected:**
-- Error message: "Couldn't load this budget. Please go back and try again."
+- Error message: "Couldn't load this workspace. Please go back and try again."
 - Can navigate back to home
 
 #### 9.2 Empty CSV Import
@@ -814,17 +827,17 @@ Run through this checklist after any change to verify nothing is broken:
 #### 9.3 Currency Symbol Display
 
 **Steps:**
-1. Create a budget with currency "€"
+1. Create a workspace with currency "€"
 2. Add an expense with amount 1500
 
 **Expected:**
 - Amount displays as "€1 500.00" throughout all tabs
 - Currency symbol used consistently in projections, cashflow, compare
 
-#### 9.4 Long Budget/Expense Names
+#### 9.4 Long Workspace/Expense Names
 
 **Steps:**
-1. Create a budget with a very long name (50+ characters)
+1. Create a workspace with a very long name (50+ characters)
 2. Add an expense with a very long description
 
 **Expected:**
@@ -835,7 +848,7 @@ Run through this checklist after any change to verify nothing is broken:
 #### 9.5 Large Number of Expenses
 
 **Steps:**
-1. Create 30+ expenses in a single budget
+1. Create 30+ expenses in a single workspace
 
 **Expected:**
 - Expenses tab shows all items grouped by category
@@ -855,14 +868,14 @@ Run through this checklist after any change to verify nothing is broken:
 #### 9.7 Zero Starting Balance
 
 **Steps:**
-1. Create a budget, check "I know my current balance", enter 0
+1. Create a workspace, check "I know my current balance", enter 0
 
 **Expected:**
 - Error: "Enter a positive amount"
 - Cannot save with zero balance
 
 **Steps (alternative):**
-1. Create a budget, check "I know my current balance", enter a positive amount
+1. Create a workspace, check "I know my current balance", enter a positive amount
 2. Cashflow and Projected tabs show balance data starting from that amount
 
 ---
@@ -872,38 +885,38 @@ Run through this checklist after any change to verify nothing is broken:
 #### 10.1 Export/Import Round-Trip
 
 **Steps:**
-1. Create a budget with:
+1. Create a workspace with:
    - Custom name, currency, period type, starting balance
    - 5+ expenses (mix of income/expense, various frequencies)
    - Imported actuals
-2. Export the budget
-3. Delete the budget
+2. Export the workspace
+3. Delete the workspace
 4. Restore from the exported file
 5. Verify all data matches original
 
 **Expected:**
-- Budget properties identical
+- Workspace properties identical
 - All expenses present with correct values
 - All imported actuals present with correct matches
 - Projections, cashflow, and compare tabs show same data
 
-#### 10.2 Concurrent Budgets
+#### 10.2 Concurrent Workspaces
 
 **Steps:**
-1. Create 3 different budgets
+1. Create 3 different workspaces
 2. Add expenses to each
 3. Import actuals to one of them
-4. Switch between budgets
+4. Switch between workspaces
 
 **Expected:**
-- Each budget's data is isolated
-- No cross-contamination between budgets
-- Deleting one budget doesn't affect others
+- Each workspace's data is isolated
+- No cross-contamination between workspaces
+- Deleting one workspace doesn't affect others
 
 #### 10.3 Actual Unlinking on Expense Delete
 
 **Steps:**
-1. Create a budget with an expense "Groceries"
+1. Create a workspace with an expense "Groceries"
 2. Import actuals matched to "Groceries"
 3. Verify Compare tab shows the match
 4. Delete the "Groceries" expense

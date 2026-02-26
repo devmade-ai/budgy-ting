@@ -13,7 +13,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { db } from '@/db'
-import { calculateProjection, resolveBudgetPeriod } from '@/engine/projection'
+import { calculateProjection, resolveWorkspacePeriod } from '@/engine/projection'
 import { calculateComparison } from '@/engine/variance'
 import { calculateEnvelope } from '@/engine/envelope'
 import { formatAmount } from '@/composables/useFormat'
@@ -24,11 +24,11 @@ import EmptyState from '@/components/EmptyState.vue'
 import CompareLineItems from '@/views/compare-views/CompareLineItems.vue'
 import CompareCategories from '@/views/compare-views/CompareCategories.vue'
 import CompareMonthly from '@/views/compare-views/CompareMonthly.vue'
-import type { Budget, Expense, Actual } from '@/types/models'
+import type { Workspace, Expense, Actual } from '@/types/models'
 import type { ComparisonResult } from '@/engine/variance'
 import type { EnvelopeResult } from '@/engine/envelope'
 
-const props = defineProps<{ budget: Budget }>()
+const props = defineProps<{ workspace: Workspace }>()
 const router = useRouter()
 
 const expenses = ref<Expense[]>([])
@@ -39,8 +39,8 @@ const error = ref('')
 onMounted(async () => {
   try {
     const [exps, acts] = await Promise.all([
-      db.expenses.where('budgetId').equals(props.budget.id).toArray(),
-      db.actuals.where('budgetId').equals(props.budget.id).toArray(),
+      db.expenses.where('workspaceId').equals(props.workspace.id).toArray(),
+      db.actuals.where('workspaceId').equals(props.workspace.id).toArray(),
     ])
     expenses.value = exps
     actuals.value = acts
@@ -54,24 +54,24 @@ onMounted(async () => {
 const comparison = computed<ComparisonResult | null>(() => {
   if (expenses.value.length === 0 && actuals.value.length === 0) return null
 
-  const { startDate, endDate } = resolveBudgetPeriod(props.budget)
+  const { startDate, endDate } = resolveWorkspacePeriod(props.workspace)
   const projection = calculateProjection(expenses.value, startDate, endDate)
   return calculateComparison(projection, actuals.value, expenses.value)
 })
 
 const envelope = computed<EnvelopeResult | null>(() => {
-  if (props.budget.startingBalance == null) return null
+  if (props.workspace.startingBalance == null) return null
   if (expenses.value.length === 0 && actuals.value.length === 0) return null
 
-  const { startDate, endDate } = resolveBudgetPeriod(props.budget)
+  const { startDate, endDate } = resolveWorkspacePeriod(props.workspace)
   const projection = calculateProjection(expenses.value, startDate, endDate)
-  return calculateEnvelope(props.budget.startingBalance, projection, actuals.value, todayISO(), expenses.value)
+  return calculateEnvelope(props.workspace.startingBalance, projection, actuals.value, todayISO(), expenses.value)
 })
 
 const viewMode = ref<'items' | 'categories' | 'monthly'>('items')
 
 function goToImport() {
-  router.push({ name: 'import-actuals', params: { id: props.budget.id } })
+  router.push({ name: 'import-actuals', params: { id: props.workspace.id } })
 }
 </script>
 
@@ -101,13 +101,13 @@ function goToImport() {
           <div>
             <p class="text-xs text-gray-400 uppercase tracking-wide">Starting Balance</p>
             <p class="text-lg font-semibold text-gray-900">
-              {{ props.budget.currencyLabel }}{{ formatAmount(envelope.startingBalance) }}
+              {{ props.workspace.currencyLabel }}{{ formatAmount(envelope.startingBalance) }}
             </p>
           </div>
           <div>
             <p class="text-xs text-gray-400 uppercase tracking-wide">Spent So Far</p>
             <p class="text-lg font-semibold text-gray-900">
-              {{ props.budget.currencyLabel }}{{ formatAmount(envelope.totalSpent) }}
+              {{ props.workspace.currencyLabel }}{{ formatAmount(envelope.totalSpent) }}
             </p>
           </div>
           <div>
@@ -116,7 +116,7 @@ function goToImport() {
               class="text-lg font-semibold"
               :class="envelope.remainingBalance > 0 ? 'text-brand-600' : 'text-red-600'"
             >
-              {{ props.budget.currencyLabel }}{{ formatAmount(Math.abs(envelope.remainingBalance)) }}
+              {{ props.workspace.currencyLabel }}{{ formatAmount(Math.abs(envelope.remainingBalance)) }}
               <span v-if="envelope.remainingBalance < 0" class="text-xs font-normal">over</span>
             </p>
           </div>
@@ -130,7 +130,7 @@ function goToImport() {
                 <span class="text-xs font-normal block">~{{ envelope.daysRemaining }} days</span>
               </template>
               <template v-else-if="envelope.dailyBurnRate">
-                {{ props.budget.currencyLabel }}{{ formatAmount(envelope.dailyBurnRate) }}/day
+                {{ props.workspace.currencyLabel }}{{ formatAmount(envelope.dailyBurnRate) }}/day
               </template>
               <template v-else>
                 <span class="text-gray-400 text-sm">Import actuals to see</span>
@@ -141,10 +141,10 @@ function goToImport() {
         <!-- Forecast message -->
         <div class="mt-3 text-center text-sm" :class="envelope.willExceed ? 'text-red-600' : 'text-brand-600'">
           <template v-if="envelope.willExceed">
-            At current pace, you'll be {{ props.budget.currencyLabel }}{{ formatAmount(Math.abs(envelope.projectedSurplus)) }} over budget
+            At current pace, you'll be {{ props.workspace.currencyLabel }}{{ formatAmount(Math.abs(envelope.projectedSurplus)) }} over budget
           </template>
           <template v-else>
-            On track — {{ props.budget.currencyLabel }}{{ formatAmount(envelope.projectedSurplus) }} projected to remain
+            On track — {{ props.workspace.currencyLabel }}{{ formatAmount(envelope.projectedSurplus) }} projected to remain
           </template>
         </div>
       </div>
@@ -155,13 +155,13 @@ function goToImport() {
           <div>
             <p class="text-xs text-gray-400 uppercase tracking-wide">Budgeted</p>
             <p class="text-lg font-semibold text-gray-900">
-              {{ props.budget.currencyLabel }}{{ formatAmount(comparison.totalBudgeted) }}
+              {{ props.workspace.currencyLabel }}{{ formatAmount(comparison.totalBudgeted) }}
             </p>
           </div>
           <div>
             <p class="text-xs text-gray-400 uppercase tracking-wide">Actual</p>
             <p class="text-lg font-semibold text-gray-900">
-              {{ props.budget.currencyLabel }}{{ formatAmount(comparison.totalActual) }}
+              {{ props.workspace.currencyLabel }}{{ formatAmount(comparison.totalActual) }}
             </p>
           </div>
           <div>
@@ -170,7 +170,7 @@ function goToImport() {
               class="text-lg font-semibold"
               :class="comparison.totalVariance > 0 ? 'text-red-600' : comparison.totalVariance < 0 ? 'text-green-600' : 'text-gray-500'"
             >
-              {{ comparison.totalVariance >= 0 ? '+' : '' }}{{ props.budget.currencyLabel }}{{ formatAmount(comparison.totalVariance) }}
+              {{ comparison.totalVariance >= 0 ? '+' : '' }}{{ props.workspace.currencyLabel }}{{ formatAmount(comparison.totalVariance) }}
             </p>
           </div>
         </div>
@@ -211,7 +211,7 @@ function goToImport() {
       <CompareLineItems
         v-if="viewMode === 'items'"
         :comparison="comparison"
-        :currency-label="props.budget.currencyLabel"
+        :currency-label="props.workspace.currencyLabel"
       />
       <CompareCategories
         v-else-if="viewMode === 'categories'"

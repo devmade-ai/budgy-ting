@@ -8,30 +8,30 @@ import { useToast } from '@/composables/useToast'
 import ExpenseForm from '@/components/ExpenseForm.vue'
 import ErrorAlert from '@/components/ErrorAlert.vue'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
-import type { Budget, Expense, Frequency, LineType } from '@/types/models'
+import type { Workspace, Expense, Frequency, LineType } from '@/types/models'
 
 const props = defineProps<{ id: string; expenseId: string }>()
 const router = useRouter()
 const { show: showToast } = useToast()
 
-const budget = ref<Budget | null>(null)
+const workspace = ref<Workspace | null>(null)
 const expense = ref<Expense | null>(null)
 const loading = ref(true)
 const error = ref('')
 
 onMounted(async () => {
   try {
-    const [foundBudget, foundExpense] = await Promise.all([
-      db.budgets.get(props.id),
+    const [foundWorkspace, foundExpense] = await Promise.all([
+      db.workspaces.get(props.id),
       db.expenses.get(props.expenseId),
     ])
 
-    if (!foundBudget || !foundExpense) {
-      router.replace({ name: 'budget-list' })
+    if (!foundWorkspace || !foundExpense) {
+      router.replace({ name: 'workspace-list' })
       return
     }
 
-    budget.value = foundBudget
+    workspace.value = foundWorkspace
     expense.value = foundExpense
   } catch {
     error.value = 'Couldn\'t load this expense. Please go back and try again.'
@@ -63,14 +63,14 @@ async function handleSubmit(data: {
 
     await touchCategory(data.category)
     showToast('Expense saved')
-    router.push({ name: 'budget-expenses', params: { id: props.id } })
+    router.push({ name: 'workspace-expenses', params: { id: props.id } })
   } catch {
     error.value = 'Couldn\'t save changes. Please try again.'
   }
 }
 
 function handleCancel() {
-  router.push({ name: 'budget-expenses', params: { id: props.id } })
+  router.push({ name: 'workspace-expenses', params: { id: props.id } })
 }
 </script>
 
@@ -88,10 +88,10 @@ function handleCancel() {
 
     <LoadingSpinner v-if="loading" />
 
-    <template v-else-if="budget && expense">
+    <template v-else-if="workspace && expense">
       <h1 class="page-title mb-6">Edit Expense</h1>
       <ExpenseForm
-        :budget="budget"
+        :workspace="workspace"
         :expense="expense"
         @submit="handleSubmit"
         @cancel="handleCancel"

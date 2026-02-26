@@ -6,7 +6,7 @@ import type { Expense, Actual } from '@/types/models'
 function makeExpense(overrides: Partial<Expense> = {}): Expense {
   return {
     id: 'exp-1',
-    budgetId: 'b-1',
+    workspaceId: 'b-1',
     description: 'Test expense',
     category: 'General',
     amount: 1000,
@@ -23,7 +23,7 @@ function makeExpense(overrides: Partial<Expense> = {}): Expense {
 function makeActual(overrides: Partial<Actual> = {}): Actual {
   return {
     id: 'act-1',
-    budgetId: 'b-1',
+    workspaceId: 'b-1',
     expenseId: 'exp-1',
     date: '2026-01-15',
     amount: 1000,

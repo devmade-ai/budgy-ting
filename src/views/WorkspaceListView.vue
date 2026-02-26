@@ -1,8 +1,8 @@
 <script setup lang="ts">
 /**
- * Requirement: Budget list with restore-from-backup and clear-all-data flows
+ * Requirement: Workspace list with restore-from-backup and clear-all-data flows
  * Approach: FileReader + JSON validation for import, with replace-or-skip
- *   confirmation when a matching budget ID already exists
+ *   confirmation when a matching workspace already exists
  * Alternatives:
  *   - Drag-and-drop import: Rejected — file-input is simpler on mobile
  */
@@ -10,23 +10,23 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { db } from '@/db'
-import { validateImport, importBudget } from '@/engine/exportImport'
+import { validateImport, importWorkspace } from '@/engine/exportImport'
 import { useToast } from '@/composables/useToast'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import ErrorAlert from '@/components/ErrorAlert.vue'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import { formatAmount } from '@/composables/useFormat'
-import type { Budget, Expense } from '@/types/models'
+import type { Workspace, Expense } from '@/types/models'
 import type { ExportSchema } from '@/engine/exportImport'
 
 const router = useRouter()
 const { show: showToast } = useToast()
-const budgets = ref<Budget[]>([])
+const workspaces = ref<Workspace[]>([])
 const loading = ref(true)
 
-// Summary data per budget (expense count + monthly total)
-const budgetSummaries = ref<Record<string, { count: number; monthlyTotal: number }>>({})
+// Summary data per workspace (expense count + monthly total)
+const workspaceSummaries = ref<Record<string, { count: number; monthlyTotal: number }>>({})
 
 function monthlyEquivalent(exp: Expense): number {
   if (exp.frequency === 'monthly') return exp.amount
@@ -38,20 +38,20 @@ function monthlyEquivalent(exp: Expense): number {
   return 0
 }
 
-async function loadSummaries(budgetList: Budget[]) {
+async function loadSummaries(wsList: Workspace[]) {
   const summaries: Record<string, { count: number; monthlyTotal: number }> = {}
-  for (const b of budgetList) {
+  for (const ws of wsList) {
     try {
-      const expenses = await db.expenses.where('budgetId').equals(b.id).toArray()
+      const expenses = await db.expenses.where('workspaceId').equals(ws.id).toArray()
       const monthlyTotal = expenses
         .filter((e) => e.type !== 'income')
         .reduce((sum, e) => sum + monthlyEquivalent(e), 0)
-      summaries[b.id] = { count: expenses.length, monthlyTotal }
+      summaries[ws.id] = { count: expenses.length, monthlyTotal }
     } catch {
-      summaries[b.id] = { count: 0, monthlyTotal: 0 }
+      summaries[ws.id] = { count: 0, monthlyTotal: 0 }
     }
   }
-  budgetSummaries.value = summaries
+  workspaceSummaries.value = summaries
 }
 
 // Restore state
@@ -64,10 +64,10 @@ const error = ref('')
 
 onMounted(async () => {
   try {
-    budgets.value = await db.budgets.orderBy('createdAt').reverse().toArray()
-    loadSummaries(budgets.value)
+    workspaces.value = await db.workspaces.orderBy('createdAt').reverse().toArray()
+    loadSummaries(workspaces.value)
   } catch {
-    error.value = 'Couldn\'t load your budgets. Please refresh the page and try again.'
+    error.value = 'Couldn\'t load your workspaces. Please refresh the page and try again.'
   } finally {
     loading.value = false
   }
@@ -75,19 +75,19 @@ onMounted(async () => {
 
 async function refreshList() {
   try {
-    budgets.value = await db.budgets.orderBy('createdAt').reverse().toArray()
-    loadSummaries(budgets.value)
+    workspaces.value = await db.workspaces.orderBy('createdAt').reverse().toArray()
+    loadSummaries(workspaces.value)
   } catch {
     error.value = 'Couldn\'t refresh the list. Please refresh the page and try again.'
   }
 }
 
-function openBudget(id: string) {
-  router.push({ name: 'budget-detail', params: { id } })
+function openWorkspace(id: string) {
+  router.push({ name: 'workspace-detail', params: { id } })
 }
 
-function createBudget() {
-  router.push({ name: 'budget-create' })
+function createWorkspace() {
+  router.push({ name: 'workspace-create' })
 }
 
 function handleRestoreFile(event: Event) {
@@ -114,14 +114,14 @@ function handleRestoreFile(event: Event) {
       return
     }
 
-    // Check if budget already exists
+    // Check if workspace already exists
     try {
-      const existing = await db.budgets.get(result.data.budget.id)
+      const existing = await db.workspaces.get(result.data.workspace.id)
       if (existing) {
         pendingImportData.value = result.data
         showReplaceConfirm.value = true
       } else {
-        const importResult = await importBudget(result.data, 'merge')
+        const importResult = await importWorkspace(result.data, 'merge')
         showToast(importResult.message)
         await refreshList()
       }
@@ -141,23 +141,23 @@ function handleRestoreFile(event: Event) {
 async function confirmReplace() {
   if (!pendingImportData.value) return
   try {
-    const result = await importBudget(pendingImportData.value, 'replace')
+    const result = await importWorkspace(pendingImportData.value, 'replace')
     showToast(result.message)
     pendingImportData.value = null
     showReplaceConfirm.value = false
     await refreshList()
   } catch {
-    importError.value = 'Couldn\'t replace the budget. Please try again.'
+    importError.value = 'Couldn\'t replace the workspace. Please try again.'
     showReplaceConfirm.value = false
   }
 }
 
 async function handleClearAll() {
   try {
-    await db.transaction('rw', [db.budgets, db.expenses, db.actuals, db.categoryCache], async () => {
+    await db.transaction('rw', [db.workspaces, db.expenses, db.actuals, db.categoryCache], async () => {
       await db.actuals.clear()
       await db.expenses.clear()
-      await db.budgets.clear()
+      await db.workspaces.clear()
       await db.categoryCache.clear()
     })
     await refreshList()
@@ -173,7 +173,7 @@ const showClearConfirm = ref(false)
 <template>
   <div>
     <div class="flex items-center justify-between mb-6">
-      <h1 class="page-title">Budgets</h1>
+      <h1 class="page-title">Workspaces</h1>
       <div class="flex gap-2">
         <label class="btn-secondary text-sm cursor-pointer">
           <span class="i-lucide-folder-open mr-1" />
@@ -185,9 +185,9 @@ const showClearConfirm = ref(false)
             @change="handleRestoreFile"
           />
         </label>
-        <button class="btn-primary" @click="createBudget">
+        <button class="btn-primary" @click="createWorkspace">
           <span class="i-lucide-plus mr-1" />
-          New Budget
+          New Workspace
         </button>
       </div>
     </div>
@@ -198,14 +198,14 @@ const showClearConfirm = ref(false)
     <LoadingSpinner v-if="loading" />
 
     <EmptyState
-      v-else-if="budgets.length === 0"
+      v-else-if="workspaces.length === 0"
       icon="i-lucide-wallet"
-      title="No budgets yet"
-      description="Create your first budget or restore from a backup"
+      title="No workspaces yet"
+      description="Create your first workspace or restore from a backup"
     >
       <div class="flex gap-3 justify-center">
-        <button class="btn-primary" @click="createBudget">
-          Create your first budget
+        <button class="btn-primary" @click="createWorkspace">
+          Create your first workspace
         </button>
         <label class="btn-secondary cursor-pointer">
           Restore from file
@@ -219,27 +219,27 @@ const showClearConfirm = ref(false)
       </div>
     </EmptyState>
 
-    <!-- Budget list -->
+    <!-- Workspace list -->
     <template v-else>
       <div class="space-y-3">
         <button
-          v-for="budget in budgets"
-          :key="budget.id"
+          v-for="ws in workspaces"
+          :key="ws.id"
           class="card w-full text-left hover:border-brand-300 transition-colors cursor-pointer"
-          @click="openBudget(budget.id)"
+          @click="openWorkspace(ws.id)"
         >
           <div class="flex items-center justify-between">
             <div class="min-w-0">
-              <h2 class="font-semibold text-gray-900 truncate">{{ budget.name }}</h2>
+              <h2 class="font-semibold text-gray-900 truncate">{{ ws.name }}</h2>
               <p class="text-sm text-gray-500 mt-0.5">
-                {{ budget.periodType === 'monthly' ? 'Monthly' : 'Custom period' }}
-                <span v-if="budget.currencyLabel" class="ml-1">
-                  &middot; {{ budget.currencyLabel }}
+                {{ ws.periodType === 'monthly' ? 'Monthly' : 'Custom period' }}
+                <span v-if="ws.currencyLabel" class="ml-1">
+                  &middot; {{ ws.currencyLabel }}
                 </span>
-                <template v-if="budgetSummaries[budget.id]">
-                  &middot; {{ budgetSummaries[budget.id].count }} item{{ budgetSummaries[budget.id].count === 1 ? '' : 's' }}
-                  <template v-if="budgetSummaries[budget.id].monthlyTotal > 0">
-                    &middot; {{ budget.currencyLabel }}{{ formatAmount(budgetSummaries[budget.id].monthlyTotal) }}/mo
+                <template v-if="workspaceSummaries[ws.id]">
+                  &middot; {{ workspaceSummaries[ws.id]!.count }} item{{ workspaceSummaries[ws.id]!.count === 1 ? '' : 's' }}
+                  <template v-if="workspaceSummaries[ws.id]!.monthlyTotal > 0">
+                    &middot; {{ ws.currencyLabel }}{{ formatAmount(workspaceSummaries[ws.id]!.monthlyTotal) }}/mo
                   </template>
                 </template>
               </p>
@@ -263,8 +263,8 @@ const showClearConfirm = ref(false)
     <!-- Replace confirm dialog -->
     <ConfirmDialog
       v-if="showReplaceConfirm && pendingImportData"
-      title="Replace existing budget?"
-      :message="`A budget named '${pendingImportData.budget.name}' already exists. Replacing it will overwrite all its expenses and imported data.`"
+      title="Replace existing workspace?"
+      :message="`A workspace named '${pendingImportData.workspace.name}' already exists. Replacing it will overwrite all its expenses and imported data.`"
       confirm-label="Replace"
       :danger="true"
       @confirm="confirmReplace"
@@ -275,7 +275,7 @@ const showClearConfirm = ref(false)
     <ConfirmDialog
       v-if="showClearConfirm"
       title="Clear all data?"
-      message="This will permanently delete all budgets, expenses, and imported data. This cannot be undone. Make sure you've exported anything you want to keep."
+      message="This will permanently delete all workspaces, expenses, and imported data. This cannot be undone. Make sure you've exported anything you want to keep."
       confirm-label="Clear everything"
       :danger="true"
       @confirm="handleClearAll(); showClearConfirm = false"

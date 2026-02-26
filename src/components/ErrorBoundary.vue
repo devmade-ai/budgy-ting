@@ -41,9 +41,9 @@ function retry() {
       </button>
       <button
         class="btn-secondary"
-        @click="$router.push({ name: 'budget-list' })"
+        @click="$router.push({ name: 'workspace-list' })"
       >
-        Go to budgets
+        Go to workspaces
       </button>
     </div>
   </div>

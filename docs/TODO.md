@@ -6,7 +6,7 @@
 
 - [ ] Add ApexCharts for category bar chart and monthly line chart (requires npm install)
 - [ ] Add Papa Parse for robust CSV parsing (multi-line quoted fields, custom delimiters)
-- [ ] Storage usage indicator on budget list page
+- [ ] Storage usage indicator on workspace list page
 - [ ] Generate dedicated maskable icon with proper safe-zone padding
 
 ## UX
@@ -17,3 +17,4 @@
 ## Technical
 
 - [ ] Remove debug system (DebugPill + debugLog) after alpha phase
+- [ ] Update PRODUCT_DEFINITION.md data model to reflect workspace rename and v4 schema

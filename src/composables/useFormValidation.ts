@@ -1,5 +1,5 @@
 /**
- * Requirement: Shared form validation logic for BudgetForm and ExpenseForm
+ * Requirement: Shared form validation logic for WorkspaceForm and ExpenseForm
  * Approach: Provides reactive errors map, common validation rules, and a validate() runner.
  *   Each form defines its own rules array; the composable runs them and populates errors.
  * Alternatives:

@@ -8,10 +8,10 @@ import { ref, computed } from 'vue'
 import { useCategoryAutocomplete } from '@/composables/useCategoryAutocomplete'
 import { useFormValidation, required, positiveNumber, dateAfter } from '@/composables/useFormValidation'
 import DateInput from '@/components/DateInput.vue'
-import type { Budget, Expense, Frequency, LineType } from '@/types/models'
+import type { Workspace, Expense, Frequency, LineType } from '@/types/models'
 
 const props = defineProps<{
-  budget: Budget
+  workspace: Workspace
   expense?: Expense
 }>()
 
@@ -32,7 +32,7 @@ const lineType = ref<LineType>(props.expense?.type ?? 'expense')
 const description = ref(props.expense?.description ?? '')
 const amount = ref(props.expense?.amount?.toString() ?? '')
 const frequency = ref<Frequency>(props.expense?.frequency ?? 'monthly')
-const startDate = ref(props.expense?.startDate ?? props.budget.startDate ?? '')
+const startDate = ref(props.expense?.startDate ?? props.workspace.startDate ?? '')
 const endDate = ref(props.expense?.endDate ?? '')
 
 const { query: categoryQuery, suggestions, isOpen, select, close } = useCategoryAutocomplete()
@@ -206,7 +206,7 @@ function selectCategory(cat: string) {
     <!-- Amount -->
     <div>
       <label class="block text-sm font-medium text-gray-700 mb-1" for="expense-amount">
-        Amount ({{ budget.currencyLabel }})
+        Amount ({{ workspace.currencyLabel }})
       </label>
       <input
         id="expense-amount"

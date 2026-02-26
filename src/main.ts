@@ -2,11 +2,17 @@ import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router'
 import { debugLog } from './debug/debugLog'
+import { seedDemoWorkspace } from './db/demoData'
 
 import '@unocss/reset/tailwind.css'
 import 'virtual:uno.css'
 
 debugLog('boot', 'info', 'Application starting')
+
+// Seed demo workspace on first visit (empty DB) — non-blocking
+seedDemoWorkspace().then((created) => {
+  if (created) debugLog('boot', 'info', 'Demo workspace created')
+})
 
 const app = createApp(App)
 app.use(router)

@@ -13,9 +13,9 @@ import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import { formatAmount } from '@/composables/useFormat'
 import { useToast } from '@/composables/useToast'
-import type { Budget, Expense } from '@/types/models'
+import type { Workspace, Expense } from '@/types/models'
 
-const props = defineProps<{ budget: Budget }>()
+const props = defineProps<{ workspace: Workspace }>()
 const router = useRouter()
 const { show: showToast } = useToast()
 
@@ -28,8 +28,8 @@ const searchQuery = ref('')
 onMounted(async () => {
   try {
     expenses.value = await db.expenses
-      .where('budgetId')
-      .equals(props.budget.id)
+      .where('workspaceId')
+      .equals(props.workspace.id)
       .toArray()
   } catch {
     error.value = 'Couldn\'t load expenses. Please refresh and try again.'
@@ -92,13 +92,13 @@ function frequencyLabel(f: string): string {
 }
 
 function addExpense() {
-  router.push({ name: 'expense-create', params: { id: props.budget.id } })
+  router.push({ name: 'expense-create', params: { id: props.workspace.id } })
 }
 
 function editExpense(exp: Expense) {
   router.push({
     name: 'expense-edit',
-    params: { id: props.budget.id, expenseId: exp.id },
+    params: { id: props.workspace.id, expenseId: exp.id },
   })
 }
 
@@ -130,9 +130,9 @@ async function confirmDelete() {
         <template v-if="expenses.length > 0">
           {{ expenses.length }} item{{ expenses.length === 1 ? '' : 's' }}
           <template v-if="totalMonthlyIncome > 0">
-            &middot; <span class="text-green-600">+{{ props.budget.currencyLabel }}{{ formatAmount(totalMonthlyIncome) }}</span>
+            &middot; <span class="text-green-600">+{{ props.workspace.currencyLabel }}{{ formatAmount(totalMonthlyIncome) }}</span>
           </template>
-          &middot; <span class="text-red-600">-{{ props.budget.currencyLabel }}{{ formatAmount(totalMonthlyExpenses) }}</span>/month
+          &middot; <span class="text-red-600">-{{ props.workspace.currencyLabel }}{{ formatAmount(totalMonthlyExpenses) }}</span>/month
         </template>
       </p>
       <button class="btn-primary text-sm" @click="addExpense">
@@ -191,7 +191,7 @@ async function confirmDelete() {
                 <span v-if="exp.type === 'income'" class="text-xs text-green-600 font-normal ml-1">income</span>
               </p>
               <p class="text-sm" :class="exp.type === 'income' ? 'text-green-600' : 'text-gray-500'">
-                {{ exp.type === 'income' ? '+' : '' }}{{ props.budget.currencyLabel }}{{ formatAmount(exp.amount) }}
+                {{ exp.type === 'income' ? '+' : '' }}{{ props.workspace.currencyLabel }}{{ formatAmount(exp.amount) }}
                 <span class="text-gray-400">{{ frequencyLabel(exp.frequency) }}</span>
               </p>
             </div>
@@ -222,7 +222,7 @@ async function confirmDelete() {
     <ConfirmDialog
       v-if="deleteTarget"
       title="Delete expense?"
-      :message="`Remove '${deleteTarget.description}' (${props.budget.currencyLabel}${formatAmount(deleteTarget.amount)} ${frequencyLabel(deleteTarget.frequency)})? Any matched import data will be unlinked.`"
+      :message="`Remove '${deleteTarget.description}' (${props.workspace.currencyLabel}${formatAmount(deleteTarget.amount)} ${frequencyLabel(deleteTarget.frequency)})? Any matched import data will be unlinked.`"
       confirm-label="Delete expense"
       :danger="true"
       @confirm="confirmDelete"

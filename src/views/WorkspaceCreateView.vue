@@ -5,7 +5,7 @@ import { db } from '@/db'
 import { useId } from '@/composables/useId'
 import { nowISO, todayISO } from '@/composables/useTimestamp'
 import { useToast } from '@/composables/useToast'
-import BudgetForm from '@/components/BudgetForm.vue'
+import WorkspaceForm from '@/components/WorkspaceForm.vue'
 import ErrorAlert from '@/components/ErrorAlert.vue'
 import type { PeriodType } from '@/types/models'
 
@@ -25,7 +25,7 @@ async function handleSubmit(data: {
     const now = nowISO()
     const id = useId()
 
-    await db.budgets.add({
+    await db.workspaces.add({
       id,
       name: data.name,
       currencyLabel: data.currencyLabel,
@@ -33,19 +33,20 @@ async function handleSubmit(data: {
       startDate: data.periodType === 'monthly' ? todayISO() : data.startDate,
       endDate: data.endDate,
       startingBalance: data.startingBalance,
+      isDemo: false,
       createdAt: now,
       updatedAt: now,
     })
 
-    showToast('Budget created')
-    router.push({ name: 'budget-detail', params: { id } })
+    showToast('Workspace created')
+    router.push({ name: 'workspace-detail', params: { id } })
   } catch {
-    error.value = 'Couldn\'t create the budget. Please check your storage and try again.'
+    error.value = 'Couldn\'t create the workspace. Please check your storage and try again.'
   }
 }
 
 function handleCancel() {
-  router.push({ name: 'budget-list' })
+  router.push({ name: 'workspace-list' })
 }
 </script>
 
@@ -58,8 +59,8 @@ function handleCancel() {
       <span class="i-lucide-arrow-left" />
       Back
     </button>
-    <h1 class="page-title mb-6">New Budget</h1>
+    <h1 class="page-title mb-6">New Workspace</h1>
     <ErrorAlert v-if="error" :message="error" @dismiss="error = ''" />
-    <BudgetForm @submit="handleSubmit" @cancel="handleCancel" />
+    <WorkspaceForm @submit="handleSubmit" @cancel="handleCancel" />
   </div>
 </template>

@@ -5,7 +5,7 @@ import type { Expense } from '@/types/models'
 function makeExpense(overrides: Partial<Expense> = {}): Expense {
   return {
     id: 'exp-1',
-    budgetId: 'b-1',
+    workspaceId: 'b-1',
     description: 'Test expense',
     category: 'General',
     amount: 100,

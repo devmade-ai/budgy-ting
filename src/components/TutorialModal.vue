@@ -31,8 +31,8 @@ const steps: TutorialStep[] = [
   },
   {
     icon: 'i-lucide-wallet',
-    title: 'Create a budget',
-    description: 'Start by creating a budget. Give it a name, pick a time period (monthly or custom dates), and choose your currency.',
+    title: 'Create a workspace',
+    description: 'Start by creating a workspace. Give it a name, pick a time period (monthly or custom dates), and choose your currency.',
   },
   {
     icon: 'i-lucide-list-plus',
