@@ -11,6 +11,19 @@
   </head>
   <body>
     <div id="app"></div>
+    <!-- Requirement: Capture beforeinstallprompt before Vue modules load
+         Approach: Classic (non-module) inline script runs synchronously during
+           HTML parse, before any <script type="module"> begins loading.
+           Stashes the event on window for usePWAInstall.ts to consume.
+         Why: On repeat visits with a cached SW, the browser fires
+           beforeinstallprompt before module scripts execute — losing the event.
+         Reference: glow-props CLAUDE.md "PWA Install Prompt Race Condition" -->
+    <script>
+      window.addEventListener('beforeinstallprompt', function (e) {
+        e.preventDefault();
+        window.__pwaInstallPromptEvent = e;
+      });
+    </script>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

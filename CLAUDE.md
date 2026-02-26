@@ -1,5 +1,14 @@
 # READ AND FOLLOW THE FUCKING PROCESS, PRINCIPLES, CODE STANDARDS, DOCUMENTATION, AI NOTES, AND PROHIBITIONS EVERY TIME
 
+## Cross-Project Reference
+
+Shared CLAUDE.md patterns are maintained at:
+```
+https://raw.githubusercontent.com/devmade-ai/glow-props/main/CLAUDE.md
+```
+
+Check this periodically for new Suggested Implementations, AI Notes, or process updates that should be synced into this project. Adapt React examples to Vue 3 Composition API when porting.
+
 ## Process
 
 1. **Read these preferences first**
@@ -252,8 +261,125 @@ These footers are required on every commit. No exceptions.
 - **Always read files before editing.** Use the Read tool on every file before attempting to Edit it. Editing without reading first will fail.
 - **Communication style:** Direct, concise responses. No filler phrases or conversational padding. State facts and actions. Ask specific questions with concrete options when clarification is needed.
 - **Development phase:** App is pre-release with zero users. Features added now are provisional and will be changed or removed later. Don't over-polish or over-engineer — keep things easy to swap out. Don't push back on feature ideas based on "users don't need this" — there are no users yet, and the goal is exploration.
+- **Check build tools before building.** Run `npm install` or verify `node_modules/.bin/vite` exists before attempting `npm run build`. The `sharp` package may not be installed (used by prebuild icon generation), so use `./node_modules/.bin/vite build` directly to skip the prebuild step if sharp fails.
 
 ### REMINDER: READ AND FOLLOW THE FUCKING AI NOTES EVERY TIME
+
+## Suggested Implementations
+
+Reference patterns for features implemented in this project. These document the architecture and behavior — check existing code matches before modifying.
+
+### PWA System
+
+The PWA system has four parts:
+
+**Service worker & updates** (`src/composables/usePWAUpdate.ts`): Wraps `vite-plugin-pwa`'s virtual import with `registerType: 'prompt'` — users control when updates apply. Checks for new service worker versions every 60 minutes via `registration.update()`. Exposes `hasUpdate` ref and `updateApp()` to the UI. The offline-ready notification auto-dismisses after 3 seconds.
+
+**Install detection** (`src/composables/usePWAInstall.ts`): Detects browser type (Chrome/Edge/Brave/Safari/Firefox) via UA string. Captures `beforeinstallprompt` on Chromium browsers for native install. For Safari and Firefox, falls back to manual instruction flow. Tracks install analytics in localStorage (last 50 events: prompted, installed, dismissed, instructions-viewed). Respects standalone mode detection (hides prompt when already installed). Dismiss state persisted in localStorage.
+
+**Install prompt UI** (`src/components/InstallPrompt.vue`): Renders a banner with "Install" (Chromium native) or "How to Install" (Safari/Firefox) buttons, plus a "Not now" dismiss. Hidden when already in standalone mode, dismissed, or unsupported browser.
+
+**Manual install instructions** (`src/components/InstallInstructionsModal.vue`): Browser-specific step-by-step guides in a modal. Four variants: Safari iOS (Share → Add to Home Screen), Safari macOS (File → Add to Dock), Firefox Android (menu → Install), Firefox desktop (tells user to use Chrome/Edge instead). Plain language, aimed at non-technical users.
+
+#### Fix: Timer Leaks on Unmount (Nested Timeouts)
+
+Debounce patterns using `setTimeout` leak when a component unmounts mid-timeout. The nested case is worse: a timeout callback sets *another* timeout, and cleaning up only the outer one leaves the inner one orphaned.
+
+**Fix — track all timeout IDs:**
+```typescript
+// In a composable or component setup
+const timeouts: ReturnType<typeof setTimeout>[] = []
+
+function scheduleWithCleanup() {
+  const outer = setTimeout(() => {
+    doSomething()
+    const inner = setTimeout(() => save(), 500)
+    timeouts.push(inner)
+  }, 300)
+  timeouts.push(outer)
+}
+
+onUnmounted(() => timeouts.forEach(clearTimeout))
+```
+
+**General rule:** Every `setTimeout`, `setInterval`, `addEventListener`, or `subscribe` call inside a component needs a corresponding cleanup in `onUnmounted`. If callbacks create *new* async operations, those need cleanup too.
+
+#### Fix: PWA Install Prompt Race Condition
+
+In SPAs, `beforeinstallprompt` can fire before the framework mounts. This event fires once — if nothing is listening, it's lost.
+
+**Part 1: Inline script in `index.html` (before module scripts)**
+
+```html
+<script>
+  window.addEventListener('beforeinstallprompt', function (e) {
+    e.preventDefault();
+    window.__pwaInstallPromptEvent = e;
+  });
+</script>
+```
+
+Classic (non-module) script executes synchronously during HTML parse. Stashes the event on `window` for the composable to consume.
+
+**Part 2: Composable consumes the stashed event**
+
+```typescript
+function consumeEarlyCapturedEvent() {
+  const win = window as unknown as Record<string, unknown>
+  const captured = win.__pwaInstallPromptEvent
+  if (captured) {
+    delete win.__pwaInstallPromptEvent
+    return captured
+  }
+  return null
+}
+
+// At module load (outside composable function):
+const early = consumeEarlyCapturedEvent()
+if (early) {
+  deferredPrompt = early
+  canNativeInstall.value = true
+}
+
+// Fallback listener for first-visit case
+window.addEventListener('beforeinstallprompt', (e) => { ... })
+```
+
+**Why both parts:** On repeat visits (cached SW), the event fires before mount — the inline script catches it. On first visits (SW registers late), the event fires after mount — the listener catches it.
+
+### Debug System
+
+Alpha-phase diagnostic tool, intended to be removed post-alpha.
+
+**In-memory event store** (`src/debug/debugLog.ts`): Pub/sub system with a capped circular buffer of 200 entries. Each entry has: `id`, `timestamp`, `source` (boot/db/pwa/import/engine/global), `severity` (info/success/warn/error), `event`, and optional `details`. Global `window.error` and `unhandledrejection` listeners capture crashes early.
+
+**Floating debug pill** (`src/debug/DebugPill.vue`): Mounted in a separate Vue root (survives App crashes). Collapsed: "dbg" pill with entry count and error/warning badges. Expanded: two tabs — Log (timestamped, color-coded entries) and Environment (URL, UA, screen, online status, SW/IndexedDB support). Copy generates a full debug report to clipboard. Clear wipes all entries.
+
+### App Icons from SVG Source
+
+Single SVG source file (`public/icon.svg`), Sharp converts to all needed PNG sizes. One command regenerates everything.
+
+**Generator:** `scripts/generate-icons.mjs` — reads SVG, outputs:
+- `pwa-512x512.png` (512x512) — PWA manifest, maskable
+- `pwa-192x192.png` (192x192) — PWA manifest, any
+- `apple-touch-icon.png` (180x180) — iOS bookmark
+- `favicon.ico` (32x32) — browser tab (PNG wrapped in ICO container)
+
+**Run:** `npm run generate-icons`
+
+**SVG design rules:**
+- Canvas must be square (`viewBox="0 0 512 512"`)
+- Use paths, not text — avoid font rendering inconsistencies across OS/CI
+- Background fills entire canvas (no transparency)
+- Important content stays within inner 80% (safe zone for maskable crop)
+- Design must be legible at 32px (favicon) — avoid fine details
+
+**PWA manifest icons** (configured in `vite.config.ts` via vite-plugin-pwa):
+- 192x192 with `purpose: 'any'`
+- 512x512 with `purpose: 'any'`
+- 512x512 with `purpose: 'maskable'` (separate entry)
+
+Don't combine `"any maskable"` — browsers pick the wrong one.
 
 ## Prohibitions
 

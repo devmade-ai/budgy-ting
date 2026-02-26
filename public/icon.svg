@@ -2,15 +2,30 @@
   App icon source — rasterized by scripts/generate-icons.mjs via sharp.
 
   Requirement: Icon must render identically in CI (Ubuntu) and locally.
-  Approach: Generic "serif" font-family for the B glyph.
+  Approach: Geometric B built from SVG paths — no font dependency at all.
   Alternatives:
-    - Georgia: Rejected — proprietary MS font, not installed on Ubuntu CI runners.
-    - Convert text to <path>: Rejected — harder to tweak; serif fallback is adequate.
+    - <text> with serif font: Rejected — renders differently across OS/CI (Ubuntu
+      lacks Georgia; generic serif varies). Previous approach, replaced here.
+    - Outlined font via fontforge: Rejected — external tooling dependency for a
+      single glyph; hand-tuned paths are simpler and more controllable.
+  Design: Bold B monogram with two D-shaped bowls (lower slightly wider).
+    Even-odd fill rule cuts counter shapes from the outer boundary.
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <rect width="512" height="512" rx="92" fill="#10b981"/>
-  <circle cx="256" cy="256" r="180" fill="white"/>
-  <text x="256" y="270" font-family="serif" font-weight="bold"
-    font-size="240" fill="#10b981" text-anchor="middle"
-    dominant-baseline="central">B</text>
+  <path fill="white" fill-rule="evenodd" d="
+    M 140 108
+    H 264
+    C 376 108, 376 248, 264 248
+    L 248 252
+    C 400 252, 400 404, 264 404
+    H 140
+    Z
+    M 204 152
+    C 334 152, 334 204, 204 204
+    Z
+    M 204 292
+    C 350 292, 350 358, 204 358
+    Z
+  "/>
 </svg>
