@@ -4,11 +4,13 @@ import { useRouter } from 'vue-router'
 import { db } from '@/db'
 import { useId } from '@/composables/useId'
 import { nowISO, todayISO } from '@/composables/useTimestamp'
+import { useToast } from '@/composables/useToast'
 import BudgetForm from '@/components/BudgetForm.vue'
 import ErrorAlert from '@/components/ErrorAlert.vue'
 import type { PeriodType } from '@/types/models'
 
 const router = useRouter()
+const { show: showToast } = useToast()
 const error = ref('')
 
 async function handleSubmit(data: {
@@ -35,6 +37,7 @@ async function handleSubmit(data: {
       updatedAt: now,
     })
 
+    showToast('Budget created')
     router.push({ name: 'budget-detail', params: { id } })
   } catch {
     error.value = 'Couldn\'t create the budget. Please check your storage and try again.'

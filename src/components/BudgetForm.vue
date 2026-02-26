@@ -7,9 +7,11 @@
  *   - Modal form: Rejected — full page form is simpler on mobile
  */
 
-import { ref, computed, watch } from 'vue'
+import { ref, computed } from 'vue'
 import type { Budget, PeriodType } from '@/types/models'
 import { todayISO } from '@/composables/useTimestamp'
+import { useFormValidation, required, positiveNumber, dateAfter } from '@/composables/useFormValidation'
+import DateInput from '@/components/DateInput.vue'
 
 const props = defineProps<{
   budget?: Budget
@@ -37,45 +39,29 @@ const startingBalanceStr = ref(props.budget?.startingBalance?.toString() ?? '')
 
 const isEditing = computed(() => !!props.budget)
 
-const nameError = ref('')
-const dateError = ref('')
-const budgetAmountError = ref('')
+const { errors, validate } = useFormValidation([name, startDate, endDate, startingBalanceStr])
 
-watch(name, () => { nameError.value = '' })
-watch([startDate, endDate], () => { dateError.value = '' })
-watch(startingBalanceStr, () => { budgetAmountError.value = '' })
-
-function validate(): boolean {
-  let valid = true
-
-  if (!name.value.trim()) {
-    nameError.value = 'Budget name is required'
-    valid = false
-  }
-
-  if (periodType.value === 'custom') {
-    if (!startDate.value) {
-      dateError.value = 'Start date is required'
-      valid = false
-    } else if (endDate.value && endDate.value < startDate.value) {
-      dateError.value = 'End date must be after start date'
-      valid = false
-    }
-  }
-
-  if (hasStartingBalance.value) {
-    const num = parseFloat(startingBalanceStr.value)
-    if (!startingBalanceStr.value || isNaN(num) || num <= 0) {
-      budgetAmountError.value = 'Enter a positive amount'
-      valid = false
-    }
-  }
-
-  return valid
+function runValidation(): boolean {
+  return validate([
+    required('name', name, 'Budget name is required'),
+    // Custom period requires a start date
+    {
+      field: 'dates',
+      check: () => periodType.value !== 'custom' || !!startDate.value,
+      message: 'Start date is required',
+    },
+    dateAfter('dates', startDate, endDate),
+    // Starting balance must be positive when enabled
+    {
+      field: 'balance',
+      check: () => !hasStartingBalance.value || (!!startingBalanceStr.value && !isNaN(parseFloat(startingBalanceStr.value)) && parseFloat(startingBalanceStr.value) > 0),
+      message: 'Enter a positive amount',
+    },
+  ])
 }
 
 function handleSubmit() {
-  if (!validate()) return
+  if (!runValidation()) return
 
   emit('submit', {
     name: name.value.trim(),
@@ -103,7 +89,7 @@ function handleSubmit() {
         placeholder="e.g. Wedding Budget, Q1 Marketing"
         autofocus
       />
-      <p v-if="nameError" class="text-sm text-red-500 mt-1">{{ nameError }}</p>
+      <p v-if="errors['name']" class="text-sm text-red-500 mt-1">{{ errors['name'] }}</p>
     </div>
 
     <!-- Currency label -->
@@ -119,7 +105,7 @@ function handleSubmit() {
         placeholder="R"
         maxlength="5"
       />
-      <p class="text-xs text-gray-400 mt-1">Display only — shown next to amounts</p>
+      <p class="text-sm text-gray-400 mt-1">Display only — shown next to amounts</p>
     </div>
 
     <!-- Starting balance (cashflow tracking) -->
@@ -148,10 +134,10 @@ function handleSubmit() {
           class="input-field"
           placeholder="0.00"
         />
-        <p class="text-xs text-gray-400 mt-1">
+        <p class="text-sm text-gray-400 mt-1">
           Your current account balance — we'll forecast from here
         </p>
-        <p v-if="budgetAmountError" class="text-sm text-red-500 mt-1">{{ budgetAmountError }}</p>
+        <p v-if="errors['balance']" class="text-sm text-red-500 mt-1">{{ errors['balance'] }}</p>
       </div>
     </div>
 
@@ -190,26 +176,15 @@ function handleSubmit() {
         <label class="block text-sm font-medium text-gray-700 mb-1" for="start-date">
           Start date
         </label>
-        <input
-          id="start-date"
-          v-model="startDate"
-          type="date"
-          class="input-field"
-        />
+        <DateInput id="start-date" v-model="startDate" />
       </div>
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1" for="end-date">
           End date
         </label>
-        <input
-          id="end-date"
-          v-model="endDate"
-          type="date"
-          class="input-field"
-          :min="startDate"
-        />
+        <DateInput id="end-date" v-model="endDate" :min="startDate" />
       </div>
-      <p v-if="dateError" class="text-sm text-red-500">{{ dateError }}</p>
+      <p v-if="errors['dates']" class="text-sm text-red-500">{{ errors['dates'] }}</p>
     </div>
 
     <!-- Actions -->

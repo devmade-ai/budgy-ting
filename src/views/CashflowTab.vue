@@ -8,6 +8,7 @@
  */
 
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { db } from '@/db'
 import { calculateProjection, resolveBudgetPeriod } from '@/engine/projection'
 import { calculateCashflow } from '@/engine/cashflow'
@@ -15,14 +16,20 @@ import { formatAmount } from '@/composables/useFormat'
 import ErrorAlert from '@/components/ErrorAlert.vue'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import EmptyState from '@/components/EmptyState.vue'
+import ScrollHint from '@/components/ScrollHint.vue'
 import type { Budget, Expense, Actual } from '@/types/models'
 import type { CashflowResult } from '@/engine/cashflow'
 
 const props = defineProps<{ budget: Budget }>()
+const router = useRouter()
 
 const expenses = ref<Expense[]>([])
 const actuals = ref<Actual[]>([])
 const loading = ref(true)
+
+function goToEditBudget() {
+  router.push({ name: 'budget-edit', params: { id: props.budget.id } })
+}
 const error = ref('')
 
 onMounted(async () => {
@@ -64,13 +71,18 @@ const noBalance = computed(() => {
 
     <LoadingSpinner v-if="loading" />
 
-    <!-- No starting balance set -->
+    <!-- No starting balance set — provide direct link to edit budget -->
     <EmptyState
       v-else-if="noBalance && !error"
       icon="i-lucide-wallet"
       title="No starting balance set"
-      description="Edit your budget and enter your current balance to see cashflow projections"
-    />
+      description="Enter your current account balance to see how your money flows over time"
+    >
+      <button class="btn-primary" @click="goToEditBudget">
+        <span class="i-lucide-pencil mr-1" />
+        Set starting balance
+      </button>
+    </EmptyState>
 
     <!-- No expenses yet -->
     <EmptyState
@@ -131,8 +143,8 @@ const noBalance = computed(() => {
         </div>
       </div>
 
-      <!-- Monthly cashflow table -->
-      <div class="overflow-x-auto -mx-4 px-4">
+      <!-- Monthly cashflow table with scroll hint -->
+      <ScrollHint>
         <table class="w-full text-sm min-w-[500px]">
           <thead>
             <tr class="border-b border-gray-200">
@@ -175,14 +187,14 @@ const noBalance = computed(() => {
               <td class="text-right py-2 px-2 tabular-nums" :class="(m.actualIncome ?? m.projectedIncome) > 0 ? 'text-green-600' : 'text-gray-300'">
                 <template v-if="(m.actualIncome ?? m.projectedIncome) > 0">
                   +{{ formatAmount(m.actualIncome ?? m.projectedIncome) }}
-                  <span v-if="m.actualIncome !== null" class="text-[10px] text-green-400 block">actual</span>
+                  <span v-if="m.actualIncome !== null" class="text-xs text-green-400 block">actual</span>
                 </template>
                 <template v-else>—</template>
               </td>
               <td class="text-right py-2 px-2 tabular-nums" :class="(m.actualExpenses ?? m.projectedExpenses) > 0 ? 'text-red-600' : 'text-gray-300'">
                 <template v-if="(m.actualExpenses ?? m.projectedExpenses) > 0">
                   -{{ formatAmount(m.actualExpenses ?? m.projectedExpenses) }}
-                  <span v-if="m.actualExpenses !== null" class="text-[10px] text-red-400 block">actual</span>
+                  <span v-if="m.actualExpenses !== null" class="text-xs text-red-400 block">actual</span>
                 </template>
                 <template v-else>—</template>
               </td>
@@ -224,7 +236,7 @@ const noBalance = computed(() => {
             </tr>
           </tfoot>
         </table>
-      </div>
+      </ScrollHint>
 
       <!-- Simple balance bar chart (CSS-based) -->
       <div class="mt-6">
@@ -245,7 +257,7 @@ const noBalance = computed(() => {
                 :title="`${m.monthLabel}: ${props.budget.currencyLabel}${formatAmount(m.balance)}`"
               />
             </div>
-            <span class="text-[10px] text-gray-400 truncate w-full text-center mt-0.5">
+            <span class="text-xs text-gray-400 truncate w-full text-center mt-0.5">
               {{ m.monthLabel.slice(0, 3) }}
             </span>
           </div>

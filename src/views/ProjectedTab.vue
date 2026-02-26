@@ -11,6 +11,7 @@ import { formatAmount } from '@/composables/useFormat'
 import ErrorAlert from '@/components/ErrorAlert.vue'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import EmptyState from '@/components/EmptyState.vue'
+import ScrollHint from '@/components/ScrollHint.vue'
 import type { Budget, Expense } from '@/types/models'
 import type { ProjectionResult } from '@/engine/projection'
 
@@ -164,7 +165,7 @@ const envelopeSummary = computed(() => {
               : 'bg-gray-50 text-gray-600 border border-gray-200'"
             @click="viewMode = 'items'"
           >
-            By Item
+            Each item
           </button>
           <button
             class="btn text-xs"
@@ -173,13 +174,13 @@ const envelopeSummary = computed(() => {
               : 'bg-gray-50 text-gray-600 border border-gray-200'"
             @click="viewMode = 'categories'"
           >
-            By Category
+            Group by category
           </button>
         </div>
       </div>
 
-      <!-- Scrollable table -->
-      <div class="overflow-x-auto -mx-4 px-4">
+      <!-- Scrollable table with fade hint for hidden content -->
+      <ScrollHint>
         <table class="w-full text-sm min-w-[600px]">
           <thead>
             <tr class="border-b border-gray-200">
@@ -347,7 +348,7 @@ const envelopeSummary = computed(() => {
             </tr>
           </tfoot>
         </table>
-      </div>
+      </ScrollHint>
     </template>
   </div>
 </template>

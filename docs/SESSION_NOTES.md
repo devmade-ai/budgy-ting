@@ -4,17 +4,26 @@
 
 ## Worked on
 
-Help menu with in-app docs (burger menu → User Guide / Testing Guide drawers).
+Comprehensive codebase review — implemented all 24 suggestions across code quality, UX, and mobile UX categories.
 
 ## Accomplished
 
-- **Burger menu:** Replaced `?` button in header with hamburger menu icon. Dropdown has 3 items: "How it works" (tutorial), "User Guide", "Test Scenarios"
-- **HelpDrawer component:** Slide-out drawer from right side, renders markdown via `marked` library. Animated entrance/exit, backdrop click to close, keyboard accessible via existing `useDialogA11y`
-- **Markdown content:** USER_GUIDE.md and TESTING_GUIDE.md imported at build time via Vite `?raw` — no runtime fetching
-- **Prose styles:** Scoped CSS in HelpDrawer for readable markdown rendering (headings, lists, code blocks, checkboxes, links)
-- **Dev phase note:** Added AI Notes entry in CLAUDE.md — app is pre-release, features are provisional
-- **Pre-existing type fix:** Fixed TS2352 in exportImport.ts (double cast via `unknown`)
-- **Docs updated:** USER_GUIDE.md help section, TESTING_GUIDE.md regression checklist + test scenarios
+- **Toast notification system:** Created `useToast` composable + `ToastNotification.vue`, integrated across all create/edit/delete/import/export actions
+- **Touch targets:** Bumped header menu button to 40px, expense edit/delete buttons to larger padding
+- **Tab bar mobile fix:** Added horizontal scroll with `overflow-x-auto`, renamed tabs ("Projected"→"Forecast", "Cashflow"→"Balance")
+- **Budget detail overflow menu:** Replaced 4 inline buttons with Import CTA + kebab dropdown for Export/Edit/Delete
+- **Budget list summaries:** Added expense count + monthly total summary line under each budget name
+- **Compare tab empty state:** Improved guidance text with "Import bank statement" nudge
+- **Cashflow empty state:** Added "Set starting balance" button linking to budget edit
+- **Label renames:** "Run matching"→"Find matches", "By Item"→"Each item", "By Category"→"Group by category"
+- **Expense search filter:** Text filter on expenses list (shown when ≥5 items)
+- **Scroll hints:** Created `ScrollHint.vue` with ResizeObserver-based fade gradient for tables
+- **HelpDrawer margin:** Added 2rem left margin on mobile for backdrop visibility
+- **Text size bump:** Upgraded text-[10px]→text-xs and text-xs→text-sm for readability
+- **CompareTab refactor:** Extracted 3 sub-components (CompareLineItems, CompareCategories, CompareMonthly) — reduced from ~460 to ~200 lines
+- **Form validation extraction:** Created `useFormValidation.ts` composable with rule factories, refactored BudgetForm + ExpenseForm
+- **Autocomplete debounce:** Reduced from 150ms to 80ms
+- **DateInput component:** Created wrapper with calendar icon for mobile discoverability
 
 ## Current state
 
@@ -22,11 +31,18 @@ All code type-checks, builds, 92 unit tests pass. DB schema v3.
 
 Working features:
 - All previous features intact
-- Burger menu with help drawer for User Guide and Testing Guide
+- Toast notifications on all user actions
+- Improved mobile UX (touch targets, scroll hints, overflow menu, tab overflow)
+- Expense search/filter
+- Budget list summaries
+- Better empty states with actionable guidance
+- Cleaner component architecture (CompareTab split, form validation composable)
 
 ## Key context
 
-- `AppLayout.vue` owns the menu state, drawer state, and markdown imports
-- `HelpDrawer.vue` is generic — takes `title` + `markdown` props, renders via `marked.parse()`
-- `marked` added as production dependency (lightweight, ~30KB)
-- Markdown files are bundled at build time — changing docs requires a rebuild
+- `useToast.ts` is a reactive singleton — mounted once via `ToastNotification.vue` in `AppLayout.vue`
+- `ScrollHint.vue` uses ResizeObserver to detect overflow and shows/hides right-edge gradient
+- `DateInput.vue` uses `defineModel<string>()` for v-model binding
+- `useFormValidation.ts` uses a rule factory pattern: `required()`, `positiveNumber()`, `dateAfter()`
+- Compare sub-views live in `src/views/compare-views/` directory
+- Budget detail uses click-outside pattern for overflow menu dismiss

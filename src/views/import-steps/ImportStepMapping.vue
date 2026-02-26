@@ -206,7 +206,7 @@ function handleSubmit() {
 
     <div class="flex gap-3 mt-6">
       <button class="btn-primary" @click="handleSubmit">
-        Run matching
+        Find matches
       </button>
       <button class="btn-secondary" @click="emit('back')">
         Back

@@ -32,6 +32,7 @@ export function useCategoryAutocomplete() {
       return
     }
 
+    // 80ms debounce — snappier for fast typers while still batching keystrokes
     debounceTimer = setTimeout(async () => {
       try {
         const needle = val.toLowerCase().trim()
@@ -75,7 +76,7 @@ export function useCategoryAutocomplete() {
         suggestions.value = []
         isOpen.value = false
       }
-    }, 150)
+    }, 80)
   })
 
   function select(category: string) {

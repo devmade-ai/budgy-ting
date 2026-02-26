@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { db } from '@/db'
 import { nowISO } from '@/composables/useTimestamp'
 import { touchCategory } from '@/composables/useCategoryAutocomplete'
+import { useToast } from '@/composables/useToast'
 import ExpenseForm from '@/components/ExpenseForm.vue'
 import ErrorAlert from '@/components/ErrorAlert.vue'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
@@ -11,6 +12,7 @@ import type { Budget, Expense, Frequency, LineType } from '@/types/models'
 
 const props = defineProps<{ id: string; expenseId: string }>()
 const router = useRouter()
+const { show: showToast } = useToast()
 
 const budget = ref<Budget | null>(null)
 const expense = ref<Expense | null>(null)
@@ -60,6 +62,7 @@ async function handleSubmit(data: {
     })
 
     await touchCategory(data.category)
+    showToast('Expense saved')
     router.push({ name: 'budget-expenses', params: { id: props.id } })
   } catch {
     error.value = 'Couldn\'t save changes. Please try again.'

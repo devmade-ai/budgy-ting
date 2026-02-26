@@ -11,7 +11,6 @@
 
 ## UX
 
-- [ ] Add success toast/notification after actions (create, import, export)
 - [ ] Virtual scrolling for long expense lists (vue-virtual-scroller)
 - [ ] Keyboard shortcuts for common actions
 

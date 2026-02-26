@@ -17,6 +17,7 @@ import InstallPrompt from '@/components/InstallPrompt.vue'
 import InstallInstructionsModal from '@/components/InstallInstructionsModal.vue'
 import TutorialModal from '@/components/TutorialModal.vue'
 import HelpDrawer from '@/components/HelpDrawer.vue'
+import ToastNotification from '@/components/ToastNotification.vue'
 
 // Build-time markdown imports — bundled as strings, no runtime fetch
 import userGuideMd from '../../docs/USER_GUIDE.md?raw'
@@ -117,7 +118,7 @@ function closeDrawer() {
         <!-- Menu button + dropdown -->
         <div ref="menuRef" class="relative">
           <button
-            class="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-brand-600 hover:bg-brand-50 transition-colors"
+            class="w-10 h-10 rounded-full flex items-center justify-center text-gray-400 hover:text-brand-600 hover:bg-brand-50 transition-colors"
             title="Menu"
             aria-label="Menu"
             aria-haspopup="true"
@@ -221,5 +222,7 @@ function closeDrawer() {
       :markdown="sampleCsvMd"
       @close="closeDrawer"
     />
+    <!-- Toast notifications -->
+    <ToastNotification />
   </div>
 </template>

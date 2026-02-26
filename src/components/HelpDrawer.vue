@@ -61,7 +61,7 @@ function handleClose() {
         role="dialog"
         :aria-label="title"
         aria-modal="true"
-        class="absolute top-0 right-0 h-full w-full max-w-lg bg-white shadow-xl transition-transform duration-200 flex flex-col"
+        class="absolute top-0 right-0 h-full w-[calc(100%-2rem)] max-w-lg bg-white shadow-xl transition-transform duration-200 flex flex-col"
         :class="visible ? 'translate-x-0' : 'translate-x-full'"
       >
         <!-- Header -->

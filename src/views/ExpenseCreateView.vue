@@ -5,6 +5,7 @@ import { db } from '@/db'
 import { useId } from '@/composables/useId'
 import { nowISO } from '@/composables/useTimestamp'
 import { touchCategory } from '@/composables/useCategoryAutocomplete'
+import { useToast } from '@/composables/useToast'
 import ExpenseForm from '@/components/ExpenseForm.vue'
 import ErrorAlert from '@/components/ErrorAlert.vue'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
@@ -12,6 +13,7 @@ import type { Budget, Frequency, LineType } from '@/types/models'
 
 const props = defineProps<{ id: string }>()
 const router = useRouter()
+const { show: showToast } = useToast()
 
 const budget = ref<Budget | null>(null)
 const loading = ref(true)
@@ -59,6 +61,7 @@ async function handleSubmit(data: {
     })
 
     await touchCategory(data.category)
+    showToast('Expense added')
     router.push({ name: 'budget-expenses', params: { id: props.id } })
   } catch {
     error.value = 'Couldn\'t add the expense. Please try again.'

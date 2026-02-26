@@ -12,15 +12,18 @@ import ErrorAlert from '@/components/ErrorAlert.vue'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import { formatAmount } from '@/composables/useFormat'
+import { useToast } from '@/composables/useToast'
 import type { Budget, Expense } from '@/types/models'
 
 const props = defineProps<{ budget: Budget }>()
 const router = useRouter()
+const { show: showToast } = useToast()
 
 const expenses = ref<Expense[]>([])
 const loading = ref(true)
 const deleteTarget = ref<Expense | null>(null)
 const error = ref('')
+const searchQuery = ref('')
 
 onMounted(async () => {
   try {
@@ -35,9 +38,18 @@ onMounted(async () => {
   }
 })
 
+const filteredExpenses = computed(() => {
+  const q = searchQuery.value.toLowerCase().trim()
+  if (!q) return expenses.value
+  return expenses.value.filter((exp) =>
+    exp.description.toLowerCase().includes(q) ||
+    exp.category.toLowerCase().includes(q)
+  )
+})
+
 const groupedExpenses = computed(() => {
   const groups: Record<string, Expense[]> = {}
-  for (const exp of expenses.value) {
+  for (const exp of filteredExpenses.value) {
     if (!groups[exp.category]) groups[exp.category] = []
     groups[exp.category]!.push(exp)
   }
@@ -101,6 +113,7 @@ async function confirmDelete() {
     })
 
     expenses.value = expenses.value.filter((e) => e.id !== deleteTarget.value!.id)
+    showToast('Expense deleted')
     deleteTarget.value = null
   } catch {
     error.value = 'Couldn\'t delete the expense. Please try again.'
@@ -128,6 +141,19 @@ async function confirmDelete() {
       </button>
     </div>
 
+    <!-- Search filter — shown when there are enough items to warrant filtering -->
+    <div v-if="expenses.length >= 5" class="mb-4">
+      <div class="relative">
+        <span class="i-lucide-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" aria-hidden="true" />
+        <input
+          v-model="searchQuery"
+          type="text"
+          class="input-field pl-9"
+          placeholder="Filter by name or category..."
+        />
+      </div>
+    </div>
+
     <ErrorAlert v-if="error" :message="error" @dismiss="error = ''" />
 
     <LoadingSpinner v-if="loading" />
@@ -140,6 +166,14 @@ async function confirmDelete() {
     >
       <button class="btn-primary" @click="addExpense">Add your first item</button>
     </EmptyState>
+
+    <!-- No search results -->
+    <EmptyState
+      v-else-if="filteredExpenses.length === 0 && searchQuery"
+      icon="i-lucide-search-x"
+      title="No matches"
+      :description="`Nothing matches '${searchQuery}'`"
+    />
 
     <!-- Grouped expense list -->
     <div v-else class="space-y-6">
@@ -163,7 +197,7 @@ async function confirmDelete() {
             </div>
             <div class="flex gap-1 ml-3 shrink-0">
               <button
-                class="p-1.5 text-gray-400 hover:text-gray-600 rounded transition-colors"
+                class="p-2.5 text-gray-400 hover:text-gray-600 rounded transition-colors"
                 :title="`Edit ${exp.description}`"
                 :aria-label="`Edit ${exp.description}`"
                 @click="editExpense(exp)"
@@ -171,7 +205,7 @@ async function confirmDelete() {
                 <span class="i-lucide-pencil text-sm" aria-hidden="true" />
               </button>
               <button
-                class="p-1.5 text-gray-400 hover:text-red-500 rounded transition-colors"
+                class="p-2.5 text-gray-400 hover:text-red-500 rounded transition-colors"
                 :title="`Delete ${exp.description}`"
                 :aria-label="`Delete ${exp.description}`"
                 @click="deleteTarget = exp"

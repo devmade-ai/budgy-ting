@@ -4,8 +4,10 @@
  * Approach: Reusable form with all expense fields, autocomplete dropdown for category
  */
 
-import { ref, computed, watch } from 'vue'
+import { ref, computed } from 'vue'
 import { useCategoryAutocomplete } from '@/composables/useCategoryAutocomplete'
+import { useFormValidation, required, positiveNumber, dateAfter } from '@/composables/useFormValidation'
+import DateInput from '@/components/DateInput.vue'
 import type { Budget, Expense, Frequency, LineType } from '@/types/models'
 
 const props = defineProps<{
@@ -47,35 +49,17 @@ const frequencies: { value: Frequency; label: string }[] = [
   { value: 'annually', label: 'Annually' },
 ]
 
-const errors = ref<Record<string, string>>({})
-
-watch([description, categoryQuery, amount, startDate], () => {
-  errors.value = {}
-})
-
-function validate(): boolean {
-  const e: Record<string, string> = {}
-
-  if (!description.value.trim()) e['description'] = 'Description is required'
-  if (!categoryQuery.value.trim()) e['category'] = 'Category is required'
-
-  const numAmount = parseFloat(amount.value)
-  if (!amount.value || isNaN(numAmount) || numAmount <= 0) {
-    e['amount'] = 'Enter a positive amount'
-  }
-
-  if (!startDate.value) e['startDate'] = 'Start date is required'
-
-  if (endDate.value && startDate.value && endDate.value < startDate.value) {
-    e['endDate'] = 'End date must be after start date'
-  }
-
-  errors.value = e
-  return Object.keys(e).length === 0
-}
+const { errors, validate } = useFormValidation([description, categoryQuery, amount, startDate])
 
 function handleSubmit() {
-  if (!validate()) return
+  const valid = validate([
+    required('description', description, 'Description is required'),
+    required('category', categoryQuery, 'Category is required'),
+    positiveNumber('amount', amount),
+    required('startDate', startDate, 'Start date is required'),
+    dateAfter('endDate', startDate, endDate),
+  ])
+  if (!valid) return
 
   close()
 
@@ -265,12 +249,7 @@ function selectCategory(cat: string) {
         <label class="block text-sm font-medium text-gray-700 mb-1" for="expense-start">
           Start date
         </label>
-        <input
-          id="expense-start"
-          v-model="startDate"
-          type="date"
-          class="input-field"
-        />
+        <DateInput id="expense-start" v-model="startDate" />
         <p v-if="errors['startDate']" class="text-sm text-red-500 mt-1">
           {{ errors['startDate'] }}
         </p>
@@ -280,13 +259,7 @@ function selectCategory(cat: string) {
           End date
           <span class="text-gray-400 font-normal">(optional)</span>
         </label>
-        <input
-          id="expense-end"
-          v-model="endDate"
-          type="date"
-          class="input-field"
-          :min="startDate"
-        />
+        <DateInput id="expense-end" v-model="endDate" :min="startDate" />
         <p v-if="errors['endDate']" class="text-sm text-red-500 mt-1">
           {{ errors['endDate'] }}
         </p>

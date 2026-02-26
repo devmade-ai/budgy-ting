@@ -2,6 +2,43 @@
 
 <!-- Changelog and record of completed work. Organized by date. -->
 
+## 2026-02-26
+
+- **Codebase Review — Implemented 24 UX & Code Quality Improvements:**
+
+  **New Components:**
+  - `ToastNotification.vue` + `useToast.ts` — singleton toast system with success/error/warning variants, auto-dismiss, integrated across all CRUD actions
+  - `ScrollHint.vue` — ResizeObserver-based fade gradient for horizontally scrollable tables
+  - `DateInput.vue` — date input wrapper with calendar icon for mobile discoverability
+  - `useFormValidation.ts` — shared validation composable with `required()`, `positiveNumber()`, `dateAfter()` rule factories
+
+  **Component Extractions:**
+  - Split CompareTab (~460 lines) into 3 sub-components: `CompareLineItems.vue`, `CompareCategories.vue`, `CompareMonthly.vue`
+  - Extracted form validation from BudgetForm + ExpenseForm into shared composable
+
+  **Mobile UX:**
+  - Touch targets: header menu 32→40px, expense buttons p-1.5→p-2.5
+  - Tab bar: added overflow-x-auto for horizontal scroll on narrow screens
+  - Budget detail: replaced 4 inline buttons with Import CTA + kebab overflow menu
+  - HelpDrawer: added 2rem left margin for backdrop peek-through on mobile
+  - Scroll hints on ProjectedTab and CashflowTab tables
+  - Text size bump: text-[10px]→text-xs, text-xs→text-sm for readability
+
+  **UX Improvements:**
+  - Budget list: summary line (period, currency, item count, monthly total) under each budget
+  - Expense search filter (visible when ≥5 items)
+  - Compare tab empty state: "Import bank statement" guidance
+  - Cashflow empty state: "Set starting balance" button linking to budget edit
+  - Tab renames: "Projected"→"Forecast", "Cashflow"→"Balance"
+  - Label renames: "Run matching"→"Find matches", "By Item"→"Each item", "By Category"→"Group by category"
+
+  **Technical:**
+  - Autocomplete debounce reduced from 150ms to 80ms
+  - Toast calls integrated into BudgetCreateView, BudgetEditView, ExpenseCreateView, ExpenseEditView, BudgetDetailView, ExpensesTab, BudgetListView
+
+- **Completed TODO items moved here:**
+  - Add success toast/notification after actions (create, import, export)
+
 ## 2026-02-25
 
 - **Import Review — Create New Income/Expense:**

@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { db } from '@/db'
 import { nowISO } from '@/composables/useTimestamp'
+import { useToast } from '@/composables/useToast'
 import BudgetForm from '@/components/BudgetForm.vue'
 import ErrorAlert from '@/components/ErrorAlert.vue'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
@@ -10,6 +11,7 @@ import type { Budget, PeriodType } from '@/types/models'
 
 const props = defineProps<{ id: string }>()
 const router = useRouter()
+const { show: showToast } = useToast()
 
 const budget = ref<Budget | null>(null)
 const loading = ref(true)
@@ -49,6 +51,7 @@ async function handleSubmit(data: {
       updatedAt: nowISO(),
     })
 
+    showToast('Budget saved')
     router.push({ name: 'budget-detail', params: { id: props.id } })
   } catch {
     error.value = 'Couldn\'t save changes. Please try again.'
