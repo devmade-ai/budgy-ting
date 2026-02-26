@@ -12,13 +12,13 @@
 
 import { ref, computed } from 'vue'
 import { formatAmount } from '@/composables/useFormat'
-import type { Budget, Expense, Frequency, LineType } from '@/types/models'
+import type { Workspace, Expense, Frequency, LineType } from '@/types/models'
 import type { MatchResult } from '@/engine/matching'
 
 const props = defineProps<{
   matchResults: MatchResult[]
   expenses: Expense[]
-  budget: Budget
+  workspace: Workspace
   skippedRows: number
   saving: boolean
 }>()
@@ -240,7 +240,7 @@ function handleDropdownChange(matchIndex: number, value: string) {
               <span class="text-xs text-gray-400">{{ result.importedRow.date }}</span>
             </div>
             <p class="text-sm text-gray-900">
-              {{ budget.currencyLabel }}{{ formatAmount(result.importedRow.amount) }}
+              {{ workspace.currencyLabel }}{{ formatAmount(result.importedRow.amount) }}
               <span v-if="result.importedRow.description" class="text-gray-500">
                 — {{ result.importedRow.description }}
               </span>
@@ -385,7 +385,7 @@ function handleDropdownChange(matchIndex: number, value: string) {
           <!-- Amount -->
           <div class="mb-3">
             <label class="block text-sm font-medium text-gray-700 mb-1" for="new-amount">
-              Amount ({{ budget.currencyLabel }})
+              Amount ({{ workspace.currencyLabel }})
             </label>
             <input
               id="new-amount"

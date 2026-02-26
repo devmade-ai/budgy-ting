@@ -2,13 +2,13 @@
  * Vue Router configuration.
  *
  * Routes:
- *   / — Budget list (home)
- *   /budget/new — Create budget
- *   /budget/:id — Budget detail with nested tab views
- *   /budget/:id/edit — Edit budget
- *   /budget/:id/expenses/new — Add expense
- *   /budget/:id/expenses/:expenseId/edit — Edit expense
- *   /budget/:id/import — Import actuals wizard
+ *   / — Workspace list (home)
+ *   /workspace/new — Create workspace
+ *   /workspace/:id — Workspace detail with nested tab views
+ *   /workspace/:id/edit — Edit workspace
+ *   /workspace/:id/expenses/new — Add expense
+ *   /workspace/:id/expenses/:expenseId/edit — Edit expense
+ *   /workspace/:id/import — Import actuals wizard
  */
 
 import { createRouter, createWebHistory } from 'vue-router'
@@ -20,66 +20,66 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      name: 'budget-list',
-      component: () => import('@/views/BudgetListView.vue'),
+      name: 'workspace-list',
+      component: () => import('@/views/WorkspaceListView.vue'),
     },
     {
-      path: '/budget/new',
-      name: 'budget-create',
-      component: () => import('@/views/BudgetCreateView.vue'),
+      path: '/workspace/new',
+      name: 'workspace-create',
+      component: () => import('@/views/WorkspaceCreateView.vue'),
     },
     {
-      path: '/budget/:id/edit',
-      name: 'budget-edit',
-      component: () => import('@/views/BudgetEditView.vue'),
+      path: '/workspace/:id/edit',
+      name: 'workspace-edit',
+      component: () => import('@/views/WorkspaceEditView.vue'),
       props: true,
     },
     {
-      path: '/budget/:id',
-      name: 'budget-detail',
-      component: () => import('@/views/BudgetDetailView.vue'),
+      path: '/workspace/:id',
+      name: 'workspace-detail',
+      component: () => import('@/views/WorkspaceDetailView.vue'),
       props: true,
       children: [
         {
           path: '',
-          redirect: (to) => ({ name: 'budget-expenses', params: to.params }),
+          redirect: (to) => ({ name: 'workspace-expenses', params: to.params }),
         },
         {
           path: 'expenses',
-          name: 'budget-expenses',
+          name: 'workspace-expenses',
           component: () => import('@/views/ExpensesTab.vue'),
         },
         {
           path: 'projected',
-          name: 'budget-projected',
+          name: 'workspace-projected',
           component: () => import('@/views/ProjectedTab.vue'),
         },
         {
           path: 'compare',
-          name: 'budget-compare',
+          name: 'workspace-compare',
           component: () => import('@/views/CompareTab.vue'),
         },
         {
           path: 'cashflow',
-          name: 'budget-cashflow',
+          name: 'workspace-cashflow',
           component: () => import('@/views/CashflowTab.vue'),
         },
       ],
     },
     {
-      path: '/budget/:id/expenses/new',
+      path: '/workspace/:id/expenses/new',
       name: 'expense-create',
       component: () => import('@/views/ExpenseCreateView.vue'),
       props: true,
     },
     {
-      path: '/budget/:id/expenses/:expenseId/edit',
+      path: '/workspace/:id/expenses/:expenseId/edit',
       name: 'expense-edit',
       component: () => import('@/views/ExpenseEditView.vue'),
       props: true,
     },
     {
-      path: '/budget/:id/import',
+      path: '/workspace/:id/import',
       name: 'import-actuals',
       component: () => import('@/views/ImportWizardView.vue'),
       props: true,
@@ -87,7 +87,7 @@ const router = createRouter({
     {
       path: '/:pathMatch(.*)*',
       name: 'not-found',
-      redirect: { name: 'budget-list' },
+      redirect: { name: 'workspace-list' },
     },
   ],
 })

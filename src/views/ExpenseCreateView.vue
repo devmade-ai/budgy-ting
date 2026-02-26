@@ -9,26 +9,26 @@ import { useToast } from '@/composables/useToast'
 import ExpenseForm from '@/components/ExpenseForm.vue'
 import ErrorAlert from '@/components/ErrorAlert.vue'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
-import type { Budget, Frequency, LineType } from '@/types/models'
+import type { Workspace, Frequency, LineType } from '@/types/models'
 
 const props = defineProps<{ id: string }>()
 const router = useRouter()
 const { show: showToast } = useToast()
 
-const budget = ref<Budget | null>(null)
+const workspace = ref<Workspace | null>(null)
 const loading = ref(true)
 const error = ref('')
 
 onMounted(async () => {
   try {
-    const found = await db.budgets.get(props.id)
+    const found = await db.workspaces.get(props.id)
     if (!found) {
-      router.replace({ name: 'budget-list' })
+      router.replace({ name: 'workspace-list' })
       return
     }
-    budget.value = found
+    workspace.value = found
   } catch {
-    error.value = 'Couldn\'t load this budget. Please go back and try again.'
+    error.value = 'Couldn\'t load this workspace. Please go back and try again.'
   } finally {
     loading.value = false
   }
@@ -48,7 +48,7 @@ async function handleSubmit(data: {
 
     await db.expenses.add({
       id: useId(),
-      budgetId: props.id,
+      workspaceId: props.id,
       description: data.description,
       category: data.category,
       amount: data.amount,
@@ -62,14 +62,14 @@ async function handleSubmit(data: {
 
     await touchCategory(data.category)
     showToast('Expense added')
-    router.push({ name: 'budget-expenses', params: { id: props.id } })
+    router.push({ name: 'workspace-expenses', params: { id: props.id } })
   } catch {
     error.value = 'Couldn\'t add the expense. Please try again.'
   }
 }
 
 function handleCancel() {
-  router.push({ name: 'budget-expenses', params: { id: props.id } })
+  router.push({ name: 'workspace-expenses', params: { id: props.id } })
 }
 </script>
 
@@ -87,9 +87,9 @@ function handleCancel() {
 
     <LoadingSpinner v-if="loading" />
 
-    <template v-else-if="budget">
+    <template v-else-if="workspace">
       <h1 class="page-title mb-6">Add Expense</h1>
-      <ExpenseForm :budget="budget" @submit="handleSubmit" @cancel="handleCancel" />
+      <ExpenseForm :workspace="workspace" @submit="handleSubmit" @cancel="handleCancel" />
     </template>
   </div>
 </template>

@@ -8,51 +8,53 @@ Everything you need to know about using budgy-ting to plan and track your spendi
 
 budgy-ting is a budgeting tool that runs entirely on your device. No accounts, no cloud, no sign-ups. Your data stays in your browser and never leaves your device.
 
-When you first open the app, a short tutorial walks you through the basics. You can reopen it any time from the **menu** (hamburger icon) in the top-right corner.
+When you first open the app, a **Demo Household** workspace is created automatically with realistic sample data — salary, rent, groceries, and more. This lets you explore all the features before creating your own workspace.
+
+You can also reopen the tutorial any time from the **menu** (hamburger icon) in the top-right corner.
 
 ---
 
-## Budgets
+## Workspaces
 
-A budget is the top-level container for your spending plan. Each budget has its own expenses, projections, and imported data.
+A workspace is the top-level container for your spending plan. Each workspace has its own expenses, projections, and imported data.
 
-### Creating a Budget
+### Creating a Workspace
 
-1. From the home screen, click **New Budget** (or **Create your first budget** if you have none yet)
+1. From the home screen, click **New Workspace** (or **Create your first workspace** if you have none yet)
 2. Fill in the form:
-   - **Budget name** — Give it a meaningful name (e.g. "Wedding Budget", "Q1 Marketing")
+   - **Workspace name** — Give it a meaningful name (e.g. "Wedding Budget", "Q1 Marketing")
    - **Currency symbol** — The symbol shown next to amounts (e.g. "R", "$", "€"). Display only — doesn't do conversions
    - **Period type** — Choose **Monthly** (rolling 12-month view) or **Custom dates** (fixed start and end dates)
-   - **Start date** / **End date** — Only shown for custom-date budgets. End date is optional
+   - **Start date** / **End date** — Only shown for custom-date workspaces. End date is optional
    - **I know my current balance** — Check this if you want to track your account balance. Enter your current balance and the app will forecast from there
-3. Click **Create budget**
+3. Click **Create workspace**
 
-### Editing a Budget
+### Editing a Workspace
 
-1. Open the budget you want to edit
+1. Open the workspace you want to edit
 2. Click the **Edit** button (pencil icon) in the top-right
 3. Change any fields and click **Save changes**
 
-### Deleting a Budget
+### Deleting a Workspace
 
-1. Open the budget
+1. Open the workspace
 2. Click the **Delete** button (trash icon, red)
-3. A confirmation dialog will explain what gets deleted: the budget, all its expenses, and all imported data
-4. Click **Delete budget** to confirm, or **Cancel** to go back
+3. A confirmation dialog will explain what gets deleted: the workspace, all its expenses, and all imported data
+4. Click **Delete workspace** to confirm, or **Cancel** to go back
 
-### Exporting a Budget
+### Exporting a Workspace
 
-1. Open the budget
+1. Open the workspace
 2. Click **Export** (download icon)
-3. A JSON file downloads to your device containing the budget, all expenses, and all imported data
-4. Use this file as a backup or to move your budget to another device
+3. A JSON file downloads to your device containing the workspace, all expenses, and all imported data
+4. Use this file as a backup or to move your workspace to another device
 
 ### Restoring from a Backup
 
-1. From the home screen, click **Restore** (or **Restore from file** if you have no budgets)
+1. From the home screen, click **Restore** (or **Restore from file** if you have no workspaces)
 2. Select a previously exported JSON file (max 10 MB)
-3. If a budget with the same name already exists, you'll be asked whether to **Replace** it or **Cancel**
-4. The budget and all its data will be restored
+3. If a workspace with the same name already exists, you'll be asked whether to **Replace** it or **Cancel**
+4. The workspace and all its data will be restored
 
 ### Clearing All Data
 
@@ -65,11 +67,11 @@ A budget is the top-level container for your spending plan. Each budget has its 
 
 ## Expenses
 
-Expenses are the individual line items in your budget — the things you plan to spend on (or earn).
+Expenses are the individual line items in your workspace — the things you plan to spend on (or earn).
 
 ### Adding an Expense
 
-1. Open a budget and go to the **Expenses** tab
+1. Open a workspace and go to the **Expenses** tab
 2. Click **Add Item** (or **Add your first item** if the list is empty)
 3. Fill in the form:
    - **Type** — Choose **Expense** (money going out) or **Income** (money coming in)
@@ -118,7 +120,7 @@ The Projected tab shows a month-by-month breakdown of your planned spending base
 
 ### Viewing Projections
 
-1. Open a budget and click the **Projected** tab (trending-up icon)
+1. Open a workspace and click the **Projected** tab (trending-up icon)
 2. The table shows:
    - **Rows:** Your expense items (or categories, depending on view mode)
    - **Columns:** One column per month, plus a **Total** column
@@ -133,7 +135,7 @@ The Projected tab shows a month-by-month breakdown of your planned spending base
 
 ### Balance Summary
 
-If your budget has a starting balance, a summary card appears at the top showing:
+If your workspace has a starting balance, a summary card appears at the top showing:
 - **Starting Balance** — Your entered balance
 - **Income** — Total projected income
 - **Expenses** — Total projected expenses
@@ -149,7 +151,7 @@ The Cashflow tab shows how your account balance changes month by month, combinin
 ### Requirements
 
 To see the cashflow forecast, you need:
-- A **starting balance** set on the budget (edit the budget to add one)
+- A **starting balance** set on the workspace (edit the workspace to add one)
 - At least **one expense** item
 
 ### Understanding the Cashflow Table
@@ -193,7 +195,7 @@ At the top, three figures show:
 
 ### Envelope Summary
 
-If your budget has a starting balance, an envelope summary appears showing:
+If your workspace has a starting balance, an envelope summary appears showing:
 - **Starting Balance** — Your entered balance
 - **Spent So Far** — Total actual spending
 - **Remaining** — What's left (or how much you're over)
@@ -228,7 +230,7 @@ For details on file format, supported columns, and a ready-to-copy AI prompt for
 
 ### Step 1: Upload File
 
-1. From the budget detail page, click **Import**
+1. From the workspace detail page, click **Import**
 2. Click **Choose a file** and select a CSV or JSON file (max 10 MB)
 3. The app reads your file and auto-detects which columns contain dates, amounts, categories, and descriptions
 4. A preview table shows the first few rows
@@ -293,8 +295,8 @@ After your first visit, the app works fully offline. A green notification confir
 ### Navigation
 
 - Click **budgy-ting** in the header to go back to the home screen from anywhere
-- On budget pages, click **Budgets** in the breadcrumb to return to the budget list
-- Use the tab bar (Expenses, Projected, Cashflow, Compare) to switch between views within a budget
+- On workspace pages, click **Workspaces** in the breadcrumb to return to the workspace list
+- Use the tab bar (Expenses, Projected, Cashflow, Compare) to switch between views within a workspace
 
 ### Help Menu
 

@@ -4,6 +4,33 @@
 
 ## 2026-02-26
 
+- **Renamed Budget → Workspace + Demo Workspace:**
+
+  **Entity Rename (Budget → Workspace):**
+  - Renamed `Budget` type to `Workspace`, `budgetId` to `workspaceId` throughout codebase (600+ references)
+  - Added `isDemo: boolean` field to Workspace model
+  - DB migration v4: creates `workspaces` table, migrates data from `budgets`, renames foreign keys, deletes old table
+  - Renamed 5 view files via git mv (BudgetListView → WorkspaceListView, etc.)
+  - Updated all routes: `/budget/` → `/workspace/`, `budget-*` → `workspace-*`
+  - Renamed engine functions: `exportBudget` → `exportWorkspace`, `resolveBudgetPeriod` → `resolveWorkspacePeriod`
+  - Backward-compatible import: accepts both `workspace` and `budget` keys, both `workspaceId` and `budgetId`
+  - Kept financial terms as-is: "budgeted", "unbudgeted", "over/under budget" (standard accounting language)
+
+  **Demo Workspace:**
+  - New `src/db/demoData.ts` — seeds "Demo Household" workspace on first visit (empty DB)
+  - 16 realistic SA Rand-denominated items: salary (R25k), freelance (R5k), rent (R12k), groceries (R4.5k), etc.
+  - Starting balance of R45,000, monthly period type
+  - Non-blocking `seedDemoWorkspace()` call in main.ts
+  - Uses `isDemo: true` flag and deterministic ID (`demo-household`)
+
+  **Documentation:**
+  - Updated all docs (USER_GUIDE, TESTING_GUIDE, README, SESSION_NOTES, HISTORY, TODO) to workspace terminology
+  - Added demo workspace test scenario (1.9)
+
+  **Verification:**
+  - All 94 tests pass, build succeeds, type-check clean
+  - DB schema now at v4
+
 - **Codebase Review — Implemented 24 UX & Code Quality Improvements:**
 
   **New Components:**

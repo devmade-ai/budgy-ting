@@ -13,7 +13,7 @@
  *   as the 12-month rolling view per product definition recommendation.
  */
 
-import type { Budget, Expense } from '@/types/models'
+import type { Workspace, Expense } from '@/types/models'
 
 export interface MonthSlot {
   /** ISO month string: YYYY-MM */
@@ -113,18 +113,18 @@ export function getDefaultPeriod(): { startDate: string; endDate: string } {
 }
 
 /**
- * Resolve the effective start/end dates for a budget.
+ * Resolve the effective start/end dates for a workspace.
  *
- * Requirement: Monthly budgets use a 12-month rolling view from current month;
- *   custom budgets use their explicit dates with fallback to defaults.
+ * Requirement: Monthly workspaces use a 12-month rolling view from current month;
+ *   custom workspaces use their explicit dates with fallback to defaults.
  * Approach: Single helper to eliminate the 3-file duplication of this logic
  *   (was in ProjectedTab, CompareTab, and exportImport).
  */
-export function resolveBudgetPeriod(budget: Pick<Budget, 'startDate' | 'endDate' | 'periodType'>): { startDate: string; endDate: string } {
-  let startDate = budget.startDate
-  let endDate = budget.endDate
+export function resolveWorkspacePeriod(workspace: Pick<Workspace, 'startDate' | 'endDate' | 'periodType'>): { startDate: string; endDate: string } {
+  let startDate = workspace.startDate
+  let endDate = workspace.endDate
 
-  if (budget.periodType === 'monthly' || !endDate) {
+  if (workspace.periodType === 'monthly' || !endDate) {
     const defaults = getDefaultPeriod()
     if (!startDate) startDate = defaults.startDate
     if (!endDate) endDate = defaults.endDate

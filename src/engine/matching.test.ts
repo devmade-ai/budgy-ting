@@ -11,7 +11,7 @@ import type { ImportedRow } from './matching'
 function makeExpense(overrides: Partial<Expense> = {}): Expense {
   return {
     id: 'exp-1',
-    budgetId: 'b-1',
+    workspaceId: 'b-1',
     description: 'Monthly groceries',
     category: 'Food',
     amount: 500,

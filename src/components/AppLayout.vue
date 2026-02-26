@@ -50,7 +50,7 @@ onUnmounted(() => {
 })
 
 function goHome() {
-  router.push({ name: 'budget-list' })
+  router.push({ name: 'workspace-list' })
 }
 
 function toggleMenu() {

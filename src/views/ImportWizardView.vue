@@ -18,32 +18,32 @@ import ImportStepUpload from './import-steps/ImportStepUpload.vue'
 import ImportStepMapping from './import-steps/ImportStepMapping.vue'
 import ImportStepReview from './import-steps/ImportStepReview.vue'
 import ImportStepComplete from './import-steps/ImportStepComplete.vue'
-import type { Budget, Expense, Frequency, LineType } from '@/types/models'
+import type { Workspace, Expense, Frequency, LineType } from '@/types/models'
 import type { ParsedCSV } from '@/engine/csvParser'
 import type { MatchResult } from '@/engine/matching'
 
 const props = defineProps<{ id: string }>()
 const router = useRouter()
 
-const budget = ref<Budget | null>(null)
+const workspace = ref<Workspace | null>(null)
 const expenses = ref<Expense[]>([])
 const loading = ref(true)
 const error = ref('')
 
 onMounted(async () => {
   try {
-    const [foundBudget, foundExpenses] = await Promise.all([
-      db.budgets.get(props.id),
-      db.expenses.where('budgetId').equals(props.id).toArray(),
+    const [foundWorkspace, foundExpenses] = await Promise.all([
+      db.workspaces.get(props.id),
+      db.expenses.where('workspaceId').equals(props.id).toArray(),
     ])
-    if (!foundBudget) {
-      router.replace({ name: 'budget-list' })
+    if (!foundWorkspace) {
+      router.replace({ name: 'workspace-list' })
       return
     }
-    budget.value = foundBudget
+    workspace.value = foundWorkspace
     expenses.value = foundExpenses
   } catch {
-    error.value = 'Couldn\'t load budget data. Please go back and try again.'
+    error.value = 'Couldn\'t load workspace data. Please go back and try again.'
   } finally {
     loading.value = false
   }
@@ -90,7 +90,7 @@ function handleMappingComplete(data: { matchResults: MatchResult[]; skippedRows:
 }
 
 async function handleConfirmImport() {
-  if (!budget.value) return
+  if (!workspace.value) return
   saving.value = true
 
   try {
@@ -100,7 +100,7 @@ async function handleConfirmImport() {
     await db.actuals.bulkAdd(
       approvedResults.map((r) => ({
         id: useId(),
-        budgetId: budget.value!.id,
+        workspaceId: workspace.value!.id,
         expenseId: r.matchedExpense?.id ?? null,
         date: r.importedRow.date,
         amount: r.importedRow.amount,
@@ -136,18 +136,18 @@ async function handleCreateExpense(data: {
   frequency: Frequency
   type: LineType
 }) {
-  if (!budget.value) return
+  if (!workspace.value) return
 
   const now = nowISO()
   const newExpense: Expense = {
     id: useId(),
-    budgetId: budget.value.id,
+    workspaceId: workspace.value.id,
     description: data.description,
     category: data.category,
     amount: data.amount,
     frequency: data.frequency,
     type: data.type,
-    startDate: budget.value.startDate,
+    startDate: workspace.value.startDate,
     endDate: null,
     createdAt: now,
     updatedAt: now,
@@ -173,12 +173,12 @@ function goBack() {
   if (step.value > 1) {
     step.value = (step.value - 1) as 1 | 2 | 3
   } else {
-    router.push({ name: 'budget-expenses', params: { id: props.id } })
+    router.push({ name: 'workspace-expenses', params: { id: props.id } })
   }
 }
 
 function finish() {
-  router.push({ name: 'budget-compare', params: { id: props.id } })
+  router.push({ name: 'workspace-compare', params: { id: props.id } })
 }
 </script>
 
@@ -189,14 +189,14 @@ function finish() {
       @click="goBack"
     >
       <span class="i-lucide-arrow-left" />
-      {{ step === 1 ? 'Back to budget' : 'Previous step' }}
+      {{ step === 1 ? 'Back to workspace' : 'Previous step' }}
     </button>
 
     <ErrorAlert v-if="error" :message="error" @dismiss="error = ''" />
 
     <LoadingSpinner v-if="loading" />
 
-    <template v-else-if="budget">
+    <template v-else-if="workspace">
       <!-- Step indicator -->
       <div class="flex items-center gap-2 mb-6">
         <template v-for="s in [1, 2, 3, 4]" :key="s">
@@ -243,7 +243,7 @@ function finish() {
         v-else-if="step === 3"
         :match-results="matchResults"
         :expenses="expenses"
-        :budget="budget"
+        :workspace="workspace"
         :skipped-rows="skippedRows"
         :saving="saving"
         @confirm="handleConfirmImport"

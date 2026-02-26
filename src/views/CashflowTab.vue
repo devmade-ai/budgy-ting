@@ -10,17 +10,17 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { db } from '@/db'
-import { calculateProjection, resolveBudgetPeriod } from '@/engine/projection'
+import { calculateProjection, resolveWorkspacePeriod } from '@/engine/projection'
 import { calculateCashflow } from '@/engine/cashflow'
 import { formatAmount } from '@/composables/useFormat'
 import ErrorAlert from '@/components/ErrorAlert.vue'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import ScrollHint from '@/components/ScrollHint.vue'
-import type { Budget, Expense, Actual } from '@/types/models'
+import type { Workspace, Expense, Actual } from '@/types/models'
 import type { CashflowResult } from '@/engine/cashflow'
 
-const props = defineProps<{ budget: Budget }>()
+const props = defineProps<{ workspace: Workspace }>()
 const router = useRouter()
 
 const expenses = ref<Expense[]>([])
@@ -28,15 +28,15 @@ const actuals = ref<Actual[]>([])
 const loading = ref(true)
 
 function goToEditBudget() {
-  router.push({ name: 'budget-edit', params: { id: props.budget.id } })
+  router.push({ name: 'workspace-edit', params: { id: props.workspace.id } })
 }
 const error = ref('')
 
 onMounted(async () => {
   try {
     const [exps, acts] = await Promise.all([
-      db.expenses.where('budgetId').equals(props.budget.id).toArray(),
-      db.actuals.where('budgetId').equals(props.budget.id).toArray(),
+      db.expenses.where('workspaceId').equals(props.workspace.id).toArray(),
+      db.actuals.where('workspaceId').equals(props.workspace.id).toArray(),
     ])
     expenses.value = exps
     actuals.value = acts
@@ -48,12 +48,12 @@ onMounted(async () => {
 })
 
 const cashflow = computed<CashflowResult | null>(() => {
-  if (props.budget.startingBalance == null) return null
+  if (props.workspace.startingBalance == null) return null
   if (expenses.value.length === 0) return null
 
-  const { startDate, endDate } = resolveBudgetPeriod(props.budget)
+  const { startDate, endDate } = resolveWorkspacePeriod(props.workspace)
   const projection = calculateProjection(expenses.value, startDate, endDate)
-  return calculateCashflow(props.budget.startingBalance, projection, actuals.value, expenses.value)
+  return calculateCashflow(props.workspace.startingBalance, projection, actuals.value, expenses.value)
 })
 
 const hasIncomeLines = computed(() => {
@@ -61,7 +61,7 @@ const hasIncomeLines = computed(() => {
 })
 
 const noBalance = computed(() => {
-  return props.budget.startingBalance == null
+  return props.workspace.startingBalance == null
 })
 </script>
 
@@ -100,19 +100,19 @@ const noBalance = computed(() => {
           <div>
             <p class="text-xs text-gray-400 uppercase tracking-wide">Starting Balance</p>
             <p class="text-lg font-semibold text-gray-900">
-              {{ props.budget.currencyLabel }}{{ formatAmount(cashflow.startingBalance) }}
+              {{ props.workspace.currencyLabel }}{{ formatAmount(cashflow.startingBalance) }}
             </p>
           </div>
           <div>
             <p class="text-xs text-gray-400 uppercase tracking-wide">Total Income</p>
             <p class="text-lg font-semibold text-green-600">
-              +{{ props.budget.currencyLabel }}{{ formatAmount(cashflow.totalIncome) }}
+              +{{ props.workspace.currencyLabel }}{{ formatAmount(cashflow.totalIncome) }}
             </p>
           </div>
           <div>
             <p class="text-xs text-gray-400 uppercase tracking-wide">Total Expenses</p>
             <p class="text-lg font-semibold text-red-600">
-              -{{ props.budget.currencyLabel }}{{ formatAmount(cashflow.totalExpenses) }}
+              -{{ props.workspace.currencyLabel }}{{ formatAmount(cashflow.totalExpenses) }}
             </p>
           </div>
           <div>
@@ -121,7 +121,7 @@ const noBalance = computed(() => {
               class="text-lg font-semibold"
               :class="cashflow.endingBalance >= 0 ? 'text-brand-600' : 'text-red-600'"
             >
-              {{ props.budget.currencyLabel }}{{ formatAmount(cashflow.endingBalance) }}
+              {{ props.workspace.currencyLabel }}{{ formatAmount(cashflow.endingBalance) }}
             </p>
           </div>
         </div>
@@ -131,7 +131,7 @@ const noBalance = computed(() => {
           <template v-if="cashflow.willGoNegative && cashflow.zeroCrossingMonth">
             Your balance goes negative in {{ cashflow.zeroCrossingMonth }}
             <span v-if="cashflow.lowestBalance < 0">
-              (lowest: {{ props.budget.currencyLabel }}{{ formatAmount(cashflow.lowestBalance) }} in {{ cashflow.lowestBalanceMonth }})
+              (lowest: {{ props.workspace.currencyLabel }}{{ formatAmount(cashflow.lowestBalance) }} in {{ cashflow.lowestBalanceMonth }})
             </span>
           </template>
           <template v-else-if="!hasIncomeLines">
@@ -254,7 +254,7 @@ const noBalance = computed(() => {
                 :style="{
                   height: `${Math.max(4, (Math.abs(m.balance) / Math.max(...cashflow.months.map(x => Math.abs(x.balance)), 1)) * 100)}%`
                 }"
-                :title="`${m.monthLabel}: ${props.budget.currencyLabel}${formatAmount(m.balance)}`"
+                :title="`${m.monthLabel}: ${props.workspace.currencyLabel}${formatAmount(m.balance)}`"
               />
             </div>
             <span class="text-xs text-gray-400 truncate w-full text-center mt-0.5">
