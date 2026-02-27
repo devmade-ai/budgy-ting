@@ -172,7 +172,7 @@ const showClearConfirm = ref(false)
 
 <template>
   <div>
-    <div class="flex items-center justify-between mb-6">
+    <div class="flex flex-wrap items-center justify-between gap-y-3 mb-6">
       <h1 class="page-title">Workspaces</h1>
       <div class="flex gap-2">
         <label class="btn-secondary text-sm cursor-pointer">
