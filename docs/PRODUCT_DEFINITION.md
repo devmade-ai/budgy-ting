@@ -568,11 +568,11 @@ Phase 3 and Phase 4 can be developed in parallel after Phase 2 is complete.
 
 ### Deployment
 
-- **Hosting:** GitHub Pages (free, sufficient for static PWA)
+- **Hosting:** Vercel (free tier, sufficient for static PWA)
 - **Build:** `vite build` produces static assets
-- **CI/CD:** GitHub Actions workflow: lint → type-check → test → build → deploy to Pages
-- **Custom domain:** Optional, GitHub Pages supports it
-- **SSL:** Automatic via GitHub Pages (required for PWA service worker)
+- **CI/CD:** Vercel auto-deploys on push to `main`
+- **Custom domain:** Optional, Vercel supports it
+- **SSL:** Automatic via Vercel (required for PWA service worker)
 
 ---
 

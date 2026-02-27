@@ -5,13 +5,7 @@ import UnoCSS from 'unocss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import { resolve } from 'path'
 
-// GitHub Pages deploys to /<repo-name>/ — VITE_BASE_URL is set by the
-// CI workflow so asset paths and PWA scope resolve correctly.
-const raw = process.env.VITE_BASE_URL || '/'
-const base = raw.endsWith('/') ? raw : `${raw}/`
-
 export default defineConfig({
-  base,
   plugins: [
     vue(),
     UnoCSS(),
@@ -23,14 +17,14 @@ export default defineConfig({
         short_name: 'budgy-ting',
         description: 'Plan and track expenses against budgets',
         // Requirement: Stable identity for Chrome PWA install system.
-        // Approach: Explicit id field matching the base path so Chrome doesn't
-        //   derive it from start_url (which can cause mismatches on path changes).
-        id: base,
+        // Approach: Explicit id so Chrome doesn't derive it from start_url
+        //   (which can cause mismatches on path changes).
+        id: '/',
         theme_color: '#10b981',
         background_color: '#ffffff',
         display: 'standalone',
-        scope: base,
-        start_url: base,
+        scope: '/',
+        start_url: '/',
         // Requirement: Prevent Chrome from preferring a native app store listing.
         // Without this, Chrome may skip beforeinstallprompt if it thinks a
         // related native app exists.
