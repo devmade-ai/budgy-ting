@@ -22,21 +22,31 @@ export default defineConfig({
         name: 'budgy-ting',
         short_name: 'budgy-ting',
         description: 'Plan and track expenses against budgets',
+        // Requirement: Stable identity for Chrome PWA install system.
+        // Approach: Explicit id field matching the base path so Chrome doesn't
+        //   derive it from start_url (which can cause mismatches on path changes).
+        id: base,
         theme_color: '#10b981',
         background_color: '#ffffff',
         display: 'standalone',
         scope: base,
         start_url: base,
+        // Requirement: Prevent Chrome from preferring a native app store listing.
+        // Without this, Chrome may skip beforeinstallprompt if it thinks a
+        // related native app exists.
+        prefer_related_applications: false,
         icons: [
           {
             src: 'pwa-192x192.png',
             sizes: '192x192',
             type: 'image/png',
+            purpose: 'any',
           },
           {
             src: 'pwa-512x512.png',
             sizes: '512x512',
             type: 'image/png',
+            purpose: 'any',
           },
           // Requirement: Maskable icon for Android adaptive-icon cropping.
           // Approach: Separate entry with purpose 'maskable' (same image).
