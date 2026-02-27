@@ -90,4 +90,4 @@ src/
 
 ## Deployment
 
-Static site deployment via GitHub Pages. `vite build` produces the `dist/` directory.
+Deployed to Vercel. `vite build` produces the `dist/` directory. Vercel auto-deploys on push to `main`.
