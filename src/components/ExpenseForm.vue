@@ -40,7 +40,7 @@ const endDate = ref(props.expense?.endDate ?? '')
 
 // Multi-tag state
 const tags = ref<string[]>(props.expense?.tags ? [...props.expense.tags] : [])
-const { query: tagQuery, suggestions, isOpen, select: selectSuggestion, close } = useTagAutocomplete()
+const { query: tagQuery, suggestions, isOpen, close } = useTagAutocomplete()
 
 const isEditing = computed(() => !!props.expense)
 const tagsValid = ref(true)

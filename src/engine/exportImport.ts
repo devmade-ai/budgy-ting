@@ -12,7 +12,6 @@ import { db } from '@/db'
 import { calculateProjection, resolveWorkspacePeriod } from './projection'
 import { calculateComparison } from './variance'
 import type { Workspace, Expense, Actual } from '@/types/models'
-import { primaryTag } from '@/types/models'
 
 export interface ExportSchema {
   version: 2
