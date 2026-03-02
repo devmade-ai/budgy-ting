@@ -52,7 +52,7 @@ export interface ProjectionResult {
   rows: ProjectedRow[]
   /** Primary tag → month → total (expense amounts only) */
   categoryRollup: Map<string, Map<string, number>>
-  /** Month → total expense (outflows only, for variance/envelope) */
+  /** Month → total expense (outflows only, for variance) */
   monthlyTotals: Map<string, number>
   /** Grand total expenses (outflows only) */
   grandTotal: number
@@ -257,7 +257,7 @@ export function calculateProjection(
         monthlyIncome.set(slot.month, (monthlyIncome.get(slot.month) ?? 0) + amount)
         monthlyNet.set(slot.month, (monthlyNet.get(slot.month) ?? 0) + amount)
       } else {
-        // Track expenses (outflows) — these feed into variance/envelope engines
+        // Track expenses (outflows) — these feed into the variance engine
         monthlyTotals.set(slot.month, (monthlyTotals.get(slot.month) ?? 0) + amount)
         monthlyNet.set(slot.month, (monthlyNet.get(slot.month) ?? 0) - amount)
 

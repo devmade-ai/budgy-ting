@@ -31,8 +31,6 @@ export interface Workspace {
   periodType: PeriodType
   startDate: string
   endDate: string | null
-  /** Starting balance (e.g. "I have R100k right now"). Null = no balance tracking. */
-  startingBalance: number | null
   /** Whether this is a demo workspace (pre-populated with sample data) */
   isDemo: boolean
   createdAt: string

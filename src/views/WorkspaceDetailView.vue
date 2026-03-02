@@ -54,11 +54,9 @@ onUnmounted(() => {
 })
 
 // Requirement: Tab labels must be plain language for non-technical users
-// "Projected" → "Forecast", "Cashflow" → "Balance" are clearer for everyday budgeting
 const tabs = [
   { name: 'workspace-expenses', label: 'Expenses', icon: 'i-lucide-list' },
   { name: 'workspace-projected', label: 'Forecast', icon: 'i-lucide-trending-up' },
-  { name: 'workspace-cashflow', label: 'Balance', icon: 'i-lucide-wallet' },
   { name: 'workspace-compare', label: 'Compare', icon: 'i-lucide-bar-chart-3' },
 ] as const
 

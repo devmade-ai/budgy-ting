@@ -10,7 +10,7 @@ All data lives on-device using IndexedDB. No authentication, no server. Exportab
 - **Demo workspace** — Auto-seeded realistic household data on first visit to explore features immediately
 - **Expense tracking** — Add once-off or recurring income/expense lines with category autocomplete
 - **Projected spend** — View monthly breakdowns calculated from expense frequencies (by item or category)
-- **Cashflow forecast** — Running balance timeline showing how your account balance changes month by month
+- **Cash runway** — Enter cash on hand to see how long it lasts based on your forecast (not stored)
 - **Import actuals** — Upload CSV/JSON files with guided column mapping and 3-pass auto-matching
 - **Budget vs actuals** — Compare projected and actual spend by line item, category, or month with variance indicators
 - **Export/backup** — Download workspace data as JSON, restore from backup, clear all data
@@ -61,9 +61,7 @@ src/
 │   ├── index.ts                # Schema v4 definition with migrations
 │   └── demoData.ts             # Demo workspace seeding on first visit
 ├── engine/             # Pure TypeScript calculation engines
-│   ├── cashflow.ts            # Running balance / cashflow forecast
 │   ├── csvParser.ts            # CSV/JSON file parsing
-│   ├── envelope.ts             # Budget envelope tracking
 │   ├── exportImport.ts         # Workspace export/import/restore
 │   ├── matching.ts             # 3-pass auto-matching algorithm
 │   ├── projection.ts           # Recurring expense projection engine
@@ -80,8 +78,7 @@ src/
 │   ├── ExpensesTab.vue         # Grouped expense list
 │   ├── ExpenseCreateView.vue   # New expense form
 │   ├── ExpenseEditView.vue     # Edit expense form
-│   ├── ProjectedTab.vue        # Monthly projection table
-│   ├── CashflowTab.vue         # Running balance timeline + chart
+│   ├── ProjectedTab.vue        # Monthly projection table + cash runway
 │   ├── CompareTab.vue          # Variance comparison (3 sub-views)
 │   └── ImportWizardView.vue    # 4-step import wizard
 ├── App.vue             # Root component

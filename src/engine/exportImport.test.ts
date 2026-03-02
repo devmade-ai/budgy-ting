@@ -11,7 +11,6 @@ function makeWorkspace(overrides: Partial<Workspace> = {}): Workspace {
     periodType: 'monthly',
     startDate: '2026-01-01',
     endDate: null,
-    startingBalance: null,
     isDemo: false,
     createdAt: '2026-01-01T00:00:00Z',
     updatedAt: '2026-01-01T00:00:00Z',
@@ -175,12 +174,13 @@ describe('validateImport', () => {
     expect(result.valid).toBe(true)
   })
 
-  it('accepts valid export with startingBalance', () => {
+  it('accepts old export that has startingBalance (backward compat)', () => {
+    // Old exports may include startingBalance — validation should still accept them
+    const ws = { ...makeWorkspace(), startingBalance: 50000 } as Record<string, unknown>
     const result = validateImport(makeValidExport({
-      workspace: makeWorkspace({ startingBalance: 50000 }),
+      workspace: ws as unknown as Workspace,
     }))
     expect(result.valid).toBe(true)
-    expect(result.data!.workspace.startingBalance).toBe(50000)
   })
 
   it('accepts valid export with comparison data', () => {

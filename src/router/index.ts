@@ -57,11 +57,6 @@ const router = createRouter({
           name: 'workspace-compare',
           component: () => import('@/views/CompareTab.vue'),
         },
-        {
-          path: 'cashflow',
-          name: 'workspace-cashflow',
-          component: () => import('@/views/CashflowTab.vue'),
-        },
       ],
     },
     {

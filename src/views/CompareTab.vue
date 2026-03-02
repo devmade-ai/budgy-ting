@@ -15,9 +15,7 @@ import { useRouter } from 'vue-router'
 import { db } from '@/db'
 import { calculateProjection, resolveWorkspacePeriod } from '@/engine/projection'
 import { calculateComparison } from '@/engine/variance'
-import { calculateEnvelope } from '@/engine/envelope'
 import { formatAmount } from '@/composables/useFormat'
-import { todayISO } from '@/composables/useTimestamp'
 import ErrorAlert from '@/components/ErrorAlert.vue'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import EmptyState from '@/components/EmptyState.vue'
@@ -26,7 +24,6 @@ import CompareCategories from '@/views/compare-views/CompareCategories.vue'
 import CompareMonthly from '@/views/compare-views/CompareMonthly.vue'
 import type { Workspace, Expense, Actual } from '@/types/models'
 import type { ComparisonResult } from '@/engine/variance'
-import type { EnvelopeResult } from '@/engine/envelope'
 
 const props = defineProps<{ workspace: Workspace }>()
 const router = useRouter()
@@ -59,15 +56,6 @@ const comparison = computed<ComparisonResult | null>(() => {
   return calculateComparison(projection, actuals.value, expenses.value)
 })
 
-const envelope = computed<EnvelopeResult | null>(() => {
-  if (props.workspace.startingBalance == null) return null
-  if (expenses.value.length === 0 && actuals.value.length === 0) return null
-
-  const { startDate, endDate } = resolveWorkspacePeriod(props.workspace)
-  const projection = calculateProjection(expenses.value, startDate, endDate)
-  return calculateEnvelope(props.workspace.startingBalance, projection, actuals.value, todayISO(), expenses.value)
-})
-
 const viewMode = ref<'items' | 'categories' | 'monthly'>('items')
 
 function goToImport() {
@@ -95,60 +83,6 @@ function goToImport() {
 
     <!-- Comparison views -->
     <template v-else-if="comparison">
-      <!-- Envelope summary (only shown when budget has a fixed total amount) -->
-      <div v-if="envelope" class="card mb-4 border-2" :class="envelope.willExceed ? 'border-red-200 bg-red-50/30' : 'border-brand-200 bg-brand-50/30'">
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
-          <div>
-            <p class="text-xs text-gray-400 uppercase tracking-wide">Starting Balance</p>
-            <p class="text-lg font-semibold text-gray-900">
-              {{ props.workspace.currencyLabel }}{{ formatAmount(envelope.startingBalance) }}
-            </p>
-          </div>
-          <div>
-            <p class="text-xs text-gray-400 uppercase tracking-wide">Spent So Far</p>
-            <p class="text-lg font-semibold text-gray-900">
-              {{ props.workspace.currencyLabel }}{{ formatAmount(envelope.totalSpent) }}
-            </p>
-          </div>
-          <div>
-            <p class="text-xs text-gray-400 uppercase tracking-wide">Remaining</p>
-            <p
-              class="text-lg font-semibold"
-              :class="envelope.remainingBalance > 0 ? 'text-brand-600' : 'text-red-600'"
-            >
-              {{ props.workspace.currencyLabel }}{{ formatAmount(Math.abs(envelope.remainingBalance)) }}
-              <span v-if="envelope.remainingBalance < 0" class="text-xs font-normal">over</span>
-            </p>
-          </div>
-          <div>
-            <p class="text-xs text-gray-400 uppercase tracking-wide">
-              {{ envelope.daysRemaining !== null ? 'Lasts Until' : 'At Current Rate' }}
-            </p>
-            <p class="text-lg font-semibold" :class="envelope.willExceed ? 'text-red-600' : 'text-brand-600'">
-              <template v-if="envelope.depletionDate">
-                {{ envelope.depletionDate.slice(5) }}
-                <span class="text-xs font-normal block">~{{ envelope.daysRemaining }} days</span>
-              </template>
-              <template v-else-if="envelope.dailyBurnRate">
-                {{ props.workspace.currencyLabel }}{{ formatAmount(envelope.dailyBurnRate) }}/day
-              </template>
-              <template v-else>
-                <span class="text-gray-400 text-sm">Import actuals to see</span>
-              </template>
-            </p>
-          </div>
-        </div>
-        <!-- Forecast message -->
-        <div class="mt-3 text-center text-sm" :class="envelope.willExceed ? 'text-red-600' : 'text-brand-600'">
-          <template v-if="envelope.willExceed">
-            At current pace, you'll be {{ props.workspace.currencyLabel }}{{ formatAmount(Math.abs(envelope.projectedSurplus)) }} over budget
-          </template>
-          <template v-else>
-            On track — {{ props.workspace.currencyLabel }}{{ formatAmount(envelope.projectedSurplus) }} projected to remain
-          </template>
-        </div>
-      </div>
-
       <!-- Summary bar -->
       <div class="card mb-4">
         <div class="grid grid-cols-3 gap-4 text-center">

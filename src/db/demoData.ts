@@ -63,7 +63,6 @@ export async function seedDemoWorkspace(): Promise<boolean> {
     periodType: 'monthly',
     startDate,
     endDate: null,
-    startingBalance: 45000,
     isDemo: true,
     createdAt: nowISO,
     updatedAt: nowISO,
