@@ -11,11 +11,11 @@ Run through this checklist after any change to verify nothing is broken:
 - [ ] App loads without errors (no console errors)
 - [ ] Home page lists existing workspaces (demo workspace on first visit)
 - [ ] Can create a new workspace (both monthly and custom period types)
-- [ ] Can open a workspace and see all 4 tabs (Expenses, Projected, Cashflow, Compare)
+- [ ] Can open a workspace and see all 3 tabs (Expenses, Forecast, Compare)
 - [ ] Can add an expense item
 - [ ] Can add an income item
-- [ ] Projected tab shows monthly breakdown
-- [ ] Cashflow tab shows running balance (requires starting balance)
+- [ ] Forecast tab shows monthly breakdown
+- [ ] Cash on hand input shows runway result on Forecast tab
 - [ ] Can import a CSV file through the 4-step wizard
 - [ ] Compare tab shows budget vs actuals after import
 - [ ] Can export a workspace as JSON
@@ -53,7 +53,7 @@ Run through this checklist after any change to verify nothing is broken:
 - "Monthly" period type displayed
 - Expenses tab is active and shows empty state: "No items yet"
 
-#### 1.2 Create a Custom-Period Workspace with Starting Balance
+#### 1.2 Create a Custom-Period Workspace
 
 **Steps:**
 1. Go to home screen
@@ -63,16 +63,13 @@ Run through this checklist after any change to verify nothing is broken:
 5. Select **Custom dates**
 6. Set start date to 2026-01-01
 7. Set end date to 2026-06-30
-8. Check **I know my current balance**
-9. Enter starting balance: 10000
-10. Click **Create workspace**
+8. Click **Create workspace**
 
 **Expected:**
 - Redirected to workspace detail page
 - Workspace name shows "Test Custom"
 - "$" shown as currency
 - "Custom period" displayed
-- Cashflow tab shows balance data (not the "No starting balance" empty state)
 
 #### 1.3 Workspace Validation Errors
 
@@ -169,7 +166,6 @@ Run through this checklist after any change to verify nothing is broken:
 **Expected:**
 - A "Demo Household" workspace appears automatically
 - Contains 16 items (salary, freelance, rent, groceries, etc.)
-- Starting balance of R45,000
 - All tabs functional with the demo data
 
 ---
@@ -297,8 +293,8 @@ Run through this checklist after any change to verify nothing is broken:
 **Pre-condition:** Workspace with several expenses at different frequencies.
 
 **Steps:**
-1. Open workspace, click **Projected** tab
-2. Ensure **By Item** view is selected
+1. Open workspace, click **Forecast** tab
+2. Ensure **Each item** view is selected
 
 **Expected:**
 - Table shows one row per expense
@@ -313,19 +309,19 @@ Run through this checklist after any change to verify nothing is broken:
 #### 3.2 Monthly Projections — By Category View
 
 **Steps:**
-1. From Projected tab, click **By Category**
+1. From Forecast tab, click **Group by tag**
 
 **Expected:**
-- Rows grouped by category instead of individual items
-- Amounts are summed per category per month
-- Totals match the "By Item" totals
+- Rows grouped by tag instead of individual items
+- Amounts are summed per tag per month
+- Totals match the "Each item" totals
 
 #### 3.3 Projections with Income
 
 **Pre-condition:** Workspace has both income and expense items.
 
 **Steps:**
-1. Open Projected tab
+1. Open Forecast tab
 
 **Expected:**
 - **Income** section (green) at top with income rows
@@ -333,96 +329,54 @@ Run through this checklist after any change to verify nothing is broken:
 - Footer shows: Total Income, Total Expenses, Net
 - Net = Income - Expenses
 
-#### 3.4 Balance Summary with Negative Projection
+#### 3.4 Cash on Hand — Runs Out
 
-**Pre-condition:** Workspace with starting balance where expenses exceed income + balance.
+**Pre-condition:** Workspace with expenses exceeding income.
 
 **Steps:**
-1. Open Projected tab
+1. Open Forecast tab
+2. Enter a cash amount in the **Cash on hand** field (e.g. 10000)
 
 **Expected:**
-- Balance summary card shows Starting Balance, Income, Expenses, Ending Balance
-- Warning message in red: "Your balance goes negative in [Month Year]"
-- Ending balance shown in red
+- Shows "Runs out in [Month Year]" in red text
+- Clears when the input is emptied
 
-#### 3.5 Empty State
+#### 3.5 Cash on Hand — Growing
+
+**Pre-condition:** Workspace where income exceeds expenses.
+
+**Steps:**
+1. Open Forecast tab
+2. Enter a cash amount in the **Cash on hand** field
+
+**Expected:**
+- Shows "Cash is growing — R[amount] after [N] months" in green text
+
+#### 3.6 Cash on Hand — Lasts
+
+**Pre-condition:** Workspace where expenses exceed income but not enough to deplete within forecast period.
+
+**Steps:**
+1. Open Forecast tab
+2. Enter a large cash amount
+
+**Expected:**
+- Shows "Lasts all [N] months — R[amount] remaining" in green text
+
+#### 3.7 Empty State
 
 **Steps:**
 1. Open a workspace with no expenses
-2. Click **Projected** tab
+2. Click **Forecast** tab
 
 **Expected:**
 - Empty state: "No projections yet" with description "Add expenses to see projected spend over time"
 
 ---
 
-### 4. Cashflow Forecast
+### 4. Compare (Budget vs Actuals)
 
-#### 4.1 Cashflow with Starting Balance
-
-**Pre-condition:** Workspace with starting balance of R10,000 and monthly expenses totalling R3,000.
-
-**Steps:**
-1. Open workspace, click **Cashflow** tab
-
-**Expected:**
-- Summary card shows Starting Balance: R10,000
-- Table shows month-by-month with:
-  - Starting row with R10,000
-  - Each month's income, expenses, net, and running balance
-  - Balance decreasing each month by ~R3,000
-- Bar chart shows balance trajectory
-
-#### 4.2 Cashflow with Actuals
-
-**Pre-condition:** Workspace with starting balance, expenses, and imported actuals for at least one month.
-
-**Steps:**
-1. Open Cashflow tab
-
-**Expected:**
-- Months with imported data show actual amounts (marked with "actual" indicator)
-- Months without imported data show projected amounts
-- Running balance uses actual where available, projected where not
-
-#### 4.3 Balance Goes Negative
-
-**Pre-condition:** Workspace where expenses will deplete balance.
-
-**Steps:**
-1. Open Cashflow tab
-
-**Expected:**
-- Warning: "Your balance goes negative in [Month Year]"
-- Lowest balance and month shown
-- Red bars in chart for negative months
-
-#### 4.4 Missing Starting Balance
-
-**Steps:**
-1. Open a workspace without starting balance
-2. Click **Cashflow** tab
-
-**Expected:**
-- Empty state: "No starting balance set"
-- Description: "Enter your current account balance to see how your money flows over time"
-- Button: "Set starting balance" linking to workspace edit
-
-#### 4.5 No Expenses
-
-**Steps:**
-1. Open a workspace with starting balance but no expenses
-2. Click **Cashflow** tab
-
-**Expected:**
-- Empty state: "No cashflow data yet"
-- Description: "Add income and expense lines to see your cashflow forecast"
-
----
-
-### 5. Compare (Budget vs Actuals)
-
-#### 5.1 Empty State
+#### 4.1 Empty State
 
 **Steps:**
 1. Open a workspace with no imported actuals
@@ -433,7 +387,7 @@ Run through this checklist after any change to verify nothing is broken:
 - Description: "Import your bank statement to see how your actual spending compares to your budget"
 - Button: "Import bank statement"
 
-#### 5.2 Line Items View
+#### 4.2 Line Items View
 
 **Pre-condition:** Workspace with expenses and imported actuals.
 
@@ -447,7 +401,7 @@ Run through this checklist after any change to verify nothing is broken:
 - Under-budget items shown in green
 - "Unbudgeted Spending" section at bottom (if any unmatched imports exist)
 
-#### 5.3 Categories View
+#### 4.3 Categories View
 
 **Steps:**
 1. From Compare tab, click **Categories**
@@ -457,7 +411,7 @@ Run through this checklist after any change to verify nothing is broken:
 - Bar chart below with budgeted (blue) vs actual (green = under, red = over)
 - Legend present
 
-#### 5.4 Monthly View
+#### 4.4 Monthly View
 
 **Steps:**
 1. From Compare tab, click **Monthly**
@@ -467,24 +421,11 @@ Run through this checklist after any change to verify nothing is broken:
 - Months without actual data are dimmed
 - Bar chart below showing monthly comparison
 
-#### 5.5 Envelope Summary
-
-**Pre-condition:** Workspace with starting balance and imported actuals.
-
-**Steps:**
-1. Open Compare tab
-
-**Expected:**
-- Envelope card shows: Starting Balance, Spent So Far, Remaining
-- If spending is on track: green message with projected surplus
-- If overspending: red message with amount over budget
-- Daily burn rate or depletion date shown (after importing actuals)
-
 ---
 
-### 6. Import Wizard
+### 5. Import Wizard
 
-#### 6.1 Step 1 — File Upload (CSV)
+#### 5.1 Step 1 — File Upload (CSV)
 
 **Pre-condition:** Have a CSV file with columns: Date, Description, Amount, Category.
 
@@ -498,7 +439,7 @@ Run through this checklist after any change to verify nothing is broken:
 - Columns auto-detected for date, amount, category, description
 - **Continue to mapping** button enabled
 
-#### 6.2 Step 1 — File Upload (JSON)
+#### 5.2 Step 1 — File Upload (JSON)
 
 **Steps:**
 1. Click **Import**, select a JSON file
@@ -507,7 +448,7 @@ Run through this checklist after any change to verify nothing is broken:
 - File parsed, preview shown
 - Same auto-detection behavior as CSV
 
-#### 6.3 Step 1 — File Too Large
+#### 5.3 Step 1 — File Too Large
 
 **Steps:**
 1. Click **Import**, select a file larger than 10 MB
@@ -516,7 +457,7 @@ Run through this checklist after any change to verify nothing is broken:
 - Error: "File is too large (max 10 MB)"
 - Cannot proceed
 
-#### 6.4 Step 1 — Invalid File
+#### 5.4 Step 1 — Invalid File
 
 **Steps:**
 1. Select a file that isn't valid CSV or JSON (e.g. a text file with random content)
@@ -525,7 +466,7 @@ Run through this checklist after any change to verify nothing is broken:
 - Error message about parsing failure
 - Cannot proceed
 
-#### 6.5 Step 2 — Column Mapping
+#### 5.5 Step 2 — Column Mapping
 
 **Steps:**
 1. After uploading, proceed to Step 2
@@ -541,7 +482,7 @@ Run through this checklist after any change to verify nothing is broken:
 - Preview table updates as you change mappings
 - Dates and amounts parse correctly in preview
 
-#### 6.6 Step 2 — Bad Date Format
+#### 5.6 Step 2 — Bad Date Format
 
 **Steps:**
 1. Select a date column with dates in DD/MM/YYYY format
@@ -551,7 +492,7 @@ Run through this checklist after any change to verify nothing is broken:
 - Error: "Many dates couldn't be parsed — check the date format"
 - Cannot proceed until format corrected
 
-#### 6.7 Step 2 — Bad Amount Column
+#### 5.7 Step 2 — Bad Amount Column
 
 **Steps:**
 1. Select a description column as the amount column
@@ -560,7 +501,7 @@ Run through this checklist after any change to verify nothing is broken:
 - Error: "Many amounts couldn't be parsed — check the amount column"
 - Cannot proceed
 
-#### 6.8 Step 3 — Review Matches
+#### 5.8 Step 3 — Review Matches
 
 **Steps:**
 1. After mapping, proceed to Step 3
@@ -573,7 +514,7 @@ Run through this checklist after any change to verify nothing is broken:
 - Summary badges at top show count per confidence level
 - High-confidence matches are auto-approved (green checkmark)
 
-#### 6.9 Step 3 — Reassign a Match
+#### 5.9 Step 3 — Reassign a Match
 
 **Steps:**
 1. On a matched row, click the "Assign to expense" dropdown
@@ -584,7 +525,7 @@ Run through this checklist after any change to verify nothing is broken:
 - Row marked as approved
 - Matched expense name updates
 
-#### 6.10 Step 3 — Mark as Unbudgeted
+#### 5.10 Step 3 — Mark as Unbudgeted
 
 **Steps:**
 1. On a matched row, select **Unbudgeted** from dropdown
@@ -593,7 +534,7 @@ Run through this checklist after any change to verify nothing is broken:
 - Match changes to "unmatched" confidence
 - Row still approved (will import as unbudgeted)
 
-#### 6.11 Step 3 — Create New Expense from Import
+#### 5.11 Step 3 — Create New Expense from Import
 
 **Steps:**
 1. On any row, select **+ Create new...** from the dropdown
@@ -611,7 +552,7 @@ Run through this checklist after any change to verify nothing is broken:
 - New expense appears in all other rows' dropdowns
 - Badge updates to "manual" confidence
 
-#### 6.12 Step 3 — Bulk Approve
+#### 5.12 Step 3 — Bulk Approve
 
 **Pre-condition:** Import file has medium and low confidence matches.
 
@@ -623,7 +564,7 @@ Run through this checklist after any change to verify nothing is broken:
 - All rows at that confidence level become approved
 - Import count updates
 
-#### 6.13 Step 3 — Un-approve a Row
+#### 5.13 Step 3 — Un-approve a Row
 
 **Steps:**
 1. Click the approve button on an approved row to toggle it off
@@ -633,7 +574,7 @@ Run through this checklist after any change to verify nothing is broken:
 - Import count decreases
 - Row will be skipped during import
 
-#### 6.14 Step 3 — Pagination
+#### 5.14 Step 3 — Pagination
 
 **Pre-condition:** Import file with more than 50 rows.
 
@@ -646,7 +587,7 @@ Run through this checklist after any change to verify nothing is broken:
 - Next/Previous buttons work correctly
 - All pages show match data
 
-#### 6.15 Step 4 — Import Complete
+#### 5.15 Step 4 — Import Complete
 
 **Steps:**
 1. After reviewing all matches, click **Import [N] rows**
@@ -660,7 +601,7 @@ Run through this checklist after any change to verify nothing is broken:
   - Summary: auto-matched, manually approved, unbudgeted counts
 - Click **View comparison** → redirected to Compare tab
 
-#### 6.16 Step Navigation — Back Button
+#### 5.16 Step Navigation — Back Button
 
 **Steps:**
 1. On Step 2, click **Back**
@@ -675,9 +616,9 @@ Run through this checklist after any change to verify nothing is broken:
 
 ---
 
-### 7. Navigation & UI
+### 6. Navigation & UI
 
-#### 7.1 Home Navigation
+#### 6.1 Home Navigation
 
 **Steps:**
 1. From any workspace detail page, click **budgy-ting** in the header
@@ -688,18 +629,18 @@ Run through this checklist after any change to verify nothing is broken:
 
 **Expected:** Navigated to home screen
 
-#### 7.2 Tab Navigation
+#### 6.2 Tab Navigation
 
 **Steps:**
 1. Open a workspace
-2. Click each tab in order: Expenses → Projected → Cashflow → Compare
+2. Click each tab in order: Expenses → Forecast → Compare
 
 **Expected:**
 - Each tab loads its content
 - Active tab is visually highlighted
 - URL updates to match the tab
 
-#### 7.3 Help Menu
+#### 6.3 Help Menu
 
 **Steps:**
 1. Click the **hamburger menu** icon in the top-right corner
@@ -755,10 +696,10 @@ Run through this checklist after any change to verify nothing is broken:
 - Shows intro text and a code block with CSV data
 - CSV content is selectable/copyable
 
-#### 7.4 Browser Back/Forward
+#### 6.4 Browser Back/Forward
 
 **Steps:**
-1. Navigate: Home → Workspace → Expenses tab → Add Item → Back → Projected tab
+1. Navigate: Home → Workspace → Expenses tab → Add Item → Back → Forecast tab
 2. Click browser back button multiple times
 
 **Expected:**
@@ -768,9 +709,9 @@ Run through this checklist after any change to verify nothing is broken:
 
 ---
 
-### 8. PWA Features
+### 7. PWA Features
 
-#### 8.1 Install Prompt
+#### 7.1 Install Prompt
 
 **Steps:**
 1. Open app in Chromium browser for first time (or clear site data)
@@ -780,7 +721,7 @@ Run through this checklist after any change to verify nothing is broken:
 - "Install" button triggers browser install dialog
 - "Not now" dismisses the banner
 
-#### 8.2 Update Available
+#### 7.2 Update Available
 
 **Steps:**
 1. Deploy a new version
@@ -790,7 +731,7 @@ Run through this checklist after any change to verify nothing is broken:
 - Banner appears: "A new version is available"
 - Click **Update now** reloads the app
 
-#### 8.3 Offline Use
+#### 7.3 Offline Use
 
 **Steps:**
 1. Load the app while online
@@ -804,9 +745,9 @@ Run through this checklist after any change to verify nothing is broken:
 
 ---
 
-### 9. Edge Cases & Error Handling
+### 8. Edge Cases & Error Handling
 
-#### 9.1 Invalid Workspace URL
+#### 8.1 Invalid Workspace URL
 
 **Steps:**
 1. Navigate to `/workspace/nonexistent-id`
@@ -815,7 +756,7 @@ Run through this checklist after any change to verify nothing is broken:
 - Error message: "Couldn't load this workspace. Please go back and try again."
 - Can navigate back to home
 
-#### 9.2 Empty CSV Import
+#### 8.2 Empty CSV Import
 
 **Steps:**
 1. Import a CSV file with only headers (no data rows)
@@ -824,7 +765,7 @@ Run through this checklist after any change to verify nothing is broken:
 - Error: "No data found in file"
 - Cannot proceed past Step 1
 
-#### 9.3 Currency Symbol Display
+#### 8.3 Currency Symbol Display
 
 **Steps:**
 1. Create a workspace with currency "€"
@@ -832,9 +773,9 @@ Run through this checklist after any change to verify nothing is broken:
 
 **Expected:**
 - Amount displays as "€1 500.00" throughout all tabs
-- Currency symbol used consistently in projections, cashflow, compare
+- Currency symbol used consistently in forecast and compare
 
-#### 9.4 Long Workspace/Expense Names
+#### 8.4 Long Workspace/Expense Names
 
 **Steps:**
 1. Create a workspace with a very long name (50+ characters)
@@ -845,48 +786,35 @@ Run through this checklist after any change to verify nothing is broken:
 - No layout breaking
 - Full name visible in edit forms
 
-#### 9.5 Large Number of Expenses
+#### 8.5 Large Number of Expenses
 
 **Steps:**
 1. Create 30+ expenses in a single workspace
 
 **Expected:**
 - Expenses tab shows all items grouped by category
-- Projected tab handles many rows (may need horizontal scroll)
+- Forecast tab handles many rows (may need horizontal scroll)
 - Performance remains acceptable
 
-#### 9.6 Decimal Amounts
+#### 8.6 Decimal Amounts
 
 **Steps:**
 1. Create an expense with amount 99.99
-2. View in Projected, Cashflow, and Compare tabs
+2. View in Forecast and Compare tabs
 
 **Expected:**
 - Amount shows as "R99.99" (2 decimal places)
 - Calculations are accurate (no floating-point rounding errors visible)
 
-#### 9.7 Zero Starting Balance
-
-**Steps:**
-1. Create a workspace, check "I know my current balance", enter 0
-
-**Expected:**
-- Error: "Enter a positive amount"
-- Cannot save with zero balance
-
-**Steps (alternative):**
-1. Create a workspace, check "I know my current balance", enter a positive amount
-2. Cashflow and Projected tabs show balance data starting from that amount
-
 ---
 
-### 10. Data Integrity
+### 9. Data Integrity
 
-#### 10.1 Export/Import Round-Trip
+#### 9.1 Export/Import Round-Trip
 
 **Steps:**
 1. Create a workspace with:
-   - Custom name, currency, period type, starting balance
+   - Custom name, currency, period type
    - 5+ expenses (mix of income/expense, various frequencies)
    - Imported actuals
 2. Export the workspace
@@ -898,9 +826,9 @@ Run through this checklist after any change to verify nothing is broken:
 - Workspace properties identical
 - All expenses present with correct values
 - All imported actuals present with correct matches
-- Projections, cashflow, and compare tabs show same data
+- Forecast and compare tabs show same data
 
-#### 10.2 Concurrent Workspaces
+#### 9.2 Concurrent Workspaces
 
 **Steps:**
 1. Create 3 different workspaces
@@ -913,7 +841,7 @@ Run through this checklist after any change to verify nothing is broken:
 - No cross-contamination between workspaces
 - Deleting one workspace doesn't affect others
 
-#### 10.3 Actual Unlinking on Expense Delete
+#### 9.3 Actual Unlinking on Expense Delete
 
 **Steps:**
 1. Create a workspace with an expense "Groceries"

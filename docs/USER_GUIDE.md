@@ -26,7 +26,6 @@ A workspace is the top-level container for your spending plan. Each workspace ha
    - **Currency symbol** — The symbol shown next to amounts (e.g. "R", "$", "€"). Display only — doesn't do conversions
    - **Period type** — Choose **Monthly** (rolling 12-month view) or **Custom dates** (fixed start and end dates)
    - **Start date** / **End date** — Only shown for custom-date workspaces. End date is optional
-   - **I know my current balance** — Check this if you want to track your account balance. Enter your current balance and the app will forecast from there
 3. Click **Create workspace**
 
 ### Editing a Workspace
@@ -116,11 +115,11 @@ Expenses are the individual line items in your workspace — the things you plan
 
 ## Projected Spend
 
-The Projected tab shows a month-by-month breakdown of your planned spending based on your expense items and their frequencies.
+The Forecast tab shows a month-by-month breakdown of your planned spending based on your expense items and their frequencies.
 
 ### Viewing Projections
 
-1. Open a workspace and click the **Projected** tab (trending-up icon)
+1. Open a workspace and click the **Forecast** tab (trending-up icon)
 2. The table shows:
    - **Rows:** Your expense items (or categories, depending on view mode)
    - **Columns:** One column per month, plus a **Total** column
@@ -130,55 +129,17 @@ The Projected tab shows a month-by-month breakdown of your planned spending base
 
 ### Switching Views
 
-- Click **By Item** to see each individual expense as its own row
-- Click **By Category** to see expenses grouped and totalled by category
+- Click **Each item** to see each individual expense as its own row
+- Click **Group by tag** to see expenses grouped and totalled by tag
 
-### Balance Summary
+### Cash on Hand
 
-If your workspace has a starting balance, a summary card appears at the top showing:
-- **Starting Balance** — Your entered balance
-- **Income** — Total projected income
-- **Expenses** — Total projected expenses
-- **Ending Balance** — What's left at the end of the period
-- A warning if your balance goes negative, showing which month it happens
+At the top of the Forecast tab, there's a **Cash on hand** input where you can enter how much cash you currently have. This is not stored — it's a quick calculator to see how long your cash will last based on your forecast.
 
----
-
-## Cashflow Forecast
-
-The Cashflow tab shows how your account balance changes month by month, combining projected spend with any imported actual spending data.
-
-### Requirements
-
-To see the cashflow forecast, you need:
-- A **starting balance** set on the workspace (edit the workspace to add one)
-- At least **one expense** item
-
-### Understanding the Cashflow Table
-
-The table shows one row per month with these columns:
-- **Month** — The calendar month
-- **Income** — Projected income for that month (or actual income if you've imported data, marked with "actual")
-- **Expenses** — Projected expenses (or actual expenses if imported)
-- **Net** — Income minus expenses for the month
-- **Balance** — Your running account balance after that month
-
-The first row shows your **Starting** balance.
-
-### Balance Forecast Chart
-
-Below the table, a bar chart visualizes your balance trajectory:
-- **Blue/brand bars** — Months where your balance is positive
-- **Red bars** — Months where your balance goes negative
-
-### Summary Card
-
-At the top, a summary shows:
-- Starting and ending balance
-- Total income and expenses
-- A message about your balance trajectory:
-  - If positive: "Your balance stays positive throughout the forecast period"
-  - If negative: "Your balance goes negative in [month]" with the lowest balance shown
+- **Enter any amount** and the app immediately shows:
+  - If your cash **runs out**: "Runs out in [month]"
+  - If your cash **grows** (income exceeds expenses): "Cash is growing — R[amount] after [N] months"
+  - If your cash **lasts**: "Lasts all [N] months — R[amount] remaining"
 
 ---
 
@@ -192,14 +153,6 @@ At the top, three figures show:
 - **Budgeted** — Total planned spend
 - **Actual** — Total actual spend from imports
 - **Variance** — The difference (red if over budget, green if under)
-
-### Envelope Summary
-
-If your workspace has a starting balance, an envelope summary appears showing:
-- **Starting Balance** — Your entered balance
-- **Spent So Far** — Total actual spending
-- **Remaining** — What's left (or how much you're over)
-- **Burn rate / Depletion date** — At your current spending pace, when your balance runs out
 
 ### Three View Modes
 
@@ -296,7 +249,7 @@ After your first visit, the app works fully offline. A green notification confir
 
 - Click **budgy-ting** in the header to go back to the home screen from anywhere
 - On workspace pages, click **Workspaces** in the breadcrumb to return to the workspace list
-- Use the tab bar (Expenses, Projected, Cashflow, Compare) to switch between views within a workspace
+- Use the tab bar (Expenses, Forecast, Compare) to switch between views within a workspace
 
 ### Help Menu
 

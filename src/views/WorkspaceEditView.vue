@@ -38,7 +38,6 @@ async function handleSubmit(data: {
   periodType: PeriodType
   startDate: string
   endDate: string | null
-  startingBalance: number | null
 }) {
   try {
     await db.workspaces.update(props.id, {
@@ -47,7 +46,6 @@ async function handleSubmit(data: {
       periodType: data.periodType,
       startDate: data.startDate,
       endDate: data.endDate,
-      startingBalance: data.startingBalance,
       updatedAt: nowISO(),
     })
 

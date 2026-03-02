@@ -4,6 +4,31 @@
 
 ## 2026-03-02
 
+- **Replace Balance with Ephemeral Cash Input:**
+
+  **Concept Change:**
+  - Removed persisted `startingBalance` from Workspace model — balance is no longer stored
+  - Added ephemeral "Cash on hand" input to Forecast tab — user enters cash amount to see how long it lasts
+  - Cash input walks month-by-month through the projection to calculate depletion (accounts for varying monthly costs from quarterly/annual expenses)
+  - Shows: "Runs out in [Month]", "Cash is growing", or "Lasts all [N] months"
+
+  **Removed:**
+  - Cashflow tab (CashflowTab.vue) — running balance timeline + chart
+  - Cashflow engine (engine/cashflow.ts + tests) — running balance calculation
+  - Envelope engine (engine/envelope.ts + tests) — budget depletion tracking
+  - Balance input from WorkspaceForm (checkbox + amount field)
+  - Envelope summary from CompareTab
+  - `startingBalance` from demo workspace data
+
+  **Updated:**
+  - Export/import: strips `startingBalance` and `totalBudget` from imported workspaces (backward compat)
+  - Tab navigation: 4 tabs → 3 tabs (Expenses, Forecast, Compare)
+  - All documentation (USER_GUIDE, TESTING_GUIDE, README)
+
+  **Verification:**
+  - 76 tests pass, build succeeds, type-check clean
+  - No DB migration needed — unused `startingBalance` field on old records is harmless
+
 - **Multi-Tag Migration (category → tags):**
 
   **Data Model:**

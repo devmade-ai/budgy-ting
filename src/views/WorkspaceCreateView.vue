@@ -19,7 +19,6 @@ async function handleSubmit(data: {
   periodType: PeriodType
   startDate: string
   endDate: string | null
-  startingBalance: number | null
 }) {
   try {
     const now = nowISO()
@@ -32,7 +31,6 @@ async function handleSubmit(data: {
       periodType: data.periodType,
       startDate: data.periodType === 'monthly' ? todayISO() : data.startDate,
       endDate: data.endDate,
-      startingBalance: data.startingBalance,
       isDemo: false,
       createdAt: now,
       updatedAt: now,

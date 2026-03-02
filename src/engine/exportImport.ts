@@ -201,16 +201,16 @@ export async function importWorkspace(
       await db.workspaces.delete(data.workspace.id)
     }
 
-    // Backward compat: old exports have totalBudget instead of startingBalance,
-    // and expenses may lack a type field, and may use budgetId instead of workspaceId.
-    const rawWorkspace = data.workspace as unknown as Record<string, unknown>
+    // Backward compat: expenses may lack a type field, and may use budgetId instead of workspaceId.
+    // Legacy fields (totalBudget, startingBalance) are stripped — balance is no longer stored.
     const workspaceToAdd = {
       ...data.workspace,
-      startingBalance: data.workspace.startingBalance ?? (rawWorkspace['totalBudget'] as number | null) ?? null,
       isDemo: data.workspace.isDemo ?? false,
     }
-    // Remove legacy field if present
-    delete (workspaceToAdd as Record<string, unknown>)['totalBudget']
+    // Remove legacy fields if present
+    const rawWs = workspaceToAdd as Record<string, unknown>
+    delete rawWs['totalBudget']
+    delete rawWs['startingBalance']
     await db.workspaces.add(workspaceToAdd)
 
     // Ensure all expenses have tags, type, and workspaceId

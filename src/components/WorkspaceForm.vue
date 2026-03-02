@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Requirement: Create/edit workspace form with name, currency, period type, dates, optional starting balance
+ * Requirement: Create/edit workspace form with name, currency, period type, dates
  * Approach: Single form component reused for create and edit via optional workspace prop
  * Alternatives:
  *   - Separate create/edit components: Rejected — too much duplication
@@ -24,7 +24,6 @@ const emit = defineEmits<{
     periodType: PeriodType
     startDate: string
     endDate: string | null
-    startingBalance: number | null
   }]
   cancel: []
 }>()
@@ -34,29 +33,20 @@ const currencyLabel = ref(props.workspace?.currencyLabel ?? 'R')
 const periodType = ref<PeriodType>(props.workspace?.periodType ?? 'monthly')
 const startDate = ref(props.workspace?.startDate ?? todayISO())
 const endDate = ref(props.workspace?.endDate ?? '')
-const hasStartingBalance = ref(props.workspace?.startingBalance != null)
-const startingBalanceStr = ref(props.workspace?.startingBalance?.toString() ?? '')
 
 const isEditing = computed(() => !!props.workspace)
 
-const { errors, validate } = useFormValidation([name, startDate, endDate, startingBalanceStr])
+const { errors, validate } = useFormValidation([name, startDate, endDate])
 
 function runValidation(): boolean {
   return validate([
     required('name', name, 'Workspace name is required'),
-    // Custom period requires a start date
     {
       field: 'dates',
       check: () => periodType.value !== 'custom' || !!startDate.value,
       message: 'Start date is required',
     },
     dateAfter('dates', startDate, endDate),
-    // Starting balance must be positive when enabled
-    {
-      field: 'balance',
-      check: () => !hasStartingBalance.value || (!!startingBalanceStr.value && !isNaN(parseFloat(startingBalanceStr.value)) && parseFloat(startingBalanceStr.value) > 0),
-      message: 'Enter a positive amount',
-    },
   ])
 }
 
@@ -69,7 +59,6 @@ function handleSubmit() {
     periodType: periodType.value,
     startDate: startDate.value,
     endDate: periodType.value === 'custom' && endDate.value ? endDate.value : null,
-    startingBalance: hasStartingBalance.value ? parseFloat(startingBalanceStr.value) : null,
   })
 }
 </script>
@@ -106,39 +95,6 @@ function handleSubmit() {
         maxlength="5"
       />
       <p class="text-sm text-gray-400 mt-1">Display only — shown next to amounts</p>
-    </div>
-
-    <!-- Starting balance (cashflow tracking) -->
-    <div>
-      <div class="flex items-center gap-2 mb-2">
-        <input
-          id="has-starting-balance"
-          v-model="hasStartingBalance"
-          type="checkbox"
-          class="w-4 h-4 text-brand-600 rounded border-gray-300 focus:ring-brand-500"
-        />
-        <label class="text-sm font-medium text-gray-700" for="has-starting-balance">
-          I know my current balance
-        </label>
-      </div>
-      <div v-if="hasStartingBalance" class="ml-6">
-        <label class="block text-sm text-gray-600 mb-1" for="starting-balance">
-          Starting balance
-        </label>
-        <input
-          id="starting-balance"
-          v-model="startingBalanceStr"
-          type="number"
-          step="0.01"
-          min="0.01"
-          class="input-field"
-          placeholder="0.00"
-        />
-        <p class="text-sm text-gray-400 mt-1">
-          Your current account balance — we'll forecast from here
-        </p>
-        <p v-if="errors['balance']" class="text-sm text-red-500 mt-1">{{ errors['balance'] }}</p>
-      </div>
     </div>
 
     <!-- Period type -->

@@ -1,7 +1,12 @@
 <script setup lang="ts">
 /**
- * Requirement: Monthly breakdown table with per-expense amounts, category rollup, totals
- * Approach: Load expenses, run projection engine, render scrollable table
+ * Requirement: Monthly breakdown table with per-expense amounts, category rollup, totals,
+ *   plus an ephemeral "cash on hand" input to see how long cash lasts based on the forecast.
+ * Approach: Load expenses, run projection engine, render scrollable table.
+ *   Cash input is not persisted — it's a quick "what if I have X right now" tool.
+ * Alternatives:
+ *   - Store cash on workspace: Rejected — user wants a lightweight, non-persisted input
+ *   - Separate tab for cash runway: Rejected — user chose to consolidate into Forecast tab
  */
 
 import { ref, computed, onMounted } from 'vue'
@@ -15,18 +20,14 @@ import ScrollHint from '@/components/ScrollHint.vue'
 import type { Workspace, Expense } from '@/types/models'
 import type { ProjectionResult } from '@/engine/projection'
 
-/**
- * Requirement: When budget has a starting balance, show how long money lasts based on projections
- * Approach: Simple calculation — startingBalance / grandTotal * budget months = coverage months
- * Alternatives:
- *   - Reuse envelope engine: Rejected here — envelope needs actuals; projected tab is pre-actuals
- */
-
 const props = defineProps<{ workspace: Workspace }>()
 
 const expenses = ref<Expense[]>([])
 const loading = ref(true)
 const error = ref('')
+
+/** Ephemeral cash input — not stored, used for runway calculation */
+const cashInputStr = ref('')
 
 onMounted(async () => {
   try {
@@ -66,31 +67,45 @@ const sortedCategories = computed(() => {
 const incomeRows = computed(() => projection.value?.rows.filter((r) => r.type === 'income') ?? [])
 const expenseRows = computed(() => projection.value?.rows.filter((r) => r.type === 'expense') ?? [])
 
-/** Envelope summary based on projections only (no actuals yet) */
-const envelopeSummary = computed(() => {
-  if (props.workspace.startingBalance == null || !projection.value) return null
+/**
+ * Requirement: Ephemeral cash runway — user enters cash on hand, see how long it lasts
+ * Approach: Walk month-by-month through the projection, subtracting net spend (expenses - income)
+ *   from the cash amount. Report when cash runs out. Not persisted.
+ * Alternatives:
+ *   - Use average monthly net: Rejected — varies month to month (quarterly/annual expenses)
+ *   - Reuse envelope engine: Rejected — envelope depends on actuals and stored balance
+ */
+const cashRunway = computed(() => {
+  const cashAmount = parseFloat(cashInputStr.value)
+  if (!cashAmount || cashAmount <= 0 || !projection.value) return null
 
-  const total = props.workspace.startingBalance
-  const projected = projection.value.grandTotal
-  // Net considers income: starting balance + total income - total expenses
-  const netProjected = projection.value.totalIncome - projected
-  const endingBalance = total + netProjected
-  const willExceed = endingBalance < 0
-  const monthCount = projection.value.months.length
-
-  // Find which month the balance drops below 0 (considering income)
-  let running = total
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+  let running = cashAmount
   let depletionMonth: string | null = null
+  let monthsCount = 0
+
   for (const slot of projection.value.months) {
     const income = projection.value.monthlyIncome.get(slot.month) ?? 0
     const expense = projection.value.monthlyTotals.get(slot.month) ?? 0
     running += income - expense
-    if (running < 0 && !depletionMonth) {
-      depletionMonth = `${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][slot.monthNum - 1]} ${String(slot.year).slice(2)}`
+    monthsCount++
+
+    if (running <= 0 && !depletionMonth) {
+      depletionMonth = `${monthNames[slot.monthNum - 1]} ${String(slot.year).slice(2)}`
     }
   }
 
-  return { total, projected, totalIncome: projection.value.totalIncome, endingBalance, willExceed, monthCount, depletionMonth }
+  const endingCash = running
+
+  return {
+    cashAmount,
+    endingCash,
+    depletionMonth,
+    monthsCount,
+    runsOut: depletionMonth !== null,
+    // If cash is growing or stable, it won't run out
+    growing: endingCash >= cashAmount,
+  }
 })
 </script>
 
@@ -109,40 +124,49 @@ const envelopeSummary = computed(() => {
 
     <!-- Projection table -->
     <template v-else-if="projection">
-      <!-- Balance summary (only when budget has a starting balance) -->
-      <div v-if="envelopeSummary" class="card mb-4 border-2" :class="envelopeSummary.willExceed ? 'border-red-200 bg-red-50/30' : 'border-brand-200 bg-brand-50/30'">
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
-          <div>
-            <p class="text-xs text-gray-400 uppercase tracking-wide">Starting Balance</p>
-            <p class="text-lg font-semibold text-gray-900">
-              {{ props.workspace.currencyLabel }}{{ formatAmount(envelopeSummary.total) }}
-            </p>
+      <!-- Cash runway input — ephemeral, not stored -->
+      <div class="card mb-4 border border-gray-200">
+        <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+          <div class="flex items-center gap-2 flex-1">
+            <label for="cash-input" class="text-sm font-medium text-gray-700 whitespace-nowrap">
+              <span class="i-lucide-banknotes mr-1 text-brand-500" />
+              Cash on hand
+            </label>
+            <div class="relative flex-1 max-w-[200px]">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">{{ props.workspace.currencyLabel }}</span>
+              <input
+                id="cash-input"
+                v-model="cashInputStr"
+                type="number"
+                step="0.01"
+                min="0"
+                class="input-field pl-8"
+                placeholder="0.00"
+              />
+            </div>
           </div>
-          <div>
-            <p class="text-xs text-gray-400 uppercase tracking-wide">Income</p>
-            <p class="text-lg font-semibold text-green-600">
-              +{{ props.workspace.currencyLabel }}{{ formatAmount(envelopeSummary.totalIncome) }}
-            </p>
-          </div>
-          <div>
-            <p class="text-xs text-gray-400 uppercase tracking-wide">Expenses</p>
-            <p class="text-lg font-semibold text-red-600">
-              -{{ props.workspace.currencyLabel }}{{ formatAmount(envelopeSummary.projected) }}
-            </p>
-          </div>
-          <div>
-            <p class="text-xs text-gray-400 uppercase tracking-wide">Ending Balance</p>
-            <p class="text-lg font-semibold" :class="envelopeSummary.endingBalance >= 0 ? 'text-brand-600' : 'text-red-600'">
-              {{ props.workspace.currencyLabel }}{{ formatAmount(envelopeSummary.endingBalance) }}
-            </p>
+          <!-- Runway result -->
+          <div v-if="cashRunway" class="text-sm">
+            <template v-if="cashRunway.runsOut">
+              <span class="text-red-600 font-medium">
+                Runs out in {{ cashRunway.depletionMonth }}
+              </span>
+            </template>
+            <template v-else-if="cashRunway.growing">
+              <span class="text-brand-600 font-medium">
+                Cash is growing — {{ props.workspace.currencyLabel }}{{ formatAmount(cashRunway.endingCash) }} after {{ cashRunway.monthsCount }} months
+              </span>
+            </template>
+            <template v-else>
+              <span class="text-brand-600 font-medium">
+                Lasts all {{ cashRunway.monthsCount }} months — {{ props.workspace.currencyLabel }}{{ formatAmount(cashRunway.endingCash) }} remaining
+              </span>
+            </template>
           </div>
         </div>
-        <div v-if="envelopeSummary.depletionMonth" class="mt-3 text-center text-sm text-red-600">
-          Your balance goes negative in {{ envelopeSummary.depletionMonth }}
-        </div>
-        <div v-else-if="!envelopeSummary.willExceed" class="mt-3 text-center text-sm text-brand-600">
-          Balance stays positive across all {{ envelopeSummary.monthCount }} months
-        </div>
+        <p class="text-xs text-gray-400 mt-2">
+          Enter how much cash you have to see how long it lasts based on your forecast
+        </p>
       </div>
 
       <!-- View toggle -->
