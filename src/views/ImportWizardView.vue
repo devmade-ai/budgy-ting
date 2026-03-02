@@ -12,13 +12,14 @@ import { useRouter } from 'vue-router'
 import { db } from '@/db'
 import { useId } from '@/composables/useId'
 import { nowISO } from '@/composables/useTimestamp'
+import { touchTags } from '@/composables/useTagAutocomplete'
 import ErrorAlert from '@/components/ErrorAlert.vue'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import ImportStepUpload from './import-steps/ImportStepUpload.vue'
 import ImportStepMapping from './import-steps/ImportStepMapping.vue'
 import ImportStepReview from './import-steps/ImportStepReview.vue'
 import ImportStepComplete from './import-steps/ImportStepComplete.vue'
-import type { Workspace, Expense, Frequency, LineType } from '@/types/models'
+import type { Workspace, Expense, Actual, Frequency, LineType } from '@/types/models'
 import type { ParsedCSV } from '@/engine/csvParser'
 import type { MatchResult } from '@/engine/matching'
 
@@ -27,14 +28,16 @@ const router = useRouter()
 
 const workspace = ref<Workspace | null>(null)
 const expenses = ref<Expense[]>([])
+const existingActuals = ref<Actual[]>([])
 const loading = ref(true)
 const error = ref('')
 
 onMounted(async () => {
   try {
-    const [foundWorkspace, foundExpenses] = await Promise.all([
+    const [foundWorkspace, foundExpenses, foundActuals] = await Promise.all([
       db.workspaces.get(props.id),
       db.expenses.where('workspaceId').equals(props.id).toArray(),
+      db.actuals.where('workspaceId').equals(props.id).toArray(),
     ])
     if (!foundWorkspace) {
       router.replace({ name: 'workspace-list' })
@@ -42,6 +45,7 @@ onMounted(async () => {
     }
     workspace.value = foundWorkspace
     expenses.value = foundExpenses
+    existingActuals.value = foundActuals
   } catch {
     error.value = 'Couldn\'t load workspace data. Please go back and try again.'
   } finally {
@@ -62,6 +66,7 @@ const descriptionColumn = ref('')
 const dateFormatIndex = ref(0)
 const matchResults = ref<MatchResult[]>([])
 const skippedRows = ref(0)
+const duplicateCount = ref(0)
 const saving = ref(false)
 
 // ── Step transitions ──
@@ -83,9 +88,10 @@ function handleUploadComplete(data: {
   step.value = 2
 }
 
-function handleMappingComplete(data: { matchResults: MatchResult[]; skippedRows: number }) {
+function handleMappingComplete(data: { matchResults: MatchResult[]; skippedRows: number; duplicateCount: number }) {
   matchResults.value = data.matchResults
   skippedRows.value = data.skippedRows
+  duplicateCount.value = data.duplicateCount
   step.value = 3
 }
 
@@ -97,28 +103,70 @@ async function handleConfirmImport() {
     const now = nowISO()
     const approvedResults = matchResults.value.filter((r) => r.approved)
 
-    await db.actuals.bulkAdd(
-      approvedResults.map((r) => ({
-        id: useId(),
-        workspaceId: workspace.value!.id,
-        expenseId: r.matchedExpense?.id ?? null,
-        date: r.importedRow.date,
-        amount: r.importedRow.amount,
-        category: r.importedRow.category,
-        description: r.importedRow.description,
-        originalRow: r.importedRow.originalRow,
-        matchConfidence: r.confidence,
-        approved: true,
-        createdAt: now,
-        updatedAt: now,
-      }))
-    )
+    const newActuals = approvedResults.map((r) => ({
+      id: useId(),
+      workspaceId: workspace.value!.id,
+      expenseId: r.matchedExpense?.id ?? null,
+      date: r.importedRow.date,
+      amount: r.importedRow.amount,
+      tags: r.importedRow.tags,
+      description: r.importedRow.description,
+      originalRow: r.importedRow.originalRow,
+      matchConfidence: r.confidence,
+      approved: true,
+      createdAt: now,
+      updatedAt: now,
+    }))
+
+    await db.actuals.bulkAdd(newActuals)
+
+    // Update tag cache with all unique tags from imported rows
+    const allTags = new Set<string>()
+    for (const r of approvedResults) {
+      for (const tag of r.importedRow.tags) {
+        allTags.add(tag)
+      }
+    }
+    await touchTags([...allTags])
+
+    // Save category mappings for future imports
+    await saveCategoryMappings(approvedResults)
 
     step.value = 4
   } catch {
     error.value = 'Couldn\'t save imported data. Please try again.'
   } finally {
     saving.value = false
+  }
+}
+
+/**
+ * Requirement: Learn description→tags mappings from confirmed imports
+ * Approach: For each approved row with tags, create/update a CategoryMapping
+ */
+async function saveCategoryMappings(results: MatchResult[]) {
+  if (!workspace.value) return
+
+  const now = nowISO()
+  const mappings: Array<{ id: string; workspaceId: string; pattern: string; tags: string[]; type: LineType; createdAt: string }> = []
+
+  for (const r of results) {
+    const desc = r.importedRow.description.toLowerCase().trim()
+    if (!desc || r.importedRow.tags.length === 0) continue
+
+    const type: LineType = r.importedRow.originalSign === 'negative' ? 'income' : 'expense'
+    mappings.push({
+      id: useId(),
+      workspaceId: workspace.value.id,
+      pattern: desc,
+      tags: r.importedRow.tags,
+      type,
+      createdAt: now,
+    })
+  }
+
+  if (mappings.length > 0) {
+    await db.categoryMappings.bulkPut(mappings)
   }
 }
 
@@ -131,7 +179,7 @@ async function handleConfirmImport() {
 async function handleCreateExpense(data: {
   matchIndex: number
   description: string
-  category: string
+  tags: string[]
   amount: number
   frequency: Frequency
   type: LineType
@@ -143,7 +191,7 @@ async function handleCreateExpense(data: {
     id: useId(),
     workspaceId: workspace.value.id,
     description: data.description,
-    category: data.category,
+    tags: data.tags,
     amount: data.amount,
     frequency: data.frequency,
     type: data.type,
@@ -156,6 +204,7 @@ async function handleCreateExpense(data: {
   try {
     await db.expenses.add(newExpense)
     expenses.value.push(newExpense)
+    await touchTags(data.tags)
 
     // Assign the imported row to the newly created expense
     const result = matchResults.value[data.matchIndex]
@@ -234,6 +283,8 @@ function finish() {
         :initial-description-column="descriptionColumn"
         :initial-date-format-index="dateFormatIndex"
         :expenses="expenses"
+        :existing-actuals="existingActuals"
+        :workspace-id="workspace.id"
         @complete="handleMappingComplete"
         @back="step = 1"
       />
@@ -245,6 +296,7 @@ function finish() {
         :expenses="expenses"
         :workspace="workspace"
         :skipped-rows="skippedRows"
+        :duplicate-count="duplicateCount"
         :saving="saving"
         @confirm="handleConfirmImport"
         @create-expense="handleCreateExpense"

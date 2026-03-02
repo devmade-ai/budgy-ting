@@ -14,6 +14,7 @@
  */
 
 import type { Workspace, Expense } from '@/types/models'
+import { primaryTag } from '@/types/models'
 
 export interface MonthSlot {
   /** ISO month string: YYYY-MM */
@@ -33,6 +34,9 @@ export interface MonthSlot {
 export interface ProjectedRow {
   expenseId: string
   description: string
+  /** All tags on the expense */
+  tags: string[]
+  /** Primary tag (first tag) used for rollups — derived from tags[0] */
   category: string
   frequency: string
   /** Whether this is income (money in) or expense (money out) */
@@ -46,9 +50,9 @@ export interface ProjectedRow {
 export interface ProjectionResult {
   months: MonthSlot[]
   rows: ProjectedRow[]
-  /** Category → month → total (expense amounts only, for backward compat) */
+  /** Primary tag → month → total (expense amounts only) */
   categoryRollup: Map<string, Map<string, number>>
-  /** Month → total expense (outflows only, for backward compat with variance/envelope) */
+  /** Month → total expense (outflows only, for variance/envelope) */
   monthlyTotals: Map<string, number>
   /** Grand total expenses (outflows only) */
   grandTotal: number
@@ -241,6 +245,7 @@ export function calculateProjection(
     const amounts = new Map<string, number>()
     let rowTotal = 0
     const isIncome = expense.type === 'income'
+    const category = primaryTag(expense.tags)
 
     for (const slot of months) {
       const amount = calculateMonthAmount(expense, slot, endDate)
@@ -256,11 +261,11 @@ export function calculateProjection(
         monthlyTotals.set(slot.month, (monthlyTotals.get(slot.month) ?? 0) + amount)
         monthlyNet.set(slot.month, (monthlyNet.get(slot.month) ?? 0) - amount)
 
-        // Category rollup only tracks expenses (not income)
-        if (!categoryRollup.has(expense.category)) {
-          categoryRollup.set(expense.category, new Map())
+        // Category rollup uses primary tag (first tag) — only tracks expenses (not income)
+        if (!categoryRollup.has(category)) {
+          categoryRollup.set(category, new Map())
         }
-        const catMap = categoryRollup.get(expense.category)!
+        const catMap = categoryRollup.get(category)!
         catMap.set(slot.month, (catMap.get(slot.month) ?? 0) + amount)
       }
     }
@@ -268,7 +273,8 @@ export function calculateProjection(
     rows.push({
       expenseId: expense.id,
       description: expense.description,
-      category: expense.category,
+      tags: expense.tags,
+      category,
       frequency: expense.frequency,
       type: isIncome ? 'income' : 'expense',
       amounts,

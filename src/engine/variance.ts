@@ -8,12 +8,16 @@
  */
 
 import type { Actual, Expense } from '@/types/models'
+import { primaryTag } from '@/types/models'
 import type { ProjectionResult, MonthSlot } from './projection'
 
 export interface LineItemVariance {
   expenseId: string
   description: string
+  /** Primary tag used for display/grouping */
   category: string
+  /** All tags on the expense line */
+  tags: string[]
   budgeted: number
   actual: number
   variance: number
@@ -44,7 +48,10 @@ export interface MonthlyVariance {
 export interface UnbudgetedActual {
   date: string
   amount: number
+  /** Primary tag from the actual's tags */
   category: string
+  /** All tags on the actual */
+  tags: string[]
   description: string
 }
 
@@ -109,6 +116,7 @@ export function calculateComparison(
       expenseId: row.expenseId,
       description: row.description,
       category: row.category,
+      tags: row.tags,
       budgeted: row.total,
       actual: actualTotal,
       variance,
@@ -117,7 +125,7 @@ export function calculateComparison(
     }
   })
 
-  // ── Category variance (expense categories only) ──
+  // ── Category variance (expense categories only, using primary tag) ──
   const categoryMap = new Map<string, { budgeted: number; actual: number }>()
 
   for (const row of expenseRows) {
@@ -130,7 +138,7 @@ export function calculateComparison(
     if (!actual.expenseId) continue // unbudgeted, handled separately
     const expense = expenses.find((e) => e.id === actual.expenseId)
     if (!expense) continue
-    const cat = expense.category
+    const cat = primaryTag(expense.tags)
     if (!categoryMap.has(cat)) categoryMap.set(cat, { budgeted: 0, actual: 0 })
     categoryMap.get(cat)!.actual += actual.amount
   }
@@ -187,7 +195,8 @@ export function calculateComparison(
   const unbudgeted: UnbudgetedActual[] = (actualsByExpense.get(null) ?? []).map((a) => ({
     date: a.date,
     amount: a.amount,
-    category: a.category,
+    category: primaryTag(a.tags),
+    tags: a.tags,
     description: a.description,
   }))
 

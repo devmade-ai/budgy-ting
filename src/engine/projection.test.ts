@@ -7,7 +7,7 @@ function makeExpense(overrides: Partial<Expense> = {}): Expense {
     id: 'exp-1',
     workspaceId: 'b-1',
     description: 'Test expense',
-    category: 'General',
+    tags: ['General'],
     amount: 100,
     frequency: 'monthly',
     type: 'expense',
@@ -149,9 +149,9 @@ describe('calculateProjection', () => {
 
   it('builds category rollup correctly', () => {
     const expenses = [
-      makeExpense({ id: 'e1', category: 'Food', amount: 200 }),
-      makeExpense({ id: 'e2', category: 'Food', amount: 100 }),
-      makeExpense({ id: 'e3', category: 'Transport', amount: 50 }),
+      makeExpense({ id: 'e1', tags: ['Food'], amount: 200 }),
+      makeExpense({ id: 'e2', tags: ['Food'], amount: 100 }),
+      makeExpense({ id: 'e3', tags: ['Transport'], amount: 50 }),
     ]
     const result = calculateProjection(expenses, '2026-01-01', '2026-01-31')
 
@@ -165,7 +165,7 @@ describe('calculateProjection', () => {
   it('separates income from expense in monthly totals', () => {
     const expenses = [
       makeExpense({ id: 'e1', amount: 500, type: 'expense' }),
-      makeExpense({ id: 'e2', amount: 3000, type: 'income', category: 'Salary' }),
+      makeExpense({ id: 'e2', amount: 3000, type: 'income', tags: ['Salary'] }),
     ]
     const result = calculateProjection(expenses, '2026-01-01', '2026-01-31')
 
@@ -194,8 +194,8 @@ describe('calculateProjection', () => {
 
   it('excludes income from category rollup', () => {
     const expenses = [
-      makeExpense({ id: 'e1', amount: 500, type: 'expense', category: 'Food' }),
-      makeExpense({ id: 'e2', amount: 3000, type: 'income', category: 'Salary' }),
+      makeExpense({ id: 'e1', amount: 500, type: 'expense', tags: ['Food'] }),
+      makeExpense({ id: 'e2', amount: 3000, type: 'income', tags: ['Salary'] }),
     ]
     const result = calculateProjection(expenses, '2026-01-01', '2026-01-31')
 

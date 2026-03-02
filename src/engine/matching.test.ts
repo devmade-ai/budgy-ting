@@ -13,7 +13,7 @@ function makeExpense(overrides: Partial<Expense> = {}): Expense {
     id: 'exp-1',
     workspaceId: 'b-1',
     description: 'Monthly groceries',
-    category: 'Food',
+    tags: ['Food'],
     amount: 500,
     frequency: 'monthly',
     type: 'expense',
@@ -29,7 +29,7 @@ function makeRow(overrides: Partial<ImportedRow> = {}): ImportedRow {
   return {
     date: '2026-01-15',
     amount: 500,
-    category: 'Food',
+    tags: ['Food'],
     description: 'Monthly groceries',
     originalRow: {},
     ...overrides,
@@ -50,7 +50,7 @@ describe('matchImportedRows', () => {
 
   it('marks unmatched rows as unmatched', () => {
     const expenses = [makeExpense()]
-    const rows = [makeRow({ amount: 999, category: 'Transport' })]
+    const rows = [makeRow({ amount: 999, tags: ['Transport'] })]
 
     const results = matchImportedRows(rows, expenses)
     expect(results).toHaveLength(1)
@@ -60,7 +60,7 @@ describe('matchImportedRows', () => {
 
   it('matches amount-only within same month as low confidence', () => {
     const expenses = [makeExpense()]
-    const rows = [makeRow({ category: 'Different', description: 'Something else' })]
+    const rows = [makeRow({ tags: ['Different'], description: 'Something else' })]
 
     const results = matchImportedRows(rows, expenses)
     expect(results).toHaveLength(1)
@@ -71,7 +71,7 @@ describe('matchImportedRows', () => {
 
   it('does not auto-approve medium confidence matches', () => {
     const expenses = [makeExpense()]
-    const rows = [makeRow({ category: 'Foods', description: 'Monthly grocery' })]
+    const rows = [makeRow({ tags: ['Foods'], description: 'Monthly grocery' })]
 
     const results = matchImportedRows(rows, expenses)
     expect(results).toHaveLength(1)
@@ -83,12 +83,12 @@ describe('matchImportedRows', () => {
 
   it('handles multiple rows matching different expenses', () => {
     const expenses = [
-      makeExpense({ id: 'e1', category: 'Food', amount: 500 }),
-      makeExpense({ id: 'e2', category: 'Transport', amount: 200 }),
+      makeExpense({ id: 'e1', tags: ['Food'], amount: 500 }),
+      makeExpense({ id: 'e2', tags: ['Transport'], amount: 200 }),
     ]
     const rows = [
-      makeRow({ category: 'Food', amount: 500 }),
-      makeRow({ category: 'Transport', amount: 200 }),
+      makeRow({ tags: ['Food'], amount: 500 }),
+      makeRow({ tags: ['Transport'], amount: 200 }),
     ]
 
     const results = matchImportedRows(rows, expenses)
@@ -98,12 +98,12 @@ describe('matchImportedRows', () => {
 
   it('prefers type-compatible match when originalSign is provided', () => {
     const expenses = [
-      makeExpense({ id: 'e1', category: 'Salary', amount: 5000, type: 'income' }),
-      makeExpense({ id: 'e2', category: 'Salary', amount: 5000, type: 'expense' }),
+      makeExpense({ id: 'e1', tags: ['Salary'], amount: 5000, type: 'income' }),
+      makeExpense({ id: 'e2', tags: ['Salary'], amount: 5000, type: 'expense' }),
     ]
     // Row with negative sign (credit) should prefer income expense
     const rows = [
-      makeRow({ category: 'Salary', amount: 5000, originalSign: 'negative' as const }),
+      makeRow({ tags: ['Salary'], amount: 5000, originalSign: 'negative' as const }),
     ]
 
     const results = matchImportedRows(rows, expenses)
@@ -114,11 +114,11 @@ describe('matchImportedRows', () => {
 
   it('falls back to any type when no type-compatible match exists', () => {
     const expenses = [
-      makeExpense({ id: 'e1', category: 'Salary', amount: 5000, type: 'expense' }),
+      makeExpense({ id: 'e1', tags: ['Salary'], amount: 5000, type: 'expense' }),
     ]
     // Row with negative sign but only expense-type lines exist
     const rows = [
-      makeRow({ category: 'Salary', amount: 5000, originalSign: 'negative' as const }),
+      makeRow({ tags: ['Salary'], amount: 5000, originalSign: 'negative' as const }),
     ]
 
     const results = matchImportedRows(rows, expenses)

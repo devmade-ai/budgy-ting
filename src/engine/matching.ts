@@ -12,11 +12,13 @@
  */
 
 import type { Expense, MatchConfidence } from '@/types/models'
+import { primaryTag } from '@/types/models'
 
 export interface ImportedRow {
   date: string
   amount: number
-  category: string
+  /** Tags parsed from CSV category column or auto-assigned from CategoryMappings */
+  tags: string[]
   description: string
   originalRow: Record<string, string>
   /**
@@ -57,7 +59,14 @@ export function matchImportedRows(
     return (exp.type ?? 'expense') === expectedType
   }
 
-  // Pass 1: High confidence — exact category match + exact amount + type-compatible
+  // Compare primary tags for matching
+  function tagsMatch(rowTags: string[], expTags: string[]): boolean {
+    const rowPrimary = primaryTag(rowTags).toLowerCase()
+    const expPrimary = primaryTag(expTags).toLowerCase()
+    return rowPrimary === expPrimary && rowPrimary !== 'uncategorised'
+  }
+
+  // Pass 1: High confidence — exact primary tag match + exact amount + type-compatible
   for (let i = 0; i < unmatchedRows.length; i++) {
     if (matchedIndices.has(i)) continue
     const row = unmatchedRows[i]!
@@ -65,12 +74,12 @@ export function matchImportedRows(
     // Try type-compatible first, then fall back to any type
     const match = expenses.find((exp) =>
       !usedExpenses.has(`${exp.id}-${row.date}`) &&
-      exp.category.toLowerCase() === row.category.toLowerCase() &&
+      tagsMatch(row.tags, exp.tags) &&
       Math.abs(exp.amount - row.amount) < 0.01 &&
       isTypeCompatible(row, exp)
     ) ?? expenses.find((exp) =>
       !usedExpenses.has(`${exp.id}-${row.date}`) &&
-      exp.category.toLowerCase() === row.category.toLowerCase() &&
+      tagsMatch(row.tags, exp.tags) &&
       Math.abs(exp.amount - row.amount) < 0.01
     )
 
@@ -90,17 +99,19 @@ export function matchImportedRows(
   for (let i = 0; i < unmatchedRows.length; i++) {
     if (matchedIndices.has(i)) continue
     const row = unmatchedRows[i]!
+    const rowCategory = primaryTag(row.tags)
 
     const matchFn = (exp: Expense, requireTypeCompat: boolean) => {
       if (usedExpenses.has(`${exp.id}-${row.date}`)) return false
       if (Math.abs(exp.amount - row.amount) >= 0.01) return false
       if (requireTypeCompat && !isTypeCompatible(row, exp)) return false
 
+      const expCategory = primaryTag(exp.tags)
       // Require best-of-both: use Math.max so BOTH category and description
       // must be reasonable, not just one. Math.min was a bug — it let garbage
       // descriptions through as long as category was a perfect match.
       const score = Math.max(
-        fuzzyScore(row.category, exp.category),
+        fuzzyScore(rowCategory, expCategory),
         fuzzyScore(row.description, exp.description),
       )
       return score <= 0.4
@@ -280,4 +291,26 @@ export function parseAmount(value: string): number | null {
 
   const num = parseFloat(cleaned)
   return isNaN(num) ? null : num
+}
+
+/**
+ * Check if an imported row is a duplicate of an existing actual.
+ * Matches on date + amount + description within the same workspace.
+ *
+ * Requirement: Prevent duplicate entries when importing from multiple accounts or re-importing
+ * Approach: Exact match on date + amount + description (case-insensitive)
+ * Alternatives:
+ *   - Hash-based dedup: Rejected — over-engineering for MVP
+ *   - Fuzzy description match: Rejected — too aggressive, might skip legitimate duplicates
+ */
+export function isDuplicate(
+  row: ImportedRow,
+  existingActuals: { date: string; amount: number; description: string }[],
+): boolean {
+  const descLower = row.description.toLowerCase().trim()
+  return existingActuals.some((a) =>
+    a.date === row.date &&
+    Math.abs(a.amount - row.amount) < 0.01 &&
+    a.description.toLowerCase().trim() === descLower
+  )
 }

@@ -8,7 +8,7 @@ function makeExpense(overrides: Partial<Expense> = {}): Expense {
     id: 'exp-1',
     workspaceId: 'b-1',
     description: 'Test expense',
-    category: 'General',
+    tags: ['General'],
     amount: 100,
     frequency: 'monthly',
     type: 'expense',
@@ -27,7 +27,7 @@ function makeActual(overrides: Partial<Actual> = {}): Actual {
     expenseId: 'exp-1',
     date: '2026-01-15',
     amount: 100,
-    category: 'General',
+    tags: ['General'],
     description: 'Test actual',
     originalRow: {},
     matchConfidence: 'high',
@@ -73,8 +73,8 @@ describe('calculateComparison', () => {
 
   it('calculates per-line-item variance correctly', () => {
     const expenses = [
-      makeExpense({ id: 'e1', description: 'Rent', category: 'Housing', amount: 1000 }),
-      makeExpense({ id: 'e2', description: 'Food', category: 'Groceries', amount: 500 }),
+      makeExpense({ id: 'e1', description: 'Rent', tags: ['Housing'], amount: 1000 }),
+      makeExpense({ id: 'e2', description: 'Food', tags: ['Groceries'], amount: 500 }),
     ]
     const actuals = [
       makeActual({ id: 'a1', expenseId: 'e1', amount: 1100 }),
@@ -110,8 +110,8 @@ describe('calculateComparison', () => {
 
   it('calculates category-level variance', () => {
     const expenses = [
-      makeExpense({ id: 'e1', category: 'Food', amount: 200 }),
-      makeExpense({ id: 'e2', category: 'Food', amount: 300 }),
+      makeExpense({ id: 'e1', tags: ['Food'], amount: 200 }),
+      makeExpense({ id: 'e2', tags: ['Food'], amount: 300 }),
     ]
     const actuals = [
       makeActual({ id: 'a1', expenseId: 'e1', amount: 250 }),
@@ -149,8 +149,8 @@ describe('calculateComparison', () => {
 
   it('excludes income-type actuals from expense variance tracking', () => {
     const expenses = [
-      makeExpense({ id: 'e1', description: 'Rent', category: 'Housing', amount: 1000 }),
-      makeExpense({ id: 'e2', description: 'Salary', category: 'Income', amount: 3000, type: 'income' }),
+      makeExpense({ id: 'e1', description: 'Rent', tags: ['Housing'], amount: 1000 }),
+      makeExpense({ id: 'e2', description: 'Salary', tags: ['Income'], amount: 3000, type: 'income' }),
     ]
     const actuals = [
       makeActual({ id: 'a1', expenseId: 'e1', date: '2026-01-15', amount: 1000 }),

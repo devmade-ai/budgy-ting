@@ -1,11 +1,14 @@
 <script setup lang="ts">
 /**
- * Requirement: Add/edit expense form with category autocomplete
- * Approach: Reusable form with all expense fields, autocomplete dropdown for category
+ * Requirement: Add/edit expense form with multi-tag input and autocomplete
+ * Approach: Reusable form with tag chips, inline add via Enter/comma, autocomplete dropdown
+ * Alternatives:
+ *   - Single category input: Rejected — user needs multiple tags (category, account, etc.)
+ *   - Separate category + tags fields: Rejected — single tags array is simpler
  */
 
 import { ref, computed } from 'vue'
-import { useCategoryAutocomplete } from '@/composables/useCategoryAutocomplete'
+import { useTagAutocomplete } from '@/composables/useTagAutocomplete'
 import { useFormValidation, required, positiveNumber, dateAfter } from '@/composables/useFormValidation'
 import DateInput from '@/components/DateInput.vue'
 import type { Workspace, Expense, Frequency, LineType } from '@/types/models'
@@ -18,7 +21,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   submit: [data: {
     description: string
-    category: string
+    tags: string[]
     amount: number
     frequency: Frequency
     type: LineType
@@ -35,10 +38,12 @@ const frequency = ref<Frequency>(props.expense?.frequency ?? 'monthly')
 const startDate = ref(props.expense?.startDate ?? props.workspace.startDate ?? '')
 const endDate = ref(props.expense?.endDate ?? '')
 
-const { query: categoryQuery, suggestions, isOpen, select, close } = useCategoryAutocomplete()
-categoryQuery.value = props.expense?.category ?? ''
+// Multi-tag state
+const tags = ref<string[]>(props.expense?.tags ? [...props.expense.tags] : [])
+const { query: tagQuery, suggestions, isOpen, close } = useTagAutocomplete()
 
 const isEditing = computed(() => !!props.expense)
+const tagsValid = ref(true)
 
 const frequencies: { value: Frequency; label: string }[] = [
   { value: 'once-off', label: 'Once-off' },
@@ -49,60 +54,102 @@ const frequencies: { value: Frequency; label: string }[] = [
   { value: 'annually', label: 'Annually' },
 ]
 
-const { errors, validate } = useFormValidation([description, categoryQuery, amount, startDate])
+// Dummy ref for validation — tags are validated separately
+const tagsRef = ref('')
+const { errors, validate } = useFormValidation([description, tagsRef, amount, startDate])
+
+function addTag(value: string) {
+  const trimmed = value.trim()
+  if (trimmed && !tags.value.includes(trimmed)) {
+    tags.value.push(trimmed)
+  }
+  tagQuery.value = ''
+  close()
+}
+
+function removeTag(index: number) {
+  tags.value.splice(index, 1)
+}
+
+const highlightIndex = ref(-1)
+
+function handleTagKeydown(e: KeyboardEvent) {
+  // Handle autocomplete navigation
+  if (isOpen.value && suggestions.value.length > 0) {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      highlightIndex.value = Math.min(highlightIndex.value + 1, suggestions.value.length - 1)
+      return
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      highlightIndex.value = Math.max(highlightIndex.value - 1, 0)
+      return
+    } else if (e.key === 'Enter' && highlightIndex.value >= 0) {
+      e.preventDefault()
+      const selected = suggestions.value[highlightIndex.value]
+      if (selected) {
+        addTag(selected)
+        highlightIndex.value = -1
+      }
+      return
+    } else if (e.key === 'Escape') {
+      close()
+      highlightIndex.value = -1
+      return
+    }
+  }
+
+  // Add tag on Enter or comma
+  if (e.key === 'Enter' || e.key === ',') {
+    e.preventDefault()
+    if (tagQuery.value.trim()) {
+      addTag(tagQuery.value)
+    }
+  }
+
+  // Remove last tag on Backspace if input is empty
+  if (e.key === 'Backspace' && !tagQuery.value && tags.value.length > 0) {
+    tags.value.pop()
+  }
+}
+
+function handleTagBlur() {
+  // Add any pending text as a tag
+  if (tagQuery.value.trim()) {
+    addTag(tagQuery.value)
+  }
+  window.setTimeout(() => close(), 150)
+}
+
+function selectTag(tag: string) {
+  addTag(tag)
+  highlightIndex.value = -1
+}
 
 function handleSubmit() {
+  // Validate tags separately
+  tagsValid.value = tags.value.length > 0
+
   const valid = validate([
     required('description', description, 'Description is required'),
-    required('category', categoryQuery, 'Category is required'),
     positiveNumber('amount', amount),
     required('startDate', startDate, 'Start date is required'),
     dateAfter('endDate', startDate, endDate),
   ])
-  if (!valid) return
+
+  if (!valid || !tagsValid.value) return
 
   close()
 
   emit('submit', {
     description: description.value.trim(),
-    category: categoryQuery.value.trim(),
+    tags: tags.value,
     amount: parseFloat(amount.value),
     frequency: frequency.value,
     type: lineType.value,
     startDate: startDate.value,
     endDate: endDate.value || null,
   })
-}
-
-const BLUR_DELAY_MS = 150
-const highlightIndex = ref(-1)
-
-function handleCategoryBlur() {
-  window.setTimeout(() => close(), BLUR_DELAY_MS)
-}
-
-function handleCategoryKeydown(e: KeyboardEvent) {
-  if (!isOpen.value || suggestions.value.length === 0) return
-
-  if (e.key === 'ArrowDown') {
-    e.preventDefault()
-    highlightIndex.value = Math.min(highlightIndex.value + 1, suggestions.value.length - 1)
-  } else if (e.key === 'ArrowUp') {
-    e.preventDefault()
-    highlightIndex.value = Math.max(highlightIndex.value - 1, 0)
-  } else if (e.key === 'Enter' && highlightIndex.value >= 0) {
-    e.preventDefault()
-    const selected = suggestions.value[highlightIndex.value]
-    if (selected) selectCategory(selected)
-  } else if (e.key === 'Escape') {
-    close()
-    highlightIndex.value = -1
-  }
-}
-
-function selectCategory(cat: string) {
-  select(cat)
-  highlightIndex.value = -1
 }
 </script>
 
@@ -157,49 +204,72 @@ function selectCategory(cat: string) {
       </p>
     </div>
 
-    <!-- Category with autocomplete -->
+    <!-- Tags (multi-tag input with autocomplete) -->
     <div class="relative">
-      <label class="block text-sm font-medium text-gray-700 mb-1" for="expense-category">
-        Category
+      <label class="block text-sm font-medium text-gray-700 mb-1" for="expense-tags">
+        Tags
       </label>
-      <input
-        id="expense-category"
-        v-model="categoryQuery"
-        type="text"
-        class="input-field"
-        placeholder="e.g. Venue, Marketing, Software"
-        autocomplete="off"
-        role="combobox"
-        :aria-expanded="isOpen"
-        aria-controls="category-listbox"
-        :aria-activedescendant="highlightIndex >= 0 ? `category-option-${highlightIndex}` : undefined"
-        @focus="isOpen = suggestions.length > 0"
-        @blur="handleCategoryBlur"
-        @keydown="handleCategoryKeydown"
-      />
+      <p class="text-xs text-gray-400 mb-1">Add categories, account names, or labels. Press Enter or comma to add.</p>
+      <div
+        class="input-field flex flex-wrap items-center gap-1.5 min-h-[42px] cursor-text py-1.5"
+        @click="($refs.tagInput as HTMLInputElement)?.focus()"
+      >
+        <!-- Tag chips -->
+        <span
+          v-for="(tag, idx) in tags"
+          :key="tag"
+          class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-brand-100 text-brand-700"
+        >
+          {{ tag }}
+          <button
+            type="button"
+            class="hover:text-brand-900 transition-colors"
+            :aria-label="`Remove tag ${tag}`"
+            @click.stop="removeTag(idx)"
+          >
+            <span class="i-lucide-x text-[10px]" />
+          </button>
+        </span>
+        <!-- Input -->
+        <input
+          ref="tagInput"
+          id="expense-tags"
+          v-model="tagQuery"
+          type="text"
+          class="flex-1 min-w-[80px] outline-none border-none bg-transparent text-sm py-0.5"
+          placeholder="Type and press Enter..."
+          autocomplete="off"
+          role="combobox"
+          :aria-expanded="isOpen"
+          aria-controls="tag-listbox"
+          :aria-activedescendant="highlightIndex >= 0 ? `tag-option-${highlightIndex}` : undefined"
+          @keydown="handleTagKeydown"
+          @blur="handleTagBlur"
+        />
+      </div>
       <!-- Autocomplete dropdown -->
       <div
         v-if="isOpen"
-        id="category-listbox"
+        id="tag-listbox"
         role="listbox"
         class="absolute z-20 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto"
       >
         <button
-          v-for="(cat, idx) in suggestions"
-          :id="`category-option-${idx}`"
-          :key="cat"
+          v-for="(tag, idx) in suggestions"
+          :id="`tag-option-${idx}`"
+          :key="tag"
           type="button"
           role="option"
           :aria-selected="idx === highlightIndex"
           class="w-full text-left px-3 py-2 text-sm transition-colors"
           :class="idx === highlightIndex ? 'bg-brand-50 text-brand-700' : 'hover:bg-brand-50'"
-          @mousedown.prevent="selectCategory(cat)"
+          @mousedown.prevent="selectTag(tag)"
         >
-          {{ cat }}
+          {{ tag }}
         </button>
       </div>
-      <p v-if="errors['category']" class="text-sm text-red-500 mt-1">
-        {{ errors['category'] }}
+      <p v-if="!tagsValid" class="text-sm text-red-500 mt-1">
+        At least one tag is required
       </p>
     </div>
 

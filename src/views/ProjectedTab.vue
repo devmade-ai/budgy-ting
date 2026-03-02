@@ -174,7 +174,7 @@ const envelopeSummary = computed(() => {
               : 'bg-gray-50 text-gray-600 border border-gray-200'"
             @click="viewMode = 'categories'"
           >
-            Group by category
+            Group by tag
           </button>
         </div>
       </div>

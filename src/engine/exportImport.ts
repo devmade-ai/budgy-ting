@@ -14,7 +14,7 @@ import { calculateComparison } from './variance'
 import type { Workspace, Expense, Actual } from '@/types/models'
 
 export interface ExportSchema {
-  version: 1
+  version: 2
   exportedAt: string
   /** Workspace data. Named 'workspace' in new exports, 'budget' in old exports (backward compat). */
   workspace: Workspace
@@ -24,6 +24,7 @@ export interface ExportSchema {
     lineItems: Array<{
       description: string
       category: string
+      tags: string[]
       budgeted: number
       actual: number
       variance: number
@@ -67,6 +68,7 @@ export async function exportWorkspace(workspaceId: string): Promise<ExportSchema
       lineItems: comp.lineItems.map((li) => ({
         description: li.description,
         category: li.category,
+        tags: li.tags,
         budgeted: li.budgeted,
         actual: li.actual,
         variance: li.variance,
@@ -87,7 +89,7 @@ export async function exportWorkspace(workspaceId: string): Promise<ExportSchema
   }
 
   return {
-    version: 1,
+    version: 2,
     exportedAt: new Date().toISOString(),
     workspace,
     expenses,
@@ -117,7 +119,8 @@ export function downloadJSON(data: ExportSchema, workspaceName: string): void {
 
 /**
  * Validate an imported JSON file matches the export schema.
- * Backward compat: accepts both 'workspace' and 'budget' keys.
+ * Backward compat: accepts both 'workspace' and 'budget' keys,
+ * and handles v1 exports with category (string) instead of tags (string[]).
  */
 export function validateImport(data: unknown): { valid: boolean; error?: string; data?: ExportSchema } {
   if (!data || typeof data !== 'object') {
@@ -126,8 +129,8 @@ export function validateImport(data: unknown): { valid: boolean; error?: string;
 
   const obj = data as Record<string, unknown>
 
-  if (obj['version'] !== 1) {
-    return { valid: false, error: `Unsupported format version: ${obj['version']}. This app supports version 1.` }
+  if (obj['version'] !== 1 && obj['version'] !== 2) {
+    return { valid: false, error: `Unsupported format version: ${obj['version']}. This app supports versions 1 and 2.` }
   }
 
   // Backward compat: accept both 'workspace' and 'budget' keys
@@ -169,8 +172,8 @@ export function validateImport(data: unknown): { valid: boolean; error?: string;
     }
   }
 
-  // Normalize: ensure 'workspace' key exists for downstream code
-  const normalized = { ...obj, workspace: wsData } as unknown as ExportSchema
+  // Normalize: ensure 'workspace' key exists and version is 2 for downstream code
+  const normalized = { ...obj, workspace: wsData, version: 2 } as unknown as ExportSchema
   return { valid: true, data: normalized }
 }
 
@@ -210,27 +213,40 @@ export async function importWorkspace(
     delete (workspaceToAdd as Record<string, unknown>)['totalBudget']
     await db.workspaces.add(workspaceToAdd)
 
-    // Ensure all expenses have type and workspaceId (backward compat from budgetId)
+    // Ensure all expenses have tags, type, and workspaceId
+    // Backward compat: v1 exports have category (string) instead of tags (string[])
     const expensesToAdd = data.expenses.map((exp) => {
       const raw = exp as unknown as Record<string, unknown>
+      const legacyCategory = raw['category'] as string | undefined
       return {
         ...exp,
         workspaceId: exp.workspaceId || (raw['budgetId'] as string),
         type: exp.type ?? 'expense' as const,
+        tags: exp.tags ?? (legacyCategory ? [legacyCategory] : []),
       }
     })
+    // Remove legacy category field
+    for (const exp of expensesToAdd) {
+      delete (exp as Record<string, unknown>)['category']
+    }
     if (expensesToAdd.length > 0) {
       await db.expenses.bulkAdd(expensesToAdd)
     }
 
-    // Backward compat: actuals may use budgetId
+    // Backward compat: actuals may use budgetId and category instead of tags
     const actualsToAdd = data.actuals.map((act) => {
       const raw = act as unknown as Record<string, unknown>
+      const legacyCategory = raw['category'] as string | undefined
       return {
         ...act,
         workspaceId: act.workspaceId || (raw['budgetId'] as string),
+        tags: act.tags ?? (legacyCategory ? [legacyCategory] : []),
       }
     })
+    // Remove legacy category field
+    for (const act of actualsToAdd) {
+      delete (act as Record<string, unknown>)['category']
+    }
     if (actualsToAdd.length > 0) {
       await db.actuals.bulkAdd(actualsToAdd)
     }

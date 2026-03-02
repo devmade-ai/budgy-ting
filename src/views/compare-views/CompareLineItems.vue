@@ -44,7 +44,11 @@ function varianceClass(direction: string, percent: number | null): string {
         >
           <td class="py-2 pr-3">
             <span class="font-medium text-gray-900">{{ item.description }}</span>
-            <span class="text-gray-400 text-xs ml-1">{{ item.category }}</span>
+            <span
+              v-for="tag in item.tags"
+              :key="tag"
+              class="text-gray-400 text-xs ml-1"
+            >{{ tag }}</span>
           </td>
           <td class="text-right py-2 px-2 tabular-nums text-gray-700">
             {{ formatAmount(item.budgeted) }}
@@ -79,7 +83,7 @@ function varianceClass(direction: string, percent: number | null): string {
         >
           <div class="flex justify-between">
             <div>
-              <p class="text-sm text-gray-700">{{ item.description || item.category || 'Uncategorized' }}</p>
+              <p class="text-sm text-gray-700">{{ item.description || item.category || 'Uncategorised' }}</p>
               <p class="text-xs text-gray-400">{{ item.date }}</p>
             </div>
             <p class="text-sm font-medium text-gray-900">

@@ -154,11 +154,11 @@ async function confirmReplace() {
 
 async function handleClearAll() {
   try {
-    await db.transaction('rw', [db.workspaces, db.expenses, db.actuals, db.categoryCache], async () => {
+    await db.transaction('rw', [db.workspaces, db.expenses, db.actuals, db.tagCache], async () => {
       await db.actuals.clear()
       await db.expenses.clear()
       await db.workspaces.clear()
-      await db.categoryCache.clear()
+      await db.tagCache.clear()
     })
     await refreshList()
     showToast('All data cleared')

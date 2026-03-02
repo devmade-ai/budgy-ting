@@ -2,6 +2,44 @@
 
 <!-- Changelog and record of completed work. Organized by date. -->
 
+## 2026-03-02
+
+- **Multi-Tag Migration (category → tags):**
+
+  **Data Model:**
+  - `Expense.category: string` → `Expense.tags: string[]` across entire codebase
+  - `Actual.category: string` → `Actual.tags: string[]`
+  - Renamed `CategoryCache` → `TagCache` (field `category` → `tag`)
+  - Added `CategoryMapping` interface for learned description→tags patterns from imports
+  - Added `primaryTag(tags: string[]): string` helper — returns first tag or 'Uncategorised'
+
+  **DB Migration v5:**
+  - Converts `category` string → single-element `tags` array on all expenses and actuals
+  - Migrates `categoryCache` → `tagCache`, deletes old table
+  - New `categoryMappings` table with `id, workspaceId, pattern` indexes
+  - `*tags` multiEntry index on expenses and actuals for efficient tag queries
+
+  **Engine Updates:**
+  - projection.ts: `ProjectedRow.tags`, category rollup uses `primaryTag()`
+  - variance.ts: `LineItemVariance.tags`, `UnbudgetedActual.tags`, grouping via `primaryTag()`
+  - matching.ts: `ImportedRow.tags`, `tagsMatch()` for primary tag comparison, `isDuplicate()` for dedup
+  - exportImport.ts: Export schema bumped to v2, backward-compatible import (v1 `category` → `tags` array)
+  - All test files updated (94 tests pass)
+
+  **UI Changes:**
+  - ExpenseForm: multi-tag chip input (Enter/comma to add, Backspace to remove, autocomplete from tagCache)
+  - ExpensesTab: groups by primaryTag, shows secondary tags as small chips
+  - ImportStepMapping: auto-tagging from CategoryMappings, duplicate detection
+  - ImportStepReview: multi-tag create form, duplicate count info banner
+  - Demo data uses multi-tag arrays (e.g., `['Income', 'FNB Cheque']`, `['Food', 'Discretionary']`)
+
+  **Cleanup:**
+  - Removed `useCategoryAutocomplete.ts` (replaced by `useTagAutocomplete.ts`)
+
+  **Verification:**
+  - All 94 tests pass, build succeeds, type-check clean
+  - DB schema now at v5
+
 ## 2026-02-26
 
 - **Renamed Budget → Workspace + Demo Workspace:**

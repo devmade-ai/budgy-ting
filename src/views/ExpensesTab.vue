@@ -14,6 +14,7 @@ import EmptyState from '@/components/EmptyState.vue'
 import { formatAmount } from '@/composables/useFormat'
 import { useToast } from '@/composables/useToast'
 import type { Workspace, Expense } from '@/types/models'
+import { primaryTag } from '@/types/models'
 
 const props = defineProps<{ workspace: Workspace }>()
 const router = useRouter()
@@ -43,15 +44,16 @@ const filteredExpenses = computed(() => {
   if (!q) return expenses.value
   return expenses.value.filter((exp) =>
     exp.description.toLowerCase().includes(q) ||
-    exp.category.toLowerCase().includes(q)
+    exp.tags.some((t) => t.toLowerCase().includes(q))
   )
 })
 
 const groupedExpenses = computed(() => {
   const groups: Record<string, Expense[]> = {}
   for (const exp of filteredExpenses.value) {
-    if (!groups[exp.category]) groups[exp.category] = []
-    groups[exp.category]!.push(exp)
+    const tag = primaryTag(exp.tags)
+    if (!groups[tag]) groups[tag] = []
+    groups[tag]!.push(exp)
   }
   // Sort categories alphabetically
   return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b))
@@ -149,7 +151,7 @@ async function confirmDelete() {
           v-model="searchQuery"
           type="text"
           class="input-field pl-9"
-          placeholder="Filter by name or category..."
+          placeholder="Filter by name or tag..."
         />
       </div>
     </div>
@@ -194,6 +196,16 @@ async function confirmDelete() {
                 {{ exp.type === 'income' ? '+' : '' }}{{ props.workspace.currencyLabel }}{{ formatAmount(exp.amount) }}
                 <span class="text-gray-400">{{ frequencyLabel(exp.frequency) }}</span>
               </p>
+              <!-- Show extra tags (beyond primary which is the group header) -->
+              <div v-if="exp.tags.length > 1" class="flex flex-wrap gap-1 mt-1">
+                <span
+                  v-for="tag in exp.tags.slice(1)"
+                  :key="tag"
+                  class="px-1.5 py-0.5 text-[10px] rounded-full bg-gray-100 text-gray-500"
+                >
+                  {{ tag }}
+                </span>
+              </div>
             </div>
             <div class="flex gap-1 ml-3 shrink-0">
               <button

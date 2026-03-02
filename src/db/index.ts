@@ -9,13 +9,14 @@
  */
 
 import Dexie, { type EntityTable } from 'dexie'
-import type { Workspace, Expense, Actual, CategoryCache } from '@/types/models'
+import type { Workspace, Expense, Actual, TagCache, CategoryMapping } from '@/types/models'
 
 const db = new Dexie('budgy-ting') as Dexie & {
   workspaces: EntityTable<Workspace, 'id'>
   expenses: EntityTable<Expense, 'id'>
   actuals: EntityTable<Actual, 'id'>
-  categoryCache: EntityTable<CategoryCache, 'category'>
+  tagCache: EntityTable<TagCache, 'tag'>
+  categoryMappings: EntityTable<CategoryMapping, 'id'>
 }
 
 // Schema v1: indexes match product definition spec
@@ -106,6 +107,46 @@ db.version(4).stores({
     tx.table('actuals').toCollection().modify((actual) => {
       actual.workspaceId = actual.budgetId
       delete actual.budgetId
+    }),
+  ])
+})
+
+// Schema v5: category → tags (string[]), categoryCache → tagCache, add categoryMappings
+// Requirement: Support multiple category tags per expense/actual instead of single category
+// Approach: Convert category string to single-element tags array, rename cache table
+// Alternatives:
+//   - Keep category + add tags: Rejected — dual fields adds confusion, tags subsume category
+//   - Breaking reset: Rejected — must preserve existing user data
+db.version(5).stores({
+  workspaces: 'id, name, createdAt',
+  expenses: 'id, workspaceId, *tags, type, createdAt',
+  actuals: 'id, workspaceId, expenseId, *tags, date',
+  tagCache: 'tag, lastUsed',
+  categoryMappings: 'id, workspaceId, pattern',
+  categoryCache: null, // Delete old categoryCache table
+}).upgrade((tx) => {
+  return Promise.all([
+    // Convert expenses: category string → tags array
+    tx.table('expenses').toCollection().modify((expense: Record<string, unknown>) => {
+      const cat = expense['category'] as string | undefined
+      expense['tags'] = cat ? [cat] : []
+      delete expense['category']
+    }),
+    // Convert actuals: category string → tags array
+    tx.table('actuals').toCollection().modify((actual: Record<string, unknown>) => {
+      const cat = actual['category'] as string | undefined
+      actual['tags'] = cat ? [cat] : []
+      delete actual['category']
+    }),
+    // Migrate categoryCache → tagCache
+    tx.table('categoryCache').toCollection().toArray().then((entries: Array<Record<string, unknown>>) => {
+      const tags = entries.map((c) => ({
+        tag: c['category'] as string,
+        lastUsed: c['lastUsed'] as string,
+      }))
+      if (tags.length > 0) {
+        return tx.table('tagCache').bulkAdd(tags)
+      }
     }),
   ])
 })
