@@ -4,6 +4,29 @@
 
 ## 2026-03-02
 
+- **Code Review Audit — Bug Fixes and Quality Improvements:**
+
+  **Bug Fix:**
+  - Fixed prop mutation in ImportStepReview.vue — `toggleApproval`, `reassignExpense`, `approveAll` now emit events to parent (ImportWizardView) instead of mutating props directly
+
+  **Timer Leak Fixes:**
+  - ExpenseForm.vue: `handleTagBlur` setTimeout now tracked and cleared on unmount
+  - HelpDrawer.vue: `handleClose` animation timeout now tracked and cleared on unmount
+  - DebugPill.vue: `copyReport` feedback timeout now tracked and cleared on unmount
+  - useTagAutocomplete.ts: debounce timer now cleared on unmount via `onUnmounted`
+
+  **Performance:**
+  - variance.ts: replaced `expenses.find()` inside loop (O(n²)) with `expenseById` Map lookup (O(n))
+
+  **Error Handling:**
+  - ProjectedTab: wrapped `calculateProjection` computed in try-catch with user-facing error message
+
+  **Documentation:**
+  - Added TODO items for broken EXTRACTION_PLAYBOOK.md reference and stale PRODUCT_DEFINITION.md tech stack
+
+  **Verification:**
+  - 76 tests pass, build succeeds, type-check clean
+
 - **Replace Balance with Ephemeral Cash Input:**
 
   **Concept Change:**

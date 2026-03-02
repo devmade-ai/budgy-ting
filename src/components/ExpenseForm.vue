@@ -7,7 +7,7 @@
  *   - Separate category + tags fields: Rejected — single tags array is simpler
  */
 
-import { ref, computed } from 'vue'
+import { ref, computed, onUnmounted } from 'vue'
 import { useTagAutocomplete } from '@/composables/useTagAutocomplete'
 import { useFormValidation, required, positiveNumber, dateAfter } from '@/composables/useFormValidation'
 import DateInput from '@/components/DateInput.vue'
@@ -113,13 +113,20 @@ function handleTagKeydown(e: KeyboardEvent) {
   }
 }
 
+let tagBlurTimer: ReturnType<typeof setTimeout> | null = null
+
 function handleTagBlur() {
   // Add any pending text as a tag
   if (tagQuery.value.trim()) {
     addTag(tagQuery.value)
   }
-  window.setTimeout(() => close(), 150)
+  if (tagBlurTimer) clearTimeout(tagBlurTimer)
+  tagBlurTimer = setTimeout(() => close(), 150)
 }
+
+onUnmounted(() => {
+  if (tagBlurTimer) clearTimeout(tagBlurTimer)
+})
 
 function selectTag(tag: string) {
   addTag(tag)

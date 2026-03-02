@@ -95,9 +95,11 @@ export function calculateComparison(
     actualsByExpense.get(key)!.push(actual)
   }
 
-  // Build expense type lookup to filter out income-matched actuals
+  // Build expense lookups — avoids O(n) find() calls inside loops
+  const expenseById = new Map<string, Expense>()
   const typeLookup = new Map<string, 'income' | 'expense'>()
   for (const exp of expenses) {
+    expenseById.set(exp.id, exp)
     typeLookup.set(exp.id, exp.type ?? 'expense')
   }
   const expenseActuals = actuals.filter((a) => {
@@ -136,7 +138,7 @@ export function calculateComparison(
 
   for (const actual of expenseActuals) {
     if (!actual.expenseId) continue // unbudgeted, handled separately
-    const expense = expenses.find((e) => e.id === actual.expenseId)
+    const expense = expenseById.get(actual.expenseId)
     if (!expense) continue
     const cat = primaryTag(expense.tags)
     if (!categoryMap.has(cat)) categoryMap.set(cat, { budgeted: 0, actual: 0 })

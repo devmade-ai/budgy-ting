@@ -36,6 +36,9 @@ const emit = defineEmits<{
     frequency: Frequency
     type: LineType
   }]
+  'toggle-approval': [index: number]
+  'reassign-expense': [index: number, expenseId: string | null]
+  'approve-all': [confidence: string]
 }>()
 
 const MATCHES_PER_PAGE = 50
@@ -59,33 +62,20 @@ const matchSummary = computed(() => {
   return { total, high, medium, low, manual, unmatched, approved }
 })
 
+// Requirement: Avoid direct prop mutation — emit events so parent owns state changes
+// Approach: Emit typed events for each mutation, parent handles them on its own ref
+// Alternatives:
+//   - Direct prop mutation: Rejected — violates one-way data flow, causes Vue warnings in strict mode
 function toggleApproval(index: number) {
-  const result = props.matchResults[index]
-  if (!result) return
-  result.approved = !result.approved
+  emit('toggle-approval', index)
 }
 
 function reassignExpense(index: number, expenseId: string | null) {
-  const result = props.matchResults[index]
-  if (!result) return
-
-  if (expenseId) {
-    result.matchedExpense = props.expenses.find((e) => e.id === expenseId) ?? null
-    result.confidence = 'manual'
-    result.approved = true
-  } else {
-    result.matchedExpense = null
-    result.confidence = 'unmatched'
-    result.approved = true
-  }
+  emit('reassign-expense', index, expenseId)
 }
 
 function approveAll(confidence: string) {
-  for (const result of props.matchResults) {
-    if (result.confidence === confidence) {
-      result.approved = true
-    }
-  }
+  emit('approve-all', confidence)
 }
 
 function confidenceColor(c: string): string {

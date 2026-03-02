@@ -9,7 +9,7 @@
  *   - iframe: Rejected — unnecessary complexity for static content
  */
 
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { marked } from 'marked'
 import { useDialogA11y } from '@/composables/useDialogA11y'
 
@@ -37,11 +37,18 @@ onMounted(() => {
   })
 })
 
+let closeTimer: ReturnType<typeof setTimeout> | null = null
+
 function handleClose() {
   visible.value = false
   // Wait for slide-out animation before unmounting
-  setTimeout(() => emit('close'), 200)
+  if (closeTimer) clearTimeout(closeTimer)
+  closeTimer = setTimeout(() => emit('close'), 200)
 }
+
+onUnmounted(() => {
+  if (closeTimer) clearTimeout(closeTimer)
+})
 </script>
 
 <template>

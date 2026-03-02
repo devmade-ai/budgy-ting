@@ -45,8 +45,13 @@ onMounted(async () => {
 const projection = computed<ProjectionResult | null>(() => {
   if (expenses.value.length === 0) return null
 
-  const { startDate, endDate } = resolveWorkspacePeriod(props.workspace)
-  return calculateProjection(expenses.value, startDate, endDate)
+  try {
+    const { startDate, endDate } = resolveWorkspacePeriod(props.workspace)
+    return calculateProjection(expenses.value, startDate, endDate)
+  } catch {
+    error.value = 'Something went wrong calculating projections. Please check your expense dates and try again.'
+    return null
+  }
 })
 
 const viewMode = ref<'items' | 'categories'>('items')
