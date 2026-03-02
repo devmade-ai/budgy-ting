@@ -8,7 +8,7 @@ function makeExpense(overrides: Partial<Expense> = {}): Expense {
     id: 'exp-1',
     workspaceId: 'b-1',
     description: 'Test expense',
-    category: 'General',
+    tags: ['General'],
     amount: 1000,
     frequency: 'monthly',
     type: 'expense',
@@ -27,7 +27,7 @@ function makeActual(overrides: Partial<Actual> = {}): Actual {
     expenseId: 'exp-1',
     date: '2026-01-15',
     amount: 1000,
-    category: 'General',
+    tags: ['General'],
     description: 'Test actual',
     originalRow: {},
     matchConfidence: 'high',
@@ -152,7 +152,7 @@ describe('calculateEnvelope', () => {
   it('excludes income-type actuals from spend tracking', () => {
     const expenses = [
       makeExpense({ id: 'e1', amount: 1000, type: 'expense' }),
-      makeExpense({ id: 'e2', amount: 3000, type: 'income', category: 'Salary' }),
+      makeExpense({ id: 'e2', amount: 3000, type: 'income', tags: ['Salary'] }),
     ]
     const actuals = [
       // Expense actual — should count as spend

@@ -24,7 +24,7 @@ function makeExpense(overrides: Partial<Expense> = {}): Expense {
     id: 'exp-1',
     workspaceId: 'b-1',
     description: 'Test expense',
-    category: 'General',
+    tags: ['General'],
     amount: 1000,
     frequency: 'monthly',
     type: 'expense',
@@ -38,7 +38,7 @@ function makeExpense(overrides: Partial<Expense> = {}): Expense {
 
 function makeValidExport(overrides: Partial<ExportSchema> = {}): ExportSchema {
   return {
-    version: 1,
+    version: 2,
     exportedAt: '2026-01-15T00:00:00Z',
     workspace: makeWorkspace(),
     expenses: [makeExpense()],
@@ -69,7 +69,7 @@ describe('validateImport', () => {
 
   it('rejects wrong version', () => {
     const data = makeValidExport()
-    const result = validateImport({ ...data, version: 2 })
+    const result = validateImport({ ...data, version: 3 })
     expect(result.valid).toBe(false)
     expect(result.error).toContain('Unsupported format version')
   })
@@ -186,7 +186,7 @@ describe('validateImport', () => {
   it('accepts valid export with comparison data', () => {
     const result = validateImport(makeValidExport({
       comparison: {
-        lineItems: [{ description: 'Test', category: 'General', budgeted: 1000, actual: 900, variance: -100 }],
+        lineItems: [{ description: 'Test', category: 'General', tags: ['General'], budgeted: 1000, actual: 900, variance: -100 }],
         categories: [{ category: 'General', budgeted: 1000, actual: 900, variance: -100 }],
         monthly: [{ month: '2026-01', projected: 1000, actual: 900, variance: -100 }],
       },

@@ -1,18 +1,22 @@
 <script setup lang="ts">
 /**
- * Requirement: Step 2 of import wizard — column mapping with validation
- * Approach: Extracted from ImportWizardView to reduce component size
+ * Requirement: Step 2 of import wizard — column mapping with validation and duplicate detection
+ * Approach: Extracted from ImportWizardView to reduce component size.
+ *   Now also loads category mappings to auto-suggest tags for imported rows,
+ *   and checks for duplicate entries against existing actuals.
  */
 
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { db } from '@/db'
 import {
   DATE_FORMATS,
   parseDate,
   parseAmount,
   matchImportedRows,
+  isDuplicate,
 } from '@/engine/matching'
 import type { ParsedCSV } from '@/engine/csvParser'
-import type { Expense } from '@/types/models'
+import type { Expense, Actual, CategoryMapping } from '@/types/models'
 import type { ImportedRow, MatchResult } from '@/engine/matching'
 
 const props = defineProps<{
@@ -23,10 +27,12 @@ const props = defineProps<{
   initialDescriptionColumn: string
   initialDateFormatIndex: number
   expenses: Expense[]
+  existingActuals: Actual[]
+  workspaceId: string
 }>()
 
 const emit = defineEmits<{
-  complete: [data: { matchResults: MatchResult[]; skippedRows: number }]
+  complete: [data: { matchResults: MatchResult[]; skippedRows: number; duplicateCount: number }]
   back: []
 }>()
 
@@ -36,6 +42,20 @@ const categoryColumn = ref(props.initialCategoryColumn)
 const descriptionColumn = ref(props.initialDescriptionColumn)
 const dateFormatIndex = ref(props.initialDateFormatIndex)
 const mappingErrors = ref<string[]>([])
+
+// Loaded category mappings for auto-tagging
+const categoryMappings = ref<CategoryMapping[]>([])
+
+onMounted(async () => {
+  try {
+    categoryMappings.value = await db.categoryMappings
+      .where('workspaceId')
+      .equals(props.workspaceId)
+      .toArray()
+  } catch {
+    // Non-critical — proceed without auto-tagging
+  }
+})
 
 const previewRows = computed(() => {
   return props.parsedData.rows.slice(0, 5)
@@ -69,11 +89,40 @@ function validateMapping(): boolean {
   return errs.length === 0
 }
 
+/**
+ * Auto-assign tags to an imported row based on learned category mappings.
+ * Falls back to category column value if no mapping found.
+ */
+function autoAssignTags(description: string, csvCategory: string): string[] {
+  const descLower = description.toLowerCase().trim()
+
+  // Check category mappings (learned from previous imports)
+  if (descLower) {
+    const mapping = categoryMappings.value.find((m) =>
+      descLower.includes(m.pattern) || m.pattern.includes(descLower)
+    )
+    if (mapping) return [...mapping.tags]
+  }
+
+  // Fall back to CSV category column
+  if (csvCategory.trim()) return [csvCategory.trim()]
+
+  return []
+}
+
 function handleSubmit() {
   if (!validateMapping()) return
 
   const importedRows: ImportedRow[] = []
   let skipped = 0
+  let dupes = 0
+
+  // Build simplified existing actuals for dedup check
+  const existingForDedup = props.existingActuals.map((a) => ({
+    date: a.date,
+    amount: a.amount,
+    description: a.description,
+  }))
 
   for (const row of props.parsedData.rows) {
     const dateStr = row[dateColumn.value] ?? ''
@@ -87,20 +136,29 @@ function handleSubmit() {
       continue
     }
 
-    importedRows.push({
+    const csvCategory = categoryColumn.value ? (row[categoryColumn.value] ?? '') : ''
+    const description = descriptionColumn.value ? (row[descriptionColumn.value] ?? '') : ''
+
+    const importedRow: ImportedRow = {
       date: parsedDateVal,
       amount: Math.abs(parsedAmountVal),
-      category: categoryColumn.value ? (row[categoryColumn.value] ?? '') : '',
-      description: descriptionColumn.value ? (row[descriptionColumn.value] ?? '') : '',
+      tags: autoAssignTags(description, csvCategory),
+      description,
       originalRow: row,
-      // Preserve original sign as a hint for type-aware matching.
-      // Negative amounts in bank statements typically mean credits/income.
       originalSign: parsedAmountVal < 0 ? 'negative' : 'positive',
-    })
+    }
+
+    // Duplicate detection — skip rows that already exist in the workspace
+    if (isDuplicate(importedRow, existingForDedup)) {
+      dupes++
+      continue
+    }
+
+    importedRows.push(importedRow)
   }
 
   const matchResults = matchImportedRows(importedRows, props.expenses)
-  emit('complete', { matchResults, skippedRows: skipped })
+  emit('complete', { matchResults, skippedRows: skipped, duplicateCount: dupes })
 }
 </script>
 

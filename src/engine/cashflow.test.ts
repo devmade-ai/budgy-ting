@@ -8,7 +8,7 @@ function makeExpense(overrides: Partial<Expense> = {}): Expense {
     id: 'exp-1',
     workspaceId: 'b-1',
     description: 'Test expense',
-    category: 'General',
+    tags: ['General'],
     amount: 1000,
     frequency: 'monthly',
     type: 'expense',
@@ -27,7 +27,7 @@ function makeActual(overrides: Partial<Actual> = {}): Actual {
     expenseId: 'exp-1',
     date: '2026-01-15',
     amount: 1000,
-    category: 'General',
+    tags: ['General'],
     description: 'Test actual',
     originalRow: {},
     matchConfidence: 'high',
@@ -58,7 +58,7 @@ describe('calculateCashflow', () => {
   it('includes income in running balance', () => {
     const expenses = [
       makeExpense({ id: 'e1', amount: 2000, type: 'expense' }),
-      makeExpense({ id: 'e2', amount: 3000, type: 'income', category: 'Salary' }),
+      makeExpense({ id: 'e2', amount: 3000, type: 'income', tags: ['Salary'] }),
     ]
     const projection = calculateProjection(expenses, '2026-01-01', '2026-03-31')
 
@@ -117,7 +117,7 @@ describe('calculateCashflow', () => {
   it('splits actuals by type — income actuals replace projected income, not expenses', () => {
     const expenses = [
       makeExpense({ id: 'e1', amount: 2000, type: 'expense' }),
-      makeExpense({ id: 'e2', amount: 5000, type: 'income', category: 'Salary' }),
+      makeExpense({ id: 'e2', amount: 5000, type: 'income', tags: ['Salary'] }),
     ]
     const actuals = [
       // Salary came in higher than projected

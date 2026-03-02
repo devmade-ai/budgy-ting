@@ -12,6 +12,7 @@
 
 import { ref, computed } from 'vue'
 import { formatAmount } from '@/composables/useFormat'
+import { primaryTag } from '@/types/models'
 import type { Workspace, Expense, Frequency, LineType } from '@/types/models'
 import type { MatchResult } from '@/engine/matching'
 
@@ -20,6 +21,7 @@ const props = defineProps<{
   expenses: Expense[]
   workspace: Workspace
   skippedRows: number
+  duplicateCount: number
   saving: boolean
 }>()
 
@@ -29,7 +31,7 @@ const emit = defineEmits<{
   'create-expense': [data: {
     matchIndex: number
     description: string
-    category: string
+    tags: string[]
     amount: number
     frequency: Frequency
     type: LineType
@@ -102,7 +104,8 @@ function confidenceColor(c: string): string {
 const creatingForIndex = ref<number | null>(null)
 const newType = ref<LineType>('expense')
 const newDescription = ref('')
-const newCategory = ref('')
+const newTags = ref<string[]>([])
+const newTagInput = ref('')
 const newAmount = ref('')
 const newFrequency = ref<Frequency>('monthly')
 const newErrors = ref<Record<string, string>>({})
@@ -123,7 +126,8 @@ function openCreateForm(matchIndex: number) {
   creatingForIndex.value = matchIndex
   // Pre-fill from imported row data
   newDescription.value = row.description || ''
-  newCategory.value = row.category || ''
+  newTags.value = row.tags.length > 0 ? [...row.tags] : []
+  newTagInput.value = ''
   newAmount.value = row.amount ? String(row.amount) : ''
   // Use CSV sign as hint: negative typically means income in bank statements
   newType.value = row.originalSign === 'negative' ? 'income' : 'expense'
@@ -136,12 +140,34 @@ function cancelCreate() {
   newErrors.value = {}
 }
 
+function addNewTag() {
+  const trimmed = newTagInput.value.trim()
+  if (trimmed && !newTags.value.includes(trimmed)) {
+    newTags.value.push(trimmed)
+  }
+  newTagInput.value = ''
+}
+
+function removeNewTag(index: number) {
+  newTags.value.splice(index, 1)
+}
+
+function handleNewTagKeydown(e: KeyboardEvent) {
+  if (e.key === 'Enter' || e.key === ',') {
+    e.preventDefault()
+    addNewTag()
+  }
+  if (e.key === 'Backspace' && !newTagInput.value && newTags.value.length > 0) {
+    newTags.value.pop()
+  }
+}
+
 function submitCreate() {
   if (creatingForIndex.value === null) return
 
   const errors: Record<string, string> = {}
   if (!newDescription.value.trim()) errors['description'] = 'Description is required'
-  if (!newCategory.value.trim()) errors['category'] = 'Category is required'
+  if (newTags.value.length === 0) errors['tags'] = 'At least one tag is required'
   const parsedAmount = parseFloat(newAmount.value)
   if (!newAmount.value || isNaN(parsedAmount) || parsedAmount <= 0) {
     errors['amount'] = 'Enter a positive amount'
@@ -154,7 +180,7 @@ function submitCreate() {
   emit('create-expense', {
     matchIndex: creatingForIndex.value,
     description: newDescription.value.trim(),
-    category: newCategory.value.trim(),
+    tags: newTags.value,
     amount: parsedAmount,
     frequency: newFrequency.value,
     type: newType.value,
@@ -184,6 +210,12 @@ function handleDropdownChange(matchIndex: number, value: string) {
     <div v-if="skippedRows > 0" class="mb-4 p-3 bg-amber-50 text-amber-700 text-sm rounded-lg" role="alert">
       {{ skippedRows }} row{{ skippedRows === 1 ? ' was' : 's were' }} skipped because the date or amount couldn't be read.
       Check the date format and amount column on the previous step.
+    </div>
+
+    <!-- Duplicate detection info -->
+    <div v-if="duplicateCount > 0" class="mb-4 p-3 bg-blue-50 text-blue-700 text-sm rounded-lg" role="status">
+      {{ duplicateCount }} duplicate{{ duplicateCount === 1 ? ' was' : 's were' }} detected and skipped.
+      These transactions already exist in this workspace.
     </div>
 
     <!-- Summary badges -->
@@ -244,12 +276,19 @@ function handleDropdownChange(matchIndex: number, value: string) {
               <span v-if="result.importedRow.description" class="text-gray-500">
                 — {{ result.importedRow.description }}
               </span>
-              <span v-if="result.importedRow.category" class="text-gray-400 text-xs ml-1">
-                ({{ result.importedRow.category }})
-              </span>
             </p>
+            <!-- Tags on imported row -->
+            <div v-if="result.importedRow.tags.length > 0" class="flex flex-wrap gap-1 mt-1">
+              <span
+                v-for="tag in result.importedRow.tags"
+                :key="tag"
+                class="px-1.5 py-0.5 text-[10px] rounded-full bg-gray-100 text-gray-500"
+              >
+                {{ tag }}
+              </span>
+            </div>
             <p v-if="result.matchedExpense" class="text-xs text-brand-600 mt-1">
-              Matched: {{ result.matchedExpense.description }} ({{ result.matchedExpense.category }})
+              Matched: {{ result.matchedExpense.description }} ({{ primaryTag(result.matchedExpense.tags) }})
             </p>
           </div>
 
@@ -267,7 +306,7 @@ function handleDropdownChange(matchIndex: number, value: string) {
                 :key="exp.id"
                 :value="exp.id"
               >
-                {{ exp.description }} ({{ exp.category }})
+                {{ exp.description }} ({{ primaryTag(exp.tags) }})
               </option>
             </select>
 
@@ -369,17 +408,31 @@ function handleDropdownChange(matchIndex: number, value: string) {
             <p v-if="newErrors['description']" class="text-xs text-red-500 mt-1">{{ newErrors['description'] }}</p>
           </div>
 
-          <!-- Category -->
+          <!-- Tags (multi-tag input) -->
           <div class="mb-3">
-            <label class="block text-sm font-medium text-gray-700 mb-1" for="new-cat">Category</label>
-            <input
-              id="new-cat"
-              v-model="newCategory"
-              type="text"
-              class="input-field text-sm"
-              placeholder="e.g. Income, Entertainment"
-            />
-            <p v-if="newErrors['category']" class="text-xs text-red-500 mt-1">{{ newErrors['category'] }}</p>
+            <label class="block text-sm font-medium text-gray-700 mb-1" for="new-tags">Tags</label>
+            <div class="input-field flex flex-wrap items-center gap-1 min-h-[36px] py-1 text-sm">
+              <span
+                v-for="(tag, idx) in newTags"
+                :key="tag"
+                class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-brand-100 text-brand-700"
+              >
+                {{ tag }}
+                <button type="button" @click.stop="removeNewTag(idx)" class="hover:text-brand-900">
+                  <span class="i-lucide-x text-[8px]" />
+                </button>
+              </span>
+              <input
+                id="new-tags"
+                v-model="newTagInput"
+                type="text"
+                class="flex-1 min-w-[60px] outline-none border-none bg-transparent text-sm"
+                placeholder="Type and Enter..."
+                @keydown="handleNewTagKeydown"
+                @blur="addNewTag"
+              />
+            </div>
+            <p v-if="newErrors['tags']" class="text-xs text-red-500 mt-1">{{ newErrors['tags'] }}</p>
           </div>
 
           <!-- Amount -->

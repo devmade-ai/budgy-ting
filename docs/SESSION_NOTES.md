@@ -4,35 +4,39 @@
 
 ## Worked on
 
-Renamed top-level entity from "Budget" to "Workspace" across the entire codebase. Created demo workspace with realistic household cashflow data.
+Migrated data model from single `category: string` to multi-tag `tags: string[]` across the entire codebase. Foundation for bank statement import workflow improvements.
 
 ## Accomplished
 
-- **Type rename:** `Budget` → `Workspace`, `budgetId` → `workspaceId` in `src/types/models.ts`, added `isDemo: boolean` field
-- **DB migration v4:** New `workspaces` table, data migration from `budgets`, foreign key rename, old table deletion
-- **File renames:** 5 view files renamed via `git mv` (BudgetListView → WorkspaceListView, etc.)
-- **Bulk code update:** 600+ references across all source files — routes, components, engines, composables, props, template bindings
-- **Backward-compatible import:** `validateImport` accepts both `workspace` and `budget` keys, both `workspaceId` and `budgetId`
-- **Demo workspace:** `src/db/demoData.ts` seeds a "Demo Household" workspace with 16 realistic SA Rand-denominated items (salary, freelance, rent, groceries, etc.) on first visit (empty DB)
-- **Demo seeding:** Non-blocking `seedDemoWorkspace()` call in `main.ts`
-- **Documentation:** Updated all docs to reflect workspace terminology
+- **Data model change:** `Expense.category` and `Actual.category` → `tags: string[]` with `primaryTag()` helper for backward-compatible grouping
+- **DB migration v5:** Converts `category` → single-element `tags` array, `categoryCache` → `tagCache`, new `categoryMappings` table for learned description→tags patterns
+- **Multi-tag UI:** ExpenseForm chip input (Enter/comma to add, Backspace to remove, autocomplete from tagCache)
+- **Engine updates:** projection, variance, matching, envelope, cashflow, exportImport all updated for tags
+- **Export schema v2:** Bumped version, backward-compatible import (v1 `category` string auto-converted to `tags` array)
+- **Import improvements:** Duplicate detection (date + amount + description), auto-tagging from CategoryMappings, duplicate count display
+- **Demo data updated:** Tags arrays with multi-tag examples (e.g., `['Income', 'FNB Cheque']`, `['Food', 'Discretionary']`)
+- **Removed:** old `useCategoryAutocomplete.ts` (replaced by `useTagAutocomplete.ts`)
 - **All 94 tests pass, build succeeds, type-check clean**
 
 ## Current state
 
-DB schema v4. All features working. Build passes. 94 unit tests across 7 files.
+DB schema v5. All features working. Build passes. 94 unit tests across 7 files.
 
 Working features:
-- All previous features intact with "workspace" terminology
-- Demo workspace auto-seeded on first visit
-- Backward-compatible import (handles old "budget" format)
-- Multiple workspaces supported (always were, now properly named)
+- All previous features intact with multi-tag support
+- `primaryTag()` preserves single-category grouping behavior (first tag = category)
+- Multi-tag chip input with autocomplete
+- CategoryMappings table learns description→tags from imports
+- Duplicate detection on import (date + amount + description matching)
+- Export/import handles both v1 (category) and v2 (tags) formats
 
 ## Key context
 
-- `isDemo: boolean` flag on Workspace model — demo workspace uses `id: 'demo-household'`
-- DB v4 migration handles v3→v4 upgrade (renames tables + foreign keys, preserves data)
-- Financial terms kept as-is: "budgeted", "unbudgeted", "over/under budget" — standard accounting language
-- `resolveWorkspacePeriod()` replaces `resolveBudgetPeriod()` in projection engine
-- `exportWorkspace()` / `importWorkspace()` replace old function names
-- Export format uses `workspace:` key but import accepts both `workspace:` and `budget:`
+- `tags: string[]` replaces `category: string` on Expense and Actual models
+- `primaryTag(tags)` returns first tag or 'Uncategorised' — used for grouping/rollups
+- DB v5 migration handles v4→v5 upgrade (converts category→tags, renames tables)
+- `CategoryMapping` interface stores learned patterns: `{ pattern, tags, type }`
+- `isDuplicate()` in matching.ts checks date + amount + description for dedup
+- `useTagAutocomplete.ts` replaces `useCategoryAutocomplete.ts`
+- Export schema version is now 2; import accepts versions 1 and 2
+- Future work: pattern detection engine, "promote to recurring", forecasting with simple-statistics

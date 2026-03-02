@@ -1,13 +1,13 @@
 /**
- * Category autocomplete composable.
+ * Tag autocomplete composable.
  *
- * Requirement: Autocomplete from previously used categories across all budgets
+ * Requirement: Autocomplete from previously used tags across all workspaces
  * Approach: Dexie startsWithIgnoreCase for prefix matching (uses index), fallback
  *   to substring matching for remaining slots
  * Alternatives:
- *   - Full-table scan + JS filter: Rejected — loads all categories every keystroke
+ *   - Full-table scan + JS filter: Rejected — loads all tags every keystroke
  *   - Query expenses table directly: Rejected — slower, requires distinct aggregation
- *   - In-memory cache: Rejected — categoryCache table handles persistence across sessions
+ *   - In-memory cache: Rejected — tagCache table handles persistence across sessions
  */
 
 import { ref, watch } from 'vue'
@@ -16,7 +16,7 @@ import { nowISO } from '@/composables/useTimestamp'
 
 const MAX_SUGGESTIONS = 10
 
-export function useCategoryAutocomplete() {
+export function useTagAutocomplete() {
   const query = ref('')
   const suggestions = ref<string[]>([])
   const isOpen = ref(false)
@@ -38,31 +38,31 @@ export function useCategoryAutocomplete() {
         const needle = val.toLowerCase().trim()
 
         // Prefix match via Dexie index (fast, DB-level filtering)
-        const prefixMatches = await db.categoryCache
-          .where('category')
+        const prefixMatches = await db.tagCache
+          .where('tag')
           .startsWithIgnoreCase(needle)
           .limit(MAX_SUGGESTIONS)
           .sortBy('lastUsed')
 
         const prefixResults = prefixMatches
           .reverse()
-          .map((c) => c.category)
+          .map((c) => c.tag)
 
         // If we have enough prefix matches, use those
         if (prefixResults.length >= MAX_SUGGESTIONS) {
           suggestions.value = prefixResults.slice(0, MAX_SUGGESTIONS)
         } else {
           // Supplement with substring matches (requires broader scan, capped at 100)
-          const allCategories = await db.categoryCache
+          const allTags = await db.tagCache
             .orderBy('lastUsed')
             .reverse()
             .limit(100)
             .toArray()
 
           const prefixSet = new Set(prefixResults)
-          const substringMatches = allCategories
-            .filter((c) => !prefixSet.has(c.category) && c.category.toLowerCase().includes(needle))
-            .map((c) => c.category)
+          const substringMatches = allTags
+            .filter((c) => !prefixSet.has(c.tag) && c.tag.toLowerCase().includes(needle))
+            .map((c) => c.tag)
 
           suggestions.value = [
             ...prefixResults,
@@ -79,8 +79,8 @@ export function useCategoryAutocomplete() {
     }, 80)
   })
 
-  function select(category: string) {
-    query.value = category
+  function select(tag: string) {
+    query.value = tag
     isOpen.value = false
   }
 
@@ -92,16 +92,30 @@ export function useCategoryAutocomplete() {
 }
 
 /**
- * Update the category cache when a category is used.
- * Call after saving an expense.
+ * Update the tag cache when a tag is used.
+ * Call after saving an expense or confirming an import.
  */
-export async function touchCategory(category: string): Promise<void> {
+export async function touchTag(tag: string): Promise<void> {
   try {
-    await db.categoryCache.put({
-      category,
+    await db.tagCache.put({
+      tag,
       lastUsed: nowISO(),
     })
   } catch {
-    // Category cache is non-critical — silently degrade if DB fails
+    // Tag cache is non-critical — silently degrade if DB fails
+  }
+}
+
+/**
+ * Update the tag cache for multiple tags at once.
+ */
+export async function touchTags(tags: string[]): Promise<void> {
+  const now = nowISO()
+  try {
+    await db.tagCache.bulkPut(
+      tags.filter(Boolean).map((tag) => ({ tag, lastUsed: now }))
+    )
+  } catch {
+    // Tag cache is non-critical — silently degrade if DB fails
   }
 }

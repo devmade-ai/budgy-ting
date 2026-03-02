@@ -3,7 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { db } from '@/db'
 import { nowISO } from '@/composables/useTimestamp'
-import { touchCategory } from '@/composables/useCategoryAutocomplete'
+import { touchTags } from '@/composables/useTagAutocomplete'
 import { useToast } from '@/composables/useToast'
 import ExpenseForm from '@/components/ExpenseForm.vue'
 import ErrorAlert from '@/components/ErrorAlert.vue'
@@ -42,7 +42,7 @@ onMounted(async () => {
 
 async function handleSubmit(data: {
   description: string
-  category: string
+  tags: string[]
   amount: number
   frequency: Frequency
   type: LineType
@@ -52,7 +52,7 @@ async function handleSubmit(data: {
   try {
     await db.expenses.update(props.expenseId, {
       description: data.description,
-      category: data.category,
+      tags: data.tags,
       amount: data.amount,
       frequency: data.frequency,
       type: data.type,
@@ -61,7 +61,7 @@ async function handleSubmit(data: {
       updatedAt: nowISO(),
     })
 
-    await touchCategory(data.category)
+    await touchTags(data.tags)
     showToast('Expense saved')
     router.push({ name: 'workspace-expenses', params: { id: props.id } })
   } catch {

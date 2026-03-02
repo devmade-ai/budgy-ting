@@ -22,7 +22,7 @@ function makeId(suffix: string): string {
 function makeExpense(
   id: string,
   description: string,
-  category: string,
+  tags: string[],
   amount: number,
   frequency: Expense['frequency'],
   type: Expense['type'],
@@ -33,7 +33,7 @@ function makeExpense(
     id: makeId(id),
     workspaceId: DEMO_WORKSPACE_ID,
     description,
-    category,
+    tags,
     amount,
     frequency,
     type,
@@ -71,28 +71,28 @@ export async function seedDemoWorkspace(): Promise<boolean> {
 
   const expenses: Expense[] = [
     // Income
-    makeExpense('salary', 'Salary', 'Income', 25000, 'monthly', 'income', startDate),
-    makeExpense('freelance', 'Freelance Work', 'Income', 5000, 'monthly', 'income', startDate),
+    makeExpense('salary', 'Salary', ['Income', 'FNB Cheque'], 25000, 'monthly', 'income', startDate),
+    makeExpense('freelance', 'Freelance Work', ['Income', 'Capitec'], 5000, 'monthly', 'income', startDate),
 
     // Fixed expenses
-    makeExpense('rent', 'Rent', 'Housing', 12000, 'monthly', 'expense', startDate),
-    makeExpense('utilities', 'Electricity & Water', 'Housing', 1800, 'monthly', 'expense', startDate),
-    makeExpense('internet', 'Fibre Internet', 'Housing', 1000, 'monthly', 'expense', startDate),
-    makeExpense('insurance', 'Car Insurance', 'Insurance', 2500, 'monthly', 'expense', startDate),
-    makeExpense('medical', 'Medical Aid', 'Medical', 3500, 'monthly', 'expense', startDate),
+    makeExpense('rent', 'Rent', ['Housing'], 12000, 'monthly', 'expense', startDate),
+    makeExpense('utilities', 'Electricity & Water', ['Housing'], 1800, 'monthly', 'expense', startDate),
+    makeExpense('internet', 'Fibre Internet', ['Housing'], 1000, 'monthly', 'expense', startDate),
+    makeExpense('insurance', 'Car Insurance', ['Insurance'], 2500, 'monthly', 'expense', startDate),
+    makeExpense('medical', 'Medical Aid', ['Medical'], 3500, 'monthly', 'expense', startDate),
 
     // Variable expenses
-    makeExpense('groceries', 'Groceries', 'Food', 4500, 'monthly', 'expense', startDate),
-    makeExpense('eating-out', 'Eating Out', 'Food', 2000, 'monthly', 'expense', startDate),
-    makeExpense('transport', 'Fuel & Transport', 'Transport', 2500, 'monthly', 'expense', startDate),
-    makeExpense('gym', 'Gym Membership', 'Health', 699, 'monthly', 'expense', startDate),
-    makeExpense('netflix', 'Netflix', 'Entertainment', 199, 'monthly', 'expense', startDate),
-    makeExpense('spotify', 'Spotify', 'Entertainment', 80, 'monthly', 'expense', startDate),
+    makeExpense('groceries', 'Groceries', ['Food'], 4500, 'monthly', 'expense', startDate),
+    makeExpense('eating-out', 'Eating Out', ['Food', 'Discretionary'], 2000, 'monthly', 'expense', startDate),
+    makeExpense('transport', 'Fuel & Transport', ['Transport'], 2500, 'monthly', 'expense', startDate),
+    makeExpense('gym', 'Gym Membership', ['Health'], 699, 'monthly', 'expense', startDate),
+    makeExpense('netflix', 'Netflix', ['Entertainment'], 199, 'monthly', 'expense', startDate),
+    makeExpense('spotify', 'Spotify', ['Entertainment'], 80, 'monthly', 'expense', startDate),
 
     // Less frequent expenses
-    makeExpense('clothing', 'Clothing', 'Shopping', 1500, 'quarterly', 'expense', startDate),
-    makeExpense('car-service', 'Car Service', 'Transport', 3000, 'annually', 'expense', startDate),
-    makeExpense('vet', 'Vet Checkup', 'Pets', 800, 'annually', 'expense', startDate),
+    makeExpense('clothing', 'Clothing', ['Shopping', 'Discretionary'], 1500, 'quarterly', 'expense', startDate),
+    makeExpense('car-service', 'Car Service', ['Transport'], 3000, 'annually', 'expense', startDate),
+    makeExpense('vet', 'Vet Checkup', ['Pets'], 800, 'annually', 'expense', startDate),
   ]
 
   try {
