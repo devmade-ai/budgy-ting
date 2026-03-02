@@ -10,7 +10,7 @@
  *   - In-memory cache: Rejected — tagCache table handles persistence across sessions
  */
 
-import { ref, watch } from 'vue'
+import { ref, watch, onUnmounted } from 'vue'
 import { db } from '@/db'
 import { nowISO } from '@/composables/useTimestamp'
 
@@ -77,6 +77,10 @@ export function useTagAutocomplete() {
         isOpen.value = false
       }
     }, 80)
+  })
+
+  onUnmounted(() => {
+    if (debounceTimer) clearTimeout(debounceTimer)
   })
 
   function select(tag: string) {

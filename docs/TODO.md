@@ -21,3 +21,5 @@
 
 - [ ] Remove debug system (DebugPill + debugLog) after alpha phase
 - [ ] Update PRODUCT_DEFINITION.md data model to reflect workspace rename, v5 schema, and tags migration
+- [ ] Update PRODUCT_DEFINITION.md tech stack — remove Fuse.js and ApexCharts (not in project), add marked
+- [ ] Fix broken CLAUDE.md reference to docs/EXTRACTION_PLAYBOOK.md (file does not exist) — either create the tag list or remove the reference

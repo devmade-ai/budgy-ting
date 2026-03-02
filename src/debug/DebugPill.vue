@@ -31,6 +31,7 @@ const copyFeedback = ref(false)
 
 // Subscribe to new entries
 let unsubscribe: (() => void) | null = null
+let copyFeedbackTimer: ReturnType<typeof setTimeout> | null = null
 
 onMounted(() => {
   entries.value = [...getEntries()]
@@ -41,6 +42,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   unsubscribe?.()
+  if (copyFeedbackTimer) clearTimeout(copyFeedbackTimer)
 })
 
 // Auto-scroll log to bottom when new entries arrive or when log tab is shown
@@ -120,7 +122,8 @@ async function copyReport() {
   }
 
   copyFeedback.value = true
-  setTimeout(() => {
+  if (copyFeedbackTimer) clearTimeout(copyFeedbackTimer)
+  copyFeedbackTimer = setTimeout(() => {
     copyFeedback.value = false
   }, 1500)
 }

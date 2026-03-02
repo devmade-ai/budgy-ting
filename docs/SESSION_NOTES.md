@@ -4,33 +4,24 @@
 
 ## Worked on
 
-Replaced persisted `startingBalance` concept with ephemeral "cash on hand" input on the Forecast tab. Removed the Cashflow tab entirely.
+Code review audit — identified and fixed bugs, timer leaks, performance issues, and quality debt across the codebase.
 
 ## Accomplished
 
-- **Removed `startingBalance`** from Workspace type, WorkspaceForm, create/edit views, demo data
-- **Removed Cashflow tab** — deleted CashflowTab.vue, removed from router and tab navigation
-- **Added ephemeral cash input** to ProjectedTab — "Cash on hand" field that calculates how long cash lasts based on the forecast (not stored)
-- **Removed envelope summary** from CompareTab — no longer depends on stored balance
-- **Deleted cashflow and envelope engines** and their tests (no longer needed)
-- **Updated export/import** — strips `startingBalance` and `totalBudget` from imported workspaces for backward compat
-- **Updated all documentation** — USER_GUIDE, TESTING_GUIDE, SESSION_NOTES, HISTORY, README
-- **All 76 tests pass, build succeeds, type-check clean**
+- **Fixed prop mutation bug** in ImportStepReview.vue — now emits events to parent instead of mutating props directly
+- **Fixed 4 timer leaks** — added `onUnmounted` cleanup to ExpenseForm (blur timeout), HelpDrawer (close animation), DebugPill (copy feedback), useTagAutocomplete (debounce timer)
+- **Fixed O(n²) performance** in variance.ts — replaced `expenses.find()` inside loop with pre-built Map lookup
+- **Added error boundary** to ProjectedTab computed — wraps `calculateProjection` in try-catch
+- **Updated TODO.md** — added broken EXTRACTION_PLAYBOOK.md reference and stale PRODUCT_DEFINITION.md tech stack items
 
 ## Current state
 
-DB schema still v5 (no migration needed — `startingBalance` just becomes an unused field on old records). All features working. Build passes. 76 unit tests across 5 files.
-
-Working features:
-- All previous features intact minus balance/cashflow
-- Cash on hand input on Forecast tab (ephemeral, not stored)
-- 3 tabs: Expenses, Forecast, Compare
-- Export/import backward compatible with old files containing startingBalance
+All features working. 76 tests pass, build succeeds, type-check clean. No regressions.
 
 ## Key context
 
-- `startingBalance` removed from Workspace type — old DB records may still have it but it's ignored
-- Cash runway calculation is inline in ProjectedTab (computed, walks month-by-month through projection)
-- Cashflow engine (`engine/cashflow.ts`) and envelope engine (`engine/envelope.ts`) deleted
-- Export/import strips legacy `startingBalance` and `totalBudget` fields on import
-- Tab count reduced from 4 to 3 (Expenses, Forecast, Compare)
+- ImportStepReview now emits `toggle-approval`, `reassign-expense`, `approve-all` events — parent (ImportWizardView) handles mutations
+- All setTimeout/setInterval calls in components now have corresponding `onUnmounted` cleanup per CLAUDE.md rules
+- variance.ts uses `expenseById` Map for O(1) lookups instead of repeated `expenses.find()`
+- docs/EXTRACTION_PLAYBOOK.md does not exist but is referenced in CLAUDE.md commit message format — tracked in TODO
+- PRODUCT_DEFINITION.md lists Fuse.js and ApexCharts which are not in the project — tracked in TODO

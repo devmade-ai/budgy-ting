@@ -170,6 +170,37 @@ async function saveCategoryMappings(results: MatchResult[]) {
   }
 }
 
+// ── Match review mutation handlers (owned here, emitted from ImportStepReview) ──
+
+function handleToggleApproval(index: number) {
+  const result = matchResults.value[index]
+  if (!result) return
+  result.approved = !result.approved
+}
+
+function handleReassignExpense(index: number, expenseId: string | null) {
+  const result = matchResults.value[index]
+  if (!result) return
+
+  if (expenseId) {
+    result.matchedExpense = expenses.value.find((e) => e.id === expenseId) ?? null
+    result.confidence = 'manual'
+    result.approved = true
+  } else {
+    result.matchedExpense = null
+    result.confidence = 'unmatched'
+    result.approved = true
+  }
+}
+
+function handleApproveAll(confidence: string) {
+  for (const result of matchResults.value) {
+    if (result.confidence === confidence) {
+      result.approved = true
+    }
+  }
+}
+
 /**
  * Requirement: Create a new income/expense line from the import review screen
  * Approach: Save to DB, push to local expenses array, update match result to point to new expense
@@ -300,6 +331,9 @@ function finish() {
         :saving="saving"
         @confirm="handleConfirmImport"
         @create-expense="handleCreateExpense"
+        @toggle-approval="handleToggleApproval"
+        @reassign-expense="handleReassignExpense"
+        @approve-all="handleApproveAll"
         @back="step = 2"
       />
 
