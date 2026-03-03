@@ -75,7 +75,7 @@ Expenses are the individual line items in your workspace — the things you plan
 3. Fill in the form:
    - **Type** — Choose **Expense** (money going out) or **Income** (money coming in)
    - **Description** — What the item is (e.g. "Venue hire", "Monthly hosting")
-   - **Category** — Group label (e.g. "Venue", "Marketing", "Software"). As you type, suggestions appear from categories you've used before
+   - **Tags** — Labels for grouping (e.g. "Housing", "Food", "Transport"). Type a tag and press Enter or comma to add it. Suggestions appear from tags you've used before. You can add multiple tags per item
    - **Amount** — The cost per occurrence (always a positive number)
    - **How often?** — How frequently this item repeats:
      - **Once-off** — Happens only once
@@ -102,7 +102,7 @@ Expenses are the individual line items in your workspace — the things you plan
 
 ### Understanding the Expenses List
 
-- Items are grouped by **category** (alphabetically)
+- Items are grouped by **primary tag** (first tag, alphabetically)
 - Each item shows its description, amount, and frequency (e.g. "R500/month")
 - Income items are tagged with a green **income** badge
 - The header bar shows:

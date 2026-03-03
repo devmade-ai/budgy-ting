@@ -103,7 +103,7 @@ Epic: feature-name
 Semver: patch|minor|major
 ```
 
-**Tags:** Use from the project's tag list (see docs/EXTRACTION_PLAYBOOK.md)
+**Tags:** Use descriptive tags for the change area (e.g. projection, import, pwa, db, ux, a11y, docs, test, cleanup)
 **Complexity:** 1=trivial, 2=small, 3=medium, 4=large, 5=major rewrite
 **Urgency:** 1=planned, 2=normal, 3=elevated, 4=urgent, 5=critical
 **Impact:** internal, user-facing, infrastructure, or api
