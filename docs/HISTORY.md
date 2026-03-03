@@ -2,6 +2,44 @@
 
 <!-- Changelog and record of completed work. Organized by date. -->
 
+## 2026-03-03
+
+- **Documentation Audit — Full Codebase Review:**
+
+  **README.md:**
+  - Rewrote project structure to reflect actual codebase: all 16 components, 10 composables, debug/ directory, compare-views/ and import-steps/ subdirectories, correct schema version (v5), accurate file descriptions
+
+  **PRODUCT_DEFINITION.md:**
+  - Full rewrite — all terminology updated from "budget" to "workspace"
+  - Tech stack corrected: removed ApexCharts, Fuse.js, date-fns, Papa Parse (none in project); added marked
+  - Stack justification updated: custom Levenshtein matching, CSS bar charts, native Date helpers
+  - Data model updated: category→tags, budgetId→workspaceId, CategoryCache→TagCache, schema v5 with migration history
+  - All 6 user flows rewritten to match current implementation
+  - Task breakdown phases marked as complete with accurate feature descriptions
+  - Risks/mitigations and third-party dependencies corrected
+
+  **CLAUDE.md:**
+  - Removed broken reference to non-existent `docs/EXTRACTION_PLAYBOOK.md`
+  - Replaced with inline tag list
+
+  **USER_GUIDE.md:**
+  - Fixed "Category" field → "Tags" with multi-tag instructions
+  - Fixed "grouped by category" → "grouped by primary tag"
+
+  **HISTORY.md:**
+  - Removed stale "Starting balance of R45,000" reference
+
+  **Code Comments:**
+  - Fixed ExpensesTab.vue decision doc: "category"/"budget" → "primary tag"/"workspace"
+
+  **AI_MISTAKES.md:**
+  - Populated with 6 significant past bugs and prevention strategies
+
+  **Completed TODO items moved here:**
+  - Fix broken CLAUDE.md reference to docs/EXTRACTION_PLAYBOOK.md
+  - Update PRODUCT_DEFINITION.md data model to reflect workspace rename, v5 schema, and tags migration
+  - Update PRODUCT_DEFINITION.md tech stack — remove Fuse.js and ApexCharts, add marked
+
 ## 2026-03-02
 
 - **Code Review Audit — Bug Fixes and Quality Improvements:**
@@ -105,7 +143,7 @@
   **Demo Workspace:**
   - New `src/db/demoData.ts` — seeds "Demo Household" workspace on first visit (empty DB)
   - 16 realistic SA Rand-denominated items: salary (R25k), freelance (R5k), rent (R12k), groceries (R4.5k), etc.
-  - Starting balance of R45,000, monthly period type
+  - Monthly period type
   - Non-blocking `seedDemoWorkspace()` call in main.ts
   - Uses `isDemo: true` flag and deterministic ID (`demo-household`)
 

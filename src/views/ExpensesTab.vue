@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
- * Requirement: Expense list grouped by category with edit/delete per item
- * Approach: Load expenses for budget, group by category, display with actions
+ * Requirement: Expense list grouped by primary tag with edit/delete per item
+ * Approach: Load expenses for workspace, group by primaryTag(), display with actions
  */
 
 import { ref, computed, onMounted } from 'vue'
