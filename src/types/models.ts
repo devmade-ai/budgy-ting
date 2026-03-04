@@ -154,8 +154,10 @@ export function isExpense(amount: number): boolean {
 // that haven't been migrated to the new Transaction model yet.
 // They will be removed once the UI is fully migrated (Phase 4).
 
+/** @deprecated Use Transaction with signed amounts instead. Remove in Phase 4. */
 export type LineType = 'income' | 'expense'
 
+/** @deprecated Use Transaction model instead. Remove in Phase 4. */
 export interface Expense {
   id: string
   workspaceId: string
@@ -170,6 +172,7 @@ export interface Expense {
   updatedAt: string
 }
 
+/** @deprecated Use Transaction model instead. Remove in Phase 4. */
 export interface Actual {
   id: string
   workspaceId: string
@@ -185,6 +188,7 @@ export interface Actual {
   updatedAt: string
 }
 
+/** @deprecated Use tags on Transaction instead. Remove in Phase 4. */
 export interface CategoryMapping {
   id: string
   workspaceId: string

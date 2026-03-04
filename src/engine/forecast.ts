@@ -18,6 +18,7 @@
 import { standardDeviation, mean, quantileSorted } from 'simple-statistics'
 import type { Transaction, RecurringPattern } from '@/types/models'
 import { projectPattern } from './patterns'
+import { formatDate } from './dateUtils'
 
 // ── Legacy compatibility types and stubs ──
 // Kept for backward compat with CashflowChart.vue and ProjectedTab.vue.
@@ -371,7 +372,7 @@ export function buildForecast(
   let dayIndex = 0
 
   while (cursor <= endD) {
-    const dateStr = fmtDate(cursor)
+    const dateStr = formatDate(cursor)
     dayIndex++
 
     const recurring = recurringDaily.get(dateStr) ?? 0
@@ -426,10 +427,3 @@ export function buildForecast(
   }
 }
 
-/** Format a Date object to ISO date string (YYYY-MM-DD) */
-function fmtDate(d: Date): string {
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
-}

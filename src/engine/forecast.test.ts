@@ -6,6 +6,7 @@ import {
   runHolt,
   calculateDayOfWeekFactors,
   calculatePredictionBands,
+  bootstrapPredictionBands,
   buildForecast,
 } from './forecast'
 import type { Transaction, RecurringPattern } from '@/types/models'
@@ -192,6 +193,32 @@ describe('calculatePredictionBands', () => {
   })
 })
 
+describe('bootstrapPredictionBands', () => {
+  it('falls back to parametric with fewer than 5 errors', () => {
+    const band = bootstrapPredictionBands([5, -5, 3], 100, 1)
+    expect(band.point).toBe(100)
+    expect(band.lower).toBeLessThanOrEqual(band.point)
+    expect(band.upper).toBeGreaterThanOrEqual(band.point)
+  })
+
+  it('returns lower <= point <= upper with sufficient errors', () => {
+    const errors = [5, -3, 7, -2, 4, -6, 3, -1, 5, -4]
+    const band = bootstrapPredictionBands(errors, 100, 5, 500)
+    expect(band.point).toBe(100)
+    expect(band.lower).toBeLessThanOrEqual(band.point)
+    expect(band.upper).toBeGreaterThanOrEqual(band.point)
+  })
+
+  it('widens band with more steps ahead', () => {
+    const errors = [5, -3, 7, -2, 4, -6, 3, -1, 5, -4]
+    const band1 = bootstrapPredictionBands(errors, 100, 1, 500)
+    const band10 = bootstrapPredictionBands(errors, 100, 10, 500)
+    const width1 = band1.upper - band1.lower
+    const width10 = band10.upper - band10.lower
+    expect(width10).toBeGreaterThan(width1)
+  })
+})
+
 describe('buildForecast', () => {
   it('returns empty forecast for no data', () => {
     const result = buildForecast([], [], '2026-03-01', '2026-03-07')
@@ -254,7 +281,7 @@ describe('buildForecast', () => {
       txns.push(makeTxn({
         id: `t-${i}`,
         date: `2026-02-${String(i).padStart(2, '0')}`,
-        amount: -(50 + Math.random() * 20),
+        amount: -(50 + (i % 5) * 4),  // deterministic variation: -50, -54, -58, -62, -66
       }))
     }
 

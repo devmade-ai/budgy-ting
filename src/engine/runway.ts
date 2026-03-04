@@ -22,8 +22,8 @@ export interface RunwayResult {
   endBalance: number
   /** Lowest predicted balance during forecast */
   minimumBalance: number
-  /** When the lowest point occurs */
-  minimumBalanceDate: string
+  /** When the lowest point occurs (null when no forecast points) */
+  minimumBalanceDate: string | null
   /** Daily balance progression (for graphing the runway) */
   dailyBalance: Array<{ date: string; balance: number }>
 }
@@ -44,7 +44,7 @@ export function calculateRunway(
       depletionDate: null,
       endBalance: cashOnHand,
       minimumBalance: cashOnHand,
-      minimumBalanceDate: '',
+      minimumBalanceDate: null,
       dailyBalance: [],
     }
   }

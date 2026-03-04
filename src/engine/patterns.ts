@@ -13,6 +13,7 @@
 
 import { median, standardDeviation, mean } from 'simple-statistics'
 import type { Transaction, Frequency, RecurringPattern } from '@/types/models'
+import { formatDate } from './dateUtils'
 
 /** Coefficient of variation threshold above which a recurring item is "variable" */
 const VARIABLE_CV_THRESHOLD = 0.3
@@ -101,6 +102,9 @@ export function detectAnchorDay(
 ): number {
   if (dates.length === 0) return 1
 
+  // Daily and once-off have no meaningful anchor day
+  if (frequency === 'daily' || frequency === 'once-off') return 0
+
   if (frequency === 'weekly' || frequency === 'biweekly') {
     // Day of week — mode
     const dows = dates.map((d) => new Date(d + 'T00:00:00').getDay())
@@ -160,9 +164,9 @@ export function detectPattern(
   // Amount analysis (use absolute values for stddev, keep sign for expected)
   const amounts = sorted.map((t) => t.amount)
   const absAmounts = amounts.map(Math.abs)
-  const expectedAmount = amounts.length > 0
-    ? amounts[Math.floor(amounts.length / 2)]! // median, preserving sign
-    : 0
+  // Use proper sorted median — amounts array from date-sorted transactions is NOT amount-sorted
+  const sortedAmounts = [...amounts].sort((a, b) => a - b)
+  const expectedAmount = median(sortedAmounts)
   const amountStdDev = absAmounts.length >= 2 ? standardDeviation(absAmounts) : 0
   const meanAbs = absAmounts.length > 0 ? mean(absAmounts) : 0
   const cv = meanAbs > 0 ? amountStdDev / meanAbs : 0
@@ -257,6 +261,10 @@ export function projectPattern(
   const end = new Date(endDate + 'T00:00:00')
 
   switch (pattern.frequency) {
+    case 'once-off':
+      // Once-off patterns don't recur — return empty
+      return points
+
     case 'daily': {
       const cursor = new Date(start)
       while (cursor <= end) {
@@ -386,10 +394,3 @@ export function projectPattern(
   return points
 }
 
-/** Format a Date object to ISO date string (YYYY-MM-DD) */
-function formatDate(d: Date): string {
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
-}
