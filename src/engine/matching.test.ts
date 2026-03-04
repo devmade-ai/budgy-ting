@@ -1,131 +1,10 @@
 import { describe, it, expect } from 'vitest'
 import {
-  matchImportedRows,
   detectDateFormat,
   parseDate,
   parseAmount,
+  isDuplicate,
 } from './matching'
-import type { Expense } from '@/types/models'
-import type { ImportedRow } from './matching'
-
-function makeExpense(overrides: Partial<Expense> = {}): Expense {
-  return {
-    id: 'exp-1',
-    workspaceId: 'b-1',
-    description: 'Monthly groceries',
-    tags: ['Food'],
-    amount: 500,
-    frequency: 'monthly',
-    type: 'expense',
-    startDate: '2026-01-01',
-    endDate: null,
-    createdAt: '2026-01-01T00:00:00Z',
-    updatedAt: '2026-01-01T00:00:00Z',
-    ...overrides,
-  }
-}
-
-function makeRow(overrides: Partial<ImportedRow> = {}): ImportedRow {
-  return {
-    date: '2026-01-15',
-    amount: 500,
-    tags: ['Food'],
-    description: 'Monthly groceries',
-    originalRow: {},
-    ...overrides,
-  }
-}
-
-describe('matchImportedRows', () => {
-  it('matches exact category + amount as high confidence', () => {
-    const expenses = [makeExpense()]
-    const rows = [makeRow()]
-
-    const results = matchImportedRows(rows, expenses)
-    expect(results).toHaveLength(1)
-    expect(results[0]!.confidence).toBe('high')
-    expect(results[0]!.approved).toBe(true)
-    expect(results[0]!.matchedExpense?.id).toBe('exp-1')
-  })
-
-  it('marks unmatched rows as unmatched', () => {
-    const expenses = [makeExpense()]
-    const rows = [makeRow({ amount: 999, tags: ['Transport'] })]
-
-    const results = matchImportedRows(rows, expenses)
-    expect(results).toHaveLength(1)
-    expect(results[0]!.confidence).toBe('unmatched')
-    expect(results[0]!.matchedExpense).toBeNull()
-  })
-
-  it('matches amount-only within same month as low confidence', () => {
-    const expenses = [makeExpense()]
-    const rows = [makeRow({ tags: ['Different'], description: 'Something else' })]
-
-    const results = matchImportedRows(rows, expenses)
-    expect(results).toHaveLength(1)
-    // Should match on amount within same month range
-    expect(results[0]!.confidence).toBe('low')
-    expect(results[0]!.approved).toBe(false)
-  })
-
-  it('does not auto-approve medium confidence matches', () => {
-    const expenses = [makeExpense()]
-    const rows = [makeRow({ tags: ['Foods'], description: 'Monthly grocery' })]
-
-    const results = matchImportedRows(rows, expenses)
-    expect(results).toHaveLength(1)
-    // Should be medium (fuzzy match) — not auto-approved
-    if (results[0]!.confidence === 'medium') {
-      expect(results[0]!.approved).toBe(false)
-    }
-  })
-
-  it('handles multiple rows matching different expenses', () => {
-    const expenses = [
-      makeExpense({ id: 'e1', tags: ['Food'], amount: 500 }),
-      makeExpense({ id: 'e2', tags: ['Transport'], amount: 200 }),
-    ]
-    const rows = [
-      makeRow({ tags: ['Food'], amount: 500 }),
-      makeRow({ tags: ['Transport'], amount: 200 }),
-    ]
-
-    const results = matchImportedRows(rows, expenses)
-    expect(results).toHaveLength(2)
-    expect(results.filter((r) => r.confidence === 'high')).toHaveLength(2)
-  })
-
-  it('prefers type-compatible match when originalSign is provided', () => {
-    const expenses = [
-      makeExpense({ id: 'e1', tags: ['Salary'], amount: 5000, type: 'income' }),
-      makeExpense({ id: 'e2', tags: ['Salary'], amount: 5000, type: 'expense' }),
-    ]
-    // Row with negative sign (credit) should prefer income expense
-    const rows = [
-      makeRow({ tags: ['Salary'], amount: 5000, originalSign: 'negative' as const }),
-    ]
-
-    const results = matchImportedRows(rows, expenses)
-    expect(results).toHaveLength(1)
-    expect(results[0]!.matchedExpense?.id).toBe('e1') // income match
-    expect(results[0]!.confidence).toBe('high')
-  })
-
-  it('falls back to any type when no type-compatible match exists', () => {
-    const expenses = [
-      makeExpense({ id: 'e1', tags: ['Salary'], amount: 5000, type: 'expense' }),
-    ]
-    // Row with negative sign but only expense-type lines exist
-    const rows = [
-      makeRow({ tags: ['Salary'], amount: 5000, originalSign: 'negative' as const }),
-    ]
-
-    const results = matchImportedRows(rows, expenses)
-    expect(results).toHaveLength(1)
-    expect(results[0]!.matchedExpense?.id).toBe('e1') // still matches
-  })
-})
 
 describe('detectDateFormat', () => {
   it('detects YYYY-MM-DD format', () => {
@@ -187,5 +66,74 @@ describe('parseAmount', () => {
   it('returns null for empty or invalid', () => {
     expect(parseAmount('')).toBeNull()
     expect(parseAmount('abc')).toBeNull()
+  })
+})
+
+describe('isDuplicate', () => {
+  it('detects exact duplicate', () => {
+    const row = { date: '2026-01-15', amount: 500, description: 'Groceries' }
+    const existing = [{ date: '2026-01-15', amount: 500, description: 'Groceries' }]
+    expect(isDuplicate(row, existing)).toBe(true)
+  })
+
+  it('is case-insensitive on description', () => {
+    const row = { date: '2026-01-15', amount: 500, description: 'GROCERIES' }
+    const existing = [{ date: '2026-01-15', amount: 500, description: 'groceries' }]
+    expect(isDuplicate(row, existing)).toBe(true)
+  })
+
+  it('returns false for different amount', () => {
+    const row = { date: '2026-01-15', amount: 500, description: 'Groceries' }
+    const existing = [{ date: '2026-01-15', amount: 600, description: 'Groceries' }]
+    expect(isDuplicate(row, existing)).toBe(false)
+  })
+
+  it('returns false for different date', () => {
+    const row = { date: '2026-01-15', amount: 500, description: 'Groceries' }
+    const existing = [{ date: '2026-01-16', amount: 500, description: 'Groceries' }]
+    expect(isDuplicate(row, existing)).toBe(false)
+  })
+
+  it('tolerates small rounding differences (within 0.5%)', () => {
+    const row = { date: '2026-01-15', amount: 1000, description: 'Rent' }
+    const existing = [{ date: '2026-01-15', amount: 1004, description: 'Rent' }]
+    expect(isDuplicate(row, existing)).toBe(true) // 4 < 1000 * 0.005 = 5
+  })
+
+  it('rejects amounts beyond tolerance', () => {
+    const row = { date: '2026-01-15', amount: 1000, description: 'Rent' }
+    const existing = [{ date: '2026-01-15', amount: 1010, description: 'Rent' }]
+    expect(isDuplicate(row, existing)).toBe(false) // 10 > 1000 * 0.005 = 5
+  })
+})
+
+describe('detectDateFormat disambiguation', () => {
+  it('detects DD/MM when first segment > 12', () => {
+    const fmt = detectDateFormat(['15/01/2026', '20/02/2026', '28/03/2026'])
+    expect(fmt?.label).toBe('DD/MM/YYYY')
+  })
+
+  it('detects MM/DD when second segment > 12', () => {
+    const fmt = detectDateFormat(['01/15/2026', '02/20/2026', '03/28/2026'])
+    expect(fmt?.label).toBe('MM/DD/YYYY')
+  })
+
+  it('defaults to DD/MM when ambiguous (all values <= 12)', () => {
+    const fmt = detectDateFormat(['01/02/2026', '03/04/2026', '05/06/2026'])
+    expect(fmt?.label).toBe('DD/MM/YYYY')
+  })
+})
+
+describe('parseAmount expanded currencies', () => {
+  it('strips Korean won symbol', () => {
+    expect(parseAmount('₩50000')).toBe(50000)
+  })
+
+  it('strips Thai baht symbol', () => {
+    expect(parseAmount('฿1500')).toBe(1500)
+  })
+
+  it('strips letter-based currency codes', () => {
+    expect(parseAmount('CHF 100.50')).toBe(100.5)
   })
 })

@@ -14,7 +14,6 @@ const emit = defineEmits<{
     parsedData: ParsedCSV
     dateColumn: string
     amountColumn: string
-    categoryColumn: string
     descriptionColumn: string
     dateFormatIndex: number
   }]
@@ -22,11 +21,12 @@ const emit = defineEmits<{
 
 const parsedData = ref<ParsedCSV | null>(null)
 const fileError = ref('')
+const selectedFile = ref<{ name: string; size: string } | null>(null)
+const parsing = ref(false)
 
 // Column auto-detection results
 const dateColumn = ref('')
 const amountColumn = ref('')
-const categoryColumn = ref('')
 const descriptionColumn = ref('')
 const dateFormatIndex = ref(0)
 
@@ -37,14 +37,23 @@ function handleFileSelect(event: Event) {
 
   fileError.value = ''
 
+  // Show file info immediately before parsing
+  const sizeKB = (file.size / 1024).toFixed(1)
+  const sizeLabel = file.size > 1024 * 1024
+    ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
+    : `${sizeKB} KB`
+  selectedFile.value = { name: file.name, size: sizeLabel }
+
   // 10MB cap per product definition security considerations
   if (file.size > 10 * 1024 * 1024) {
     fileError.value = 'File is too large (max 10 MB)'
     return
   }
 
+  parsing.value = true
   const reader = new FileReader()
   reader.onload = (e) => {
+    parsing.value = false
     const content = e.target?.result as string
     if (!content) {
       fileError.value = 'Could not read file'
@@ -63,6 +72,7 @@ function handleFileSelect(event: Event) {
     autoDetectColumns()
   }
   reader.onerror = () => {
+    parsing.value = false
     fileError.value = 'Failed to read file'
   }
   reader.readAsText(file)
@@ -79,10 +89,6 @@ function autoDetectColumns() {
   const amountHints = ['amount', 'debit', 'value', 'total']
   const amountIdx = headers.findIndex((h) => amountHints.some((hint) => h.includes(hint)))
   if (amountIdx >= 0) amountColumn.value = parsedData.value.headers[amountIdx]!
-
-  const catHints = ['category', 'type', 'group']
-  const catIdx = headers.findIndex((h) => catHints.some((hint) => h.includes(hint)))
-  if (catIdx >= 0) categoryColumn.value = parsedData.value.headers[catIdx]!
 
   const descHints = ['description', 'desc', 'memo', 'reference', 'narrative', 'details']
   const descIdx = headers.findIndex((h) => descHints.some((hint) => h.includes(hint)))
@@ -106,7 +112,6 @@ function handleContinue() {
     parsedData: parsedData.value,
     dateColumn: dateColumn.value,
     amountColumn: amountColumn.value,
-    categoryColumn: categoryColumn.value,
     descriptionColumn: descriptionColumn.value,
     dateFormatIndex: dateFormatIndex.value,
   })
@@ -133,6 +138,16 @@ function handleContinue() {
         @change="handleFileSelect"
       />
     </label>
+
+    <!-- File info — shown immediately after selection, before parsing completes -->
+    <div v-if="selectedFile && !parsedData" class="mt-4 flex items-center gap-3 text-sm text-gray-600">
+      <span class="i-lucide-file text-lg text-gray-400" />
+      <div>
+        <p class="font-medium">{{ selectedFile.name }}</p>
+        <p class="text-xs text-gray-400">{{ selectedFile.size }}</p>
+      </div>
+      <span v-if="parsing" class="text-xs text-gray-400 ml-auto">Parsing...</span>
+    </div>
 
     <p v-if="fileError" class="text-sm text-red-500 mt-3">{{ fileError }}</p>
 
@@ -177,8 +192,27 @@ function handleContinue() {
         </p>
       </div>
 
+      <!-- Date format override — lets user correct auto-detection if needed
+           Requirement: User must be able to fix DD/MM vs MM/DD ambiguity
+           Approach: Dropdown showing detected format with option to change -->
+      <div class="mt-4 flex items-center gap-3">
+        <label class="text-sm text-gray-600">Date format:</label>
+        <select
+          v-model.number="dateFormatIndex"
+          class="input text-sm w-auto min-h-[44px]"
+        >
+          <option
+            v-for="(fmt, i) in DATE_FORMATS"
+            :key="i"
+            :value="i"
+          >
+            {{ fmt.label }}
+          </option>
+        </select>
+      </div>
+
       <button class="btn-primary mt-4" @click="handleContinue">
-        Continue to mapping
+        Continue to classify
       </button>
     </template>
   </div>

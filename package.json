@@ -13,10 +13,13 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "apexcharts": "^5.10.0",
     "dexie": "^4.0.11",
     "marked": "^17.0.3",
+    "simple-statistics": "^7.8.8",
     "vue": "^3.5.13",
-    "vue-router": "^4.5.0"
+    "vue-router": "^4.5.0",
+    "vue3-apexcharts": "^1.11.1"
   },
   "devDependencies": {
     "@iconify-json/lucide": "^1.2.26",

@@ -2,46 +2,22 @@
  * Export/import engine for workspace data backup and restore.
  *
  * Requirement: JSON export that can be re-imported to restore a workspace
- * Approach: Schema-versioned JSON with all workspace data, comparison snapshot included
+ * Approach: Schema-versioned JSON with all workspace data (transactions, patterns, importBatches)
  * Alternatives:
  *   - Binary format: Rejected — not human-readable, harder to debug
  *   - CSV export: Rejected — loses relational structure
  */
 
 import { db } from '@/db'
-import { calculateProjection, resolveWorkspacePeriod } from './projection'
-import { calculateComparison } from './variance'
-import type { Workspace, Expense, Actual } from '@/types/models'
+import type { Workspace, Transaction, RecurringPattern, ImportBatch } from '@/types/models'
 
 export interface ExportSchema {
-  version: 2
+  version: 3
   exportedAt: string
-  /** Workspace data. Named 'workspace' in new exports, 'budget' in old exports (backward compat). */
   workspace: Workspace
-  expenses: Expense[]
-  actuals: Actual[]
-  comparison: {
-    lineItems: Array<{
-      description: string
-      category: string
-      tags: string[]
-      budgeted: number
-      actual: number
-      variance: number
-    }>
-    categories: Array<{
-      category: string
-      budgeted: number
-      actual: number
-      variance: number
-    }>
-    monthly: Array<{
-      month: string
-      projected: number
-      actual: number
-      variance: number
-    }>
-  } | null
+  transactions: Transaction[]
+  patterns: RecurringPattern[]
+  importBatches: ImportBatch[]
 }
 
 /**
@@ -51,50 +27,19 @@ export async function exportWorkspace(workspaceId: string): Promise<ExportSchema
   const workspace = await db.workspaces.get(workspaceId)
   if (!workspace) return null
 
-  const [expenses, actuals] = await Promise.all([
-    db.expenses.where('workspaceId').equals(workspaceId).toArray(),
-    db.actuals.where('workspaceId').equals(workspaceId).toArray(),
+  const [transactions, patterns, importBatches] = await Promise.all([
+    db.transactions.where('workspaceId').equals(workspaceId).toArray(),
+    db.patterns.where('workspaceId').equals(workspaceId).toArray(),
+    db.importBatches.where('workspaceId').equals(workspaceId).toArray(),
   ])
 
-  // Generate comparison snapshot if data exists
-  let comparison: ExportSchema['comparison'] = null
-
-  if (expenses.length > 0) {
-    const { startDate, endDate } = resolveWorkspacePeriod(workspace)
-    const projection = calculateProjection(expenses, startDate, endDate)
-    const comp = calculateComparison(projection, actuals, expenses)
-
-    comparison = {
-      lineItems: comp.lineItems.map((li) => ({
-        description: li.description,
-        category: li.category,
-        tags: li.tags,
-        budgeted: li.budgeted,
-        actual: li.actual,
-        variance: li.variance,
-      })),
-      categories: comp.categories.map((c) => ({
-        category: c.category,
-        budgeted: c.budgeted,
-        actual: c.actual,
-        variance: c.variance,
-      })),
-      monthly: comp.monthly.map((m) => ({
-        month: m.month,
-        projected: m.projected,
-        actual: m.actual,
-        variance: m.variance,
-      })),
-    }
-  }
-
   return {
-    version: 2,
+    version: 3,
     exportedAt: new Date().toISOString(),
     workspace,
-    expenses,
-    actuals,
-    comparison,
+    transactions,
+    patterns,
+    importBatches,
   }
 }
 
@@ -119,8 +64,6 @@ export function downloadJSON(data: ExportSchema, workspaceName: string): void {
 
 /**
  * Validate an imported JSON file matches the export schema.
- * Backward compat: accepts both 'workspace' and 'budget' keys,
- * and handles v1 exports with category (string) instead of tags (string[]).
  */
 export function validateImport(data: unknown): { valid: boolean; error?: string; data?: ExportSchema } {
   if (!data || typeof data !== 'object') {
@@ -129,22 +72,25 @@ export function validateImport(data: unknown): { valid: boolean; error?: string;
 
   const obj = data as Record<string, unknown>
 
-  if (obj['version'] !== 1 && obj['version'] !== 2) {
-    return { valid: false, error: `Unsupported format version: ${obj['version']}. This app supports versions 1 and 2.` }
+  if (obj['version'] !== 3) {
+    return { valid: false, error: `Unsupported format version: ${obj['version']}. This app requires version 3. Old backups from before the actuals-first update are not compatible.` }
   }
 
-  // Backward compat: accept both 'workspace' and 'budget' keys
-  const wsData = (obj['workspace'] ?? obj['budget']) as Record<string, unknown> | undefined
+  const wsData = obj['workspace'] as Record<string, unknown> | undefined
   if (!wsData || typeof wsData !== 'object') {
     return { valid: false, error: 'Missing workspace data in file' }
   }
 
-  if (!Array.isArray(obj['expenses'])) {
-    return { valid: false, error: 'Missing expenses data in file' }
+  if (!Array.isArray(obj['transactions'])) {
+    return { valid: false, error: 'Missing transactions data in file' }
   }
 
-  if (!Array.isArray(obj['actuals'])) {
-    return { valid: false, error: 'Missing actuals data in file' }
+  // Validate patterns and importBatches are arrays when present
+  if (obj['patterns'] !== undefined && !Array.isArray(obj['patterns'])) {
+    return { valid: false, error: 'Invalid patterns data in file (expected array)' }
+  }
+  if (obj['importBatches'] !== undefined && !Array.isArray(obj['importBatches'])) {
+    return { valid: false, error: 'Invalid import batches data in file (expected array)' }
   }
 
   if (!wsData['id'] || typeof wsData['id'] !== 'string') {
@@ -153,28 +99,50 @@ export function validateImport(data: unknown): { valid: boolean; error?: string;
   if (!wsData['name'] || typeof wsData['name'] !== 'string') {
     return { valid: false, error: 'Workspace data is incomplete (missing name)' }
   }
-  if (!wsData['periodType'] || !['monthly', 'custom'].includes(wsData['periodType'] as string)) {
-    return { valid: false, error: 'Workspace data is incomplete (missing or invalid periodType)' }
-  }
-  if (!wsData['startDate'] || typeof wsData['startDate'] !== 'string') {
-    return { valid: false, error: 'Workspace data is incomplete (missing startDate)' }
-  }
-  if (!wsData['createdAt'] || typeof wsData['createdAt'] !== 'string') {
-    return { valid: false, error: 'Workspace data is incomplete (missing createdAt)' }
-  }
 
-  // Validate expenses have required fields (accept both budgetId and workspaceId for backward compat)
-  const expenses = obj['expenses'] as Record<string, unknown>[]
-  for (let i = 0; i < Math.min(expenses.length, 5); i++) {
-    const exp = expenses[i]!
-    if (!exp['id'] || !(exp['workspaceId'] || exp['budgetId']) || !exp['description'] || typeof exp['amount'] !== 'number') {
-      return { valid: false, error: `Expense at index ${i} is missing required fields (id, workspaceId, description, amount)` }
+  // Requirement: Validate field types to catch corrupted/tampered import files
+  // Approach: Spot-check first transaction AND first pattern for required field types.
+  // Alternatives:
+  //   - Full Zod schema: Rejected — adds a dependency for a pre-release app
+  //   - Trust the data: Rejected — corrupted files could inject invalid data into IndexedDB
+  const txns = obj['transactions'] as Record<string, unknown>[]
+  if (txns.length > 0) {
+    const sample = txns[0]!
+    if (typeof sample['id'] !== 'string' || typeof sample['date'] !== 'string' || typeof sample['amount'] !== 'number') {
+      return { valid: false, error: 'Transaction data is malformed (missing id, date, or amount)' }
+    }
+    if (typeof sample['description'] !== 'string') {
+      return { valid: false, error: 'Transaction data is malformed (missing description)' }
+    }
+    if (!Array.isArray(sample['tags'])) {
+      return { valid: false, error: 'Transaction data is malformed (tags must be an array)' }
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(sample['date'] as string)) {
+      return { valid: false, error: 'Transaction date format is invalid (expected YYYY-MM-DD)' }
     }
   }
 
-  // Normalize: ensure 'workspace' key exists and version is 2 for downstream code
-  const normalized = { ...obj, workspace: wsData, version: 2 } as unknown as ExportSchema
-  return { valid: true, data: normalized }
+  // Validate patterns if present
+  const pats = obj['patterns'] as Record<string, unknown>[] | undefined
+  if (Array.isArray(pats) && pats.length > 0) {
+    const sample = pats[0]!
+    if (typeof sample['id'] !== 'string' || typeof sample['description'] !== 'string') {
+      return { valid: false, error: 'Pattern data is malformed (missing id or description)' }
+    }
+    if (typeof sample['expectedAmount'] !== 'number') {
+      return { valid: false, error: 'Pattern data is malformed (expectedAmount must be a number)' }
+    }
+    if (typeof sample['frequency'] !== 'string') {
+      return { valid: false, error: 'Pattern data is malformed (frequency must be a string)' }
+    }
+  }
+
+  // Validate workspace has required fields
+  if (typeof wsData['currencyLabel'] !== 'string') {
+    return { valid: false, error: 'Workspace data is incomplete (missing currencyLabel)' }
+  }
+
+  return { valid: true, data: obj as unknown as ExportSchema }
 }
 
 /**
@@ -193,67 +161,29 @@ export async function importWorkspace(
     return { imported: false, message: `Workspace "${existing.name}" already exists. Skipped.` }
   }
 
-  await db.transaction('rw', [db.workspaces, db.expenses, db.actuals], async () => {
+  await db.transaction('rw', [db.workspaces, db.transactions, db.patterns, db.importBatches], async () => {
     if (existing) {
-      // Replace: clear existing data first
-      await db.actuals.where('workspaceId').equals(data.workspace.id).delete()
-      await db.expenses.where('workspaceId').equals(data.workspace.id).delete()
+      await db.transactions.where('workspaceId').equals(data.workspace.id).delete()
+      await db.patterns.where('workspaceId').equals(data.workspace.id).delete()
+      await db.importBatches.where('workspaceId').equals(data.workspace.id).delete()
       await db.workspaces.delete(data.workspace.id)
     }
 
-    // Backward compat: expenses may lack a type field, and may use budgetId instead of workspaceId.
-    // Legacy fields (totalBudget, startingBalance) are stripped — balance is no longer stored.
-    const workspaceToAdd = {
-      ...data.workspace,
-      isDemo: data.workspace.isDemo ?? false,
-    }
-    // Remove legacy fields if present
-    const rawWs = workspaceToAdd as Record<string, unknown>
-    delete rawWs['totalBudget']
-    delete rawWs['startingBalance']
-    await db.workspaces.add(workspaceToAdd)
+    await db.workspaces.add(data.workspace)
 
-    // Ensure all expenses have tags, type, and workspaceId
-    // Backward compat: v1 exports have category (string) instead of tags (string[])
-    const expensesToAdd = data.expenses.map((exp) => {
-      const raw = exp as unknown as Record<string, unknown>
-      const legacyCategory = raw['category'] as string | undefined
-      return {
-        ...exp,
-        workspaceId: exp.workspaceId || (raw['budgetId'] as string),
-        type: exp.type ?? 'expense' as const,
-        tags: exp.tags ?? (legacyCategory ? [legacyCategory] : []),
-      }
-    })
-    // Remove legacy category field
-    for (const exp of expensesToAdd) {
-      delete (exp as Record<string, unknown>)['category']
+    if (data.transactions.length > 0) {
+      await db.transactions.bulkAdd(data.transactions)
     }
-    if (expensesToAdd.length > 0) {
-      await db.expenses.bulkAdd(expensesToAdd)
+    if (data.patterns?.length > 0) {
+      await db.patterns.bulkAdd(data.patterns)
     }
-
-    // Backward compat: actuals may use budgetId and category instead of tags
-    const actualsToAdd = data.actuals.map((act) => {
-      const raw = act as unknown as Record<string, unknown>
-      const legacyCategory = raw['category'] as string | undefined
-      return {
-        ...act,
-        workspaceId: act.workspaceId || (raw['budgetId'] as string),
-        tags: act.tags ?? (legacyCategory ? [legacyCategory] : []),
-      }
-    })
-    // Remove legacy category field
-    for (const act of actualsToAdd) {
-      delete (act as Record<string, unknown>)['category']
-    }
-    if (actualsToAdd.length > 0) {
-      await db.actuals.bulkAdd(actualsToAdd)
+    if (data.importBatches?.length > 0) {
+      await db.importBatches.bulkAdd(data.importBatches)
     }
   })
 
   return {
     imported: true,
-    message: `Imported "${data.workspace.name}" with ${data.expenses.length} expenses and ${data.actuals.length} actuals.`,
+    message: `Imported "${data.workspace.name}" with ${data.transactions.length} transactions and ${data.patterns?.length ?? 0} recurring patterns.`,
   }
 }

@@ -1,228 +1,12 @@
 /**
- * Three-pass matching engine for auto-matching imported actuals to budget expense lines.
+ * CSV parsing utilities — date detection, date parsing, amount parsing, dedup.
  *
- * Requirement: Match imported rows to expense lines with confidence levels
- * Approach: 3-pass algorithm — exact, fuzzy text + exact amount, amount-only
+ * Requirement: Parse CSV columns into typed values during import
+ * Approach: Auto-detect date format from samples, parse amounts handling currency symbols
  * Alternatives:
- *   - Single-pass with weighted scoring: Rejected — harder for users to understand confidence
- *   - Machine learning: Rejected — overkill for MVP, small datasets
- *
- * Note: Fuzzy matching uses a simple substring/Levenshtein approach since Fuse.js
- * can't be installed (npm blocked). Will swap to Fuse.js when deps are available.
+ *   - Library-based parsing (date-fns, etc.): Rejected — simple formats, no deps needed
+ *   - User always selects format: Complementary — auto-detect first, allow override
  */
-
-import type { Expense, MatchConfidence } from '@/types/models'
-import { primaryTag } from '@/types/models'
-
-export interface ImportedRow {
-  date: string
-  amount: number
-  /** Tags parsed from CSV category column or auto-assigned from CategoryMappings */
-  tags: string[]
-  description: string
-  originalRow: Record<string, string>
-  /**
-   * Original sign from the CSV before Math.abs().
-   * Negative typically means a credit/income in bank statements.
-   * Used as a hint for type-aware matching.
-   */
-  originalSign?: 'positive' | 'negative'
-}
-
-export interface MatchResult {
-  importedRow: ImportedRow
-  matchedExpense: Expense | null
-  confidence: MatchConfidence
-  approved: boolean
-}
-
-/**
- * Run the three-pass matching algorithm.
- */
-export function matchImportedRows(
-  rows: ImportedRow[],
-  expenses: Expense[],
-): MatchResult[] {
-  const results: MatchResult[] = []
-  const usedExpenses = new Set<string>()
-
-  // Track which rows have been matched
-  const unmatchedRows = [...rows]
-  const matchedIndices = new Set<number>()
-
-  // Type-aware matching: when the imported row has an original sign hint,
-  // prefer matching to expenses of the corresponding type.
-  // Negative amounts in bank statements typically mean credits/income.
-  function isTypeCompatible(row: ImportedRow, exp: Expense): boolean {
-    if (!row.originalSign) return true // no hint, match anything
-    const expectedType = row.originalSign === 'negative' ? 'income' : 'expense'
-    return (exp.type ?? 'expense') === expectedType
-  }
-
-  // Compare primary tags for matching
-  function tagsMatch(rowTags: string[], expTags: string[]): boolean {
-    const rowPrimary = primaryTag(rowTags).toLowerCase()
-    const expPrimary = primaryTag(expTags).toLowerCase()
-    return rowPrimary === expPrimary && rowPrimary !== 'uncategorised'
-  }
-
-  // Pass 1: High confidence — exact primary tag match + exact amount + type-compatible
-  for (let i = 0; i < unmatchedRows.length; i++) {
-    if (matchedIndices.has(i)) continue
-    const row = unmatchedRows[i]!
-
-    // Try type-compatible first, then fall back to any type
-    const match = expenses.find((exp) =>
-      !usedExpenses.has(`${exp.id}-${row.date}`) &&
-      tagsMatch(row.tags, exp.tags) &&
-      Math.abs(exp.amount - row.amount) < 0.01 &&
-      isTypeCompatible(row, exp)
-    ) ?? expenses.find((exp) =>
-      !usedExpenses.has(`${exp.id}-${row.date}`) &&
-      tagsMatch(row.tags, exp.tags) &&
-      Math.abs(exp.amount - row.amount) < 0.01
-    )
-
-    if (match) {
-      results.push({
-        importedRow: row,
-        matchedExpense: match,
-        confidence: 'high',
-        approved: true, // Auto-approved
-      })
-      matchedIndices.add(i)
-      usedExpenses.add(`${match.id}-${row.date}`)
-    }
-  }
-
-  // Pass 2: Medium confidence — fuzzy text match + exact amount
-  for (let i = 0; i < unmatchedRows.length; i++) {
-    if (matchedIndices.has(i)) continue
-    const row = unmatchedRows[i]!
-    const rowCategory = primaryTag(row.tags)
-
-    const matchFn = (exp: Expense, requireTypeCompat: boolean) => {
-      if (usedExpenses.has(`${exp.id}-${row.date}`)) return false
-      if (Math.abs(exp.amount - row.amount) >= 0.01) return false
-      if (requireTypeCompat && !isTypeCompatible(row, exp)) return false
-
-      const expCategory = primaryTag(exp.tags)
-      // Require best-of-both: use Math.max so BOTH category and description
-      // must be reasonable, not just one. Math.min was a bug — it let garbage
-      // descriptions through as long as category was a perfect match.
-      const score = Math.max(
-        fuzzyScore(rowCategory, expCategory),
-        fuzzyScore(row.description, exp.description),
-      )
-      return score <= 0.4
-    }
-
-    // Type-compatible first, then fall back
-    const match = expenses.find((exp) => matchFn(exp, true))
-      ?? expenses.find((exp) => matchFn(exp, false))
-
-    if (match) {
-      results.push({
-        importedRow: row,
-        matchedExpense: match,
-        confidence: 'medium',
-        approved: false, // Needs review
-      })
-      matchedIndices.add(i)
-      usedExpenses.add(`${match.id}-${row.date}`)
-    }
-  }
-
-  // Pass 3: Low confidence — amount-only match within same month
-  for (let i = 0; i < unmatchedRows.length; i++) {
-    if (matchedIndices.has(i)) continue
-    const row = unmatchedRows[i]!
-    const rowMonth = row.date.slice(0, 7)
-
-    const matchFn = (exp: Expense, requireTypeCompat: boolean) => {
-      if (usedExpenses.has(`${exp.id}-${row.date}`)) return false
-      if (Math.abs(exp.amount - row.amount) >= 0.01) return false
-      if (requireTypeCompat && !isTypeCompatible(row, exp)) return false
-
-      // Check expense is active in the same month
-      const expStartMonth = exp.startDate.slice(0, 7)
-      const expEndMonth = exp.endDate ? exp.endDate.slice(0, 7) : '9999-12'
-      return rowMonth >= expStartMonth && rowMonth <= expEndMonth
-    }
-
-    const match = expenses.find((exp) => matchFn(exp, true))
-      ?? expenses.find((exp) => matchFn(exp, false))
-
-    if (match) {
-      results.push({
-        importedRow: row,
-        matchedExpense: match,
-        confidence: 'low',
-        approved: false,
-      })
-      matchedIndices.add(i)
-      usedExpenses.add(`${match.id}-${row.date}`)
-    }
-  }
-
-  // Remaining: Unmatched
-  for (let i = 0; i < unmatchedRows.length; i++) {
-    if (matchedIndices.has(i)) continue
-    results.push({
-      importedRow: unmatchedRows[i]!,
-      matchedExpense: null,
-      confidence: 'unmatched',
-      approved: false,
-    })
-  }
-
-  return results
-}
-
-/**
- * Fuzzy scoring using Levenshtein distance (0 = perfect match, 1 = no match).
- * Will be replaced by Fuse.js when available.
- *
- * Requirement: Score how similar two strings are for matching imported rows
- * Approach: Levenshtein distance normalized by max string length
- * Alternatives:
- *   - Character presence check: Rejected — order-blind, "abc" vs "cba" scored as perfect
- *   - Jaccard index on character sets: Rejected — loses positional information
- */
-function fuzzyScore(a: string, b: string): number {
-  if (!a && !b) return 0
-  if (!a || !b) return 1
-
-  const al = a.toLowerCase().trim()
-  const bl = b.toLowerCase().trim()
-
-  if (al === bl) return 0
-  if (al.includes(bl) || bl.includes(al)) return 0.1
-
-  const m = al.length
-  const n = bl.length
-  const maxLen = Math.max(m, n)
-  if (maxLen === 0) return 0
-
-  // Levenshtein with single-row DP for memory efficiency
-  let prev: number[] = Array.from({ length: n + 1 }, (_, j) => j)
-  let curr: number[] = new Array(n + 1)
-
-  for (let i = 1; i <= m; i++) {
-    curr[0] = i
-    for (let j = 1; j <= n; j++) {
-      const cost = al[i - 1] === bl[j - 1] ? 0 : 1
-      curr[j] = Math.min(
-        prev[j]! + 1,      // deletion
-        curr[j - 1]! + 1,  // insertion
-        prev[j - 1]! + cost // substitution
-      )
-    }
-    ;[prev, curr] = [curr, prev]
-  }
-
-  return prev[n]! / maxLen
-}
 
 /**
  * Common date format patterns for auto-detection.
@@ -248,13 +32,55 @@ export const DATE_FORMATS = [
 
 /**
  * Auto-detect date format from sample values.
+ *
+ * Requirement: Disambiguate DD/MM/YYYY vs MM/DD/YYYY (identical regex)
+ * Approach: When both formats match structurally, inspect the first two segments
+ *   of all samples. If any first-segment > 12, it must be DD/MM. If any
+ *   second-segment > 12, it must be MM/DD. If ambiguous (all values 1-12),
+ *   default to DD/MM (more common internationally).
+ * Alternatives:
+ *   - Always require user selection: Rejected — auto-detect should handle most cases
+ *   - Locale-based default: Rejected — browser locale unreliable for bank statement origin
  */
 export function detectDateFormat(samples: string[]): typeof DATE_FORMATS[number] | null {
   for (const fmt of DATE_FORMATS) {
     const matches = samples.filter((s) => fmt.pattern.test(s.trim())).length
-    if (matches >= samples.length * 0.8) return fmt
+    if (matches < samples.length * 0.8) continue
+
+    // DD/MM/YYYY and MM/DD/YYYY share the same regex — disambiguate
+    if (fmt.label === 'DD/MM/YYYY' || fmt.label === 'MM/DD/YYYY') {
+      return disambiguateSlashFormat(samples)
+    }
+
+    return fmt
   }
   return null
+}
+
+/**
+ * Disambiguate DD/MM/YYYY vs MM/DD/YYYY by inspecting field values.
+ * If first segment ever > 12, it's day-first (DD/MM). If second segment
+ * ever > 12, it's month-first (MM/DD). If all values fit either, default
+ * to DD/MM (international convention).
+ */
+function disambiguateSlashFormat(samples: string[]): typeof DATE_FORMATS[number] {
+  let firstOver12 = false
+  let secondOver12 = false
+
+  for (const s of samples) {
+    const parts = s.trim().split('/')
+    const a = parseInt(parts[0]!, 10)
+    const b = parseInt(parts[1]!, 10)
+    if (a > 12) firstOver12 = true
+    if (b > 12) secondOver12 = true
+  }
+
+  // First segment has values > 12 → must be DD (DD/MM/YYYY)
+  if (firstOver12 && !secondOver12) return DATE_FORMATS[1]! // DD/MM/YYYY
+  // Second segment has values > 12 → must be MM (MM/DD/YYYY)
+  if (secondOver12 && !firstOver12) return DATE_FORMATS[2]! // MM/DD/YYYY
+  // Both or neither > 12 — default to DD/MM (more common internationally)
+  return DATE_FORMATS[1]! // DD/MM/YYYY
 }
 
 /**
@@ -282,7 +108,9 @@ export function parseAmount(value: string): number | null {
   if (!value) return null
 
   // Remove currency symbols and whitespace
-  let cleaned = value.trim().replace(/[R$€£¥₹,\s]/g, '')
+  // Requirement: Support international currencies beyond ZAR/USD/EUR/GBP
+  // Approach: Strip all common currency symbols and letter-based codes (CHF, etc.)
+  let cleaned = value.trim().replace(/[R$€£¥₹₩₪₱₫₴₸₺₼₽฿,\s]/g, '').replace(/^[A-Z]{2,3}\s*/i, '')
 
   // Handle negative amounts in parentheses: (100) → -100
   if (cleaned.startsWith('(') && cleaned.endsWith(')')) {
@@ -294,23 +122,27 @@ export function parseAmount(value: string): number | null {
 }
 
 /**
- * Check if an imported row is a duplicate of an existing actual.
- * Matches on date + amount + description within the same workspace.
+ * Check if a transaction is a duplicate based on date + amount + description.
  *
- * Requirement: Prevent duplicate entries when importing from multiple accounts or re-importing
- * Approach: Exact match on date + amount + description (case-insensitive)
+ * Requirement: Prevent duplicate entries when re-importing
+ * Approach: Match on date + amount (within tolerance) + description (case-insensitive).
+ *   Amount tolerance: absolute 1 cent OR 0.5% of value, whichever is larger.
+ *   This handles rounding differences across bank export formats.
  * Alternatives:
  *   - Hash-based dedup: Rejected — over-engineering for MVP
  *   - Fuzzy description match: Rejected — too aggressive, might skip legitimate duplicates
+ *   - Exact-cent only: Rejected — real bank exports have tiny rounding differences
  */
 export function isDuplicate(
-  row: ImportedRow,
-  existingActuals: { date: string; amount: number; description: string }[],
+  row: { date: string; amount: number; description: string },
+  existing: { date: string; amount: number; description: string }[],
 ): boolean {
   const descLower = row.description.toLowerCase().trim()
-  return existingActuals.some((a) =>
-    a.date === row.date &&
-    Math.abs(a.amount - row.amount) < 0.01 &&
-    a.description.toLowerCase().trim() === descLower
-  )
+  return existing.some((a) => {
+    if (a.date !== row.date) return false
+    if (a.description.toLowerCase().trim() !== descLower) return false
+    const diff = Math.abs(a.amount - row.amount)
+    const tolerance = Math.max(0.01, Math.abs(row.amount) * 0.005)
+    return diff <= tolerance
+  })
 }

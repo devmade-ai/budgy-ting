@@ -12,12 +12,13 @@ import { useRouter } from 'vue-router'
 import { db } from '@/db'
 import { validateImport, importWorkspace } from '@/engine/exportImport'
 import { useToast } from '@/composables/useToast'
+import { usePullToRefresh } from '@/composables/usePullToRefresh'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import ErrorAlert from '@/components/ErrorAlert.vue'
-import LoadingSpinner from '@/components/LoadingSpinner.vue'
+import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import { formatAmount } from '@/composables/useFormat'
-import type { Workspace, Expense } from '@/types/models'
+import type { Workspace } from '@/types/models'
 import type { ExportSchema } from '@/engine/exportImport'
 
 const router = useRouter()
@@ -25,28 +26,30 @@ const { show: showToast } = useToast()
 const workspaces = ref<Workspace[]>([])
 const loading = ref(true)
 
-// Summary data per workspace (expense count + monthly total)
-const workspaceSummaries = ref<Record<string, { count: number; monthlyTotal: number }>>({})
+// Pull-to-refresh for mobile
+const { pulling, pullDistance, refreshing } = usePullToRefresh(refreshList)
 
-function monthlyEquivalent(exp: Expense): number {
-  if (exp.frequency === 'monthly') return exp.amount
-  if (exp.frequency === 'once-off') return exp.amount
-  if (exp.frequency === 'daily') return exp.amount * 30
-  if (exp.frequency === 'weekly') return exp.amount * 4.33
-  if (exp.frequency === 'quarterly') return exp.amount / 3
-  if (exp.frequency === 'annually') return exp.amount / 12
-  return 0
-}
+// Summary data per workspace (transaction count + monthly spend estimate)
+const workspaceSummaries = ref<Record<string, { count: number; monthlyTotal: number }>>({})
 
 async function loadSummaries(wsList: Workspace[]) {
   const summaries: Record<string, { count: number; monthlyTotal: number }> = {}
   for (const ws of wsList) {
     try {
-      const expenses = await db.expenses.where('workspaceId').equals(ws.id).toArray()
-      const monthlyTotal = expenses
-        .filter((e) => e.type !== 'income')
-        .reduce((sum, e) => sum + monthlyEquivalent(e), 0)
-      summaries[ws.id] = { count: expenses.length, monthlyTotal }
+      const transactions = await db.transactions.where('workspaceId').equals(ws.id).toArray()
+      // Estimate monthly spend from negative transactions (expenses)
+      const expenses = transactions.filter((t) => t.amount < 0)
+      if (expenses.length === 0) {
+        summaries[ws.id] = { count: transactions.length, monthlyTotal: 0 }
+        continue
+      }
+      const dates = expenses.map((t) => t.date).sort()
+      const firstDate = new Date(dates[0]!)
+      const lastDate = new Date(dates[dates.length - 1]!)
+      const daySpan = Math.max(1, (lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24))
+      const totalSpend = expenses.reduce((sum, t) => sum + Math.abs(t.amount), 0)
+      const monthlyTotal = daySpan > 0 ? (totalSpend / daySpan) * 30 : totalSpend
+      summaries[ws.id] = { count: transactions.length, monthlyTotal }
     } catch {
       summaries[ws.id] = { count: 0, monthlyTotal: 0 }
     }
@@ -63,6 +66,7 @@ const pendingImportData = ref<ExportSchema | null>(null)
 const error = ref('')
 
 onMounted(async () => {
+  checkInstallReminder()
   try {
     workspaces.value = await db.workspaces.orderBy('createdAt').reverse().toArray()
     loadSummaries(workspaces.value)
@@ -154,9 +158,10 @@ async function confirmReplace() {
 
 async function handleClearAll() {
   try {
-    await db.transaction('rw', [db.workspaces, db.expenses, db.actuals, db.tagCache], async () => {
-      await db.actuals.clear()
-      await db.expenses.clear()
+    await db.transaction('rw', [db.workspaces, db.transactions, db.patterns, db.importBatches, db.tagCache], async () => {
+      await db.transactions.clear()
+      await db.patterns.clear()
+      await db.importBatches.clear()
       await db.workspaces.clear()
       await db.tagCache.clear()
     })
@@ -168,6 +173,34 @@ async function handleClearAll() {
 }
 
 const showClearConfirm = ref(false)
+
+// Requirement: Gentle install reminder for repeat users who haven't installed the PWA
+// Approach: After 3+ visits, show a subtle reminder banner if not already installed or dismissed.
+//   Uses a separate localStorage counter from the main install prompt.
+const VISIT_COUNT_KEY = 'budgy-ting:visit-count'
+const REMINDER_DISMISSED_KEY = 'budgy-ting:install-reminder-dismissed'
+const showInstallReminder = ref(false)
+
+function checkInstallReminder() {
+  try {
+    // Don't show if already installed as PWA
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+    if (isStandalone) return
+    if (localStorage.getItem(REMINDER_DISMISSED_KEY) === 'true') return
+
+    const count = parseInt(localStorage.getItem(VISIT_COUNT_KEY) ?? '0', 10) + 1
+    localStorage.setItem(VISIT_COUNT_KEY, String(count))
+
+    if (count >= 3) {
+      showInstallReminder.value = true
+    }
+  } catch { /* ignore localStorage errors */ }
+}
+
+function dismissInstallReminder() {
+  showInstallReminder.value = false
+  try { localStorage.setItem(REMINDER_DISMISSED_KEY, 'true') } catch { /* ignore */ }
+}
 </script>
 
 <template>
@@ -192,10 +225,36 @@ const showClearConfirm = ref(false)
       </div>
     </div>
 
+    <!-- Install reminder for repeat users -->
+    <div
+      v-if="showInstallReminder"
+      class="bg-brand-50 border border-brand-200 rounded-lg p-3 mb-4 flex items-center justify-between text-sm"
+    >
+      <div class="flex items-center gap-2 text-brand-700">
+        <span class="i-lucide-smartphone text-lg" />
+        <span>Add budgy-ting to your home screen for quick access</span>
+      </div>
+      <button
+        class="text-brand-400 hover:text-brand-600 text-xs ml-2 whitespace-nowrap"
+        @click="dismissInstallReminder"
+      >
+        Dismiss
+      </button>
+    </div>
+
     <ErrorAlert v-if="error" :message="error" @dismiss="error = ''" />
     <ErrorAlert v-if="importError" :message="importError" @dismiss="importError = ''" />
 
-    <LoadingSpinner v-if="loading" />
+    <!-- Pull-to-refresh indicator -->
+    <div
+      v-if="pulling || refreshing"
+      class="flex justify-center py-2 text-xs text-gray-400 transition-all"
+      :style="{ height: `${Math.max(pullDistance, refreshing ? 32 : 0)}px` }"
+    >
+      {{ refreshing ? 'Refreshing...' : pullDistance >= 80 ? 'Release to refresh' : 'Pull to refresh' }}
+    </div>
+
+    <SkeletonLoader v-if="loading" variant="list" />
 
     <EmptyState
       v-else-if="workspaces.length === 0"
@@ -237,7 +296,7 @@ const showClearConfirm = ref(false)
                   &middot; {{ ws.currencyLabel }}
                 </span>
                 <template v-if="workspaceSummaries[ws.id]">
-                  &middot; {{ workspaceSummaries[ws.id]!.count }} item{{ workspaceSummaries[ws.id]!.count === 1 ? '' : 's' }}
+                  &middot; {{ workspaceSummaries[ws.id]!.count }} transaction{{ workspaceSummaries[ws.id]!.count === 1 ? '' : 's' }}
                   <template v-if="workspaceSummaries[ws.id]!.monthlyTotal > 0">
                     &middot; {{ ws.currencyLabel }}{{ formatAmount(workspaceSummaries[ws.id]!.monthlyTotal) }}/mo
                   </template>
@@ -264,7 +323,7 @@ const showClearConfirm = ref(false)
     <ConfirmDialog
       v-if="showReplaceConfirm && pendingImportData"
       title="Replace existing workspace?"
-      :message="`A workspace named '${pendingImportData.workspace.name}' already exists. Replacing it will overwrite all its expenses and imported data.`"
+      :message="`A workspace named '${pendingImportData.workspace.name}' already exists. Replacing it will overwrite all its transactions, patterns, and imported data.`"
       confirm-label="Replace"
       :danger="true"
       @confirm="confirmReplace"
@@ -275,7 +334,7 @@ const showClearConfirm = ref(false)
     <ConfirmDialog
       v-if="showClearConfirm"
       title="Clear all data?"
-      message="This will permanently delete all workspaces, expenses, and imported data. This cannot be undone. Make sure you've exported anything you want to keep."
+      message="This will permanently delete all workspaces, transactions, patterns, and imported data. This cannot be undone. Make sure you've exported anything you want to keep."
       confirm-label="Clear everything"
       :danger="true"
       @confirm="handleClearAll(); showClearConfirm = false"

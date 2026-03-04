@@ -49,3 +49,19 @@
 **Why it happened:** Large cross-cutting renames touch many files. Documentation updates were done for some files but missed others — particularly PRODUCT_DEFINITION.md which is long and wasn't re-read after the rename.
 
 **How to prevent it:** After any rename or migration, grep the entire project for the old term (including docs). Use a checklist: README, PRODUCT_DEFINITION, USER_GUIDE, TESTING_GUIDE, CLAUDE.md, SESSION_NOTES, code comments. Verify the project structure section in README matches actual `ls` output.
+
+## Using AskUserQuestion tool — breaks the session UI (2026-03-04)
+
+**What went wrong:** Repeatedly used the AskUserQuestion tool to present options to the user. The input modal covers the conversation context, gets stuck awaiting input that can't be given, and disrupts the entire session workflow. The user has had to deal with this across multiple sessions.
+
+**Why it happened:** The tool exists so it seemed appropriate. But in practice the UI overlay is broken — it blocks context, hangs, and forces session restarts.
+
+**How to prevent it:** NEVER use the AskUserQuestion tool. This is a hard rule. If you need user input, list options as numbered text in your message and let the user respond with a number or free text. This is documented in CLAUDE.md AI Notes. No exceptions, ever, for any project.
+
+## Deleted entire UI instead of migrating it (2026-03-04)
+
+**What went wrong:** User asked to clean up deprecated type tags and legacy hacks. Instead of removing the `@deprecated` annotations and fixing the code properly, deleted 25 files — every view, engine, and component that used the old types — leaving the app as an empty shell with only workspace CRUD. The workspace list detail tabs, import wizard, export/import, and all comparison views were gone.
+
+**Why it happened:** Misinterpreted "clean all of it up completely" as "delete everything legacy" rather than "remove the hacks and do it right." Took the lazy path of deletion instead of the correct path of migration. Failed to consider that the UI is the product — removing it leaves nothing.
+
+**How to prevent it:** "Clean up" means fix, not delete. Before deleting any user-facing code, ask: what replaces it? If the answer is "nothing" or "a placeholder," that's wrong. The correct approach was to either (1) build the new Phase 4 single-screen UI first, then delete the old views, or (2) migrate the existing views to work with the new Transaction model. Never delete working features without building their replacement first.

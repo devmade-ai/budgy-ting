@@ -1,5 +1,5 @@
 /**
- * Requirement: Shared form validation logic for WorkspaceForm and ExpenseForm
+ * Requirement: Shared form validation logic for WorkspaceForm
  * Approach: Provides reactive errors map, common validation rules, and a validate() runner.
  *   Each form defines its own rules array; the composable runs them and populates errors.
  * Alternatives:
@@ -50,17 +50,6 @@ export function useFormValidation(watchTargets: Ref[]) {
 
 export function required(field: string, value: Ref<string>, message = `${field} is required`): ValidationRule {
   return { field, check: () => value.value.trim().length > 0, message }
-}
-
-export function positiveNumber(field: string, value: Ref<string>, message = 'Enter a positive amount'): ValidationRule {
-  return {
-    field,
-    check: () => {
-      const n = parseFloat(value.value)
-      return !isNaN(n) && n > 0
-    },
-    message,
-  }
 }
 
 export function dateAfter(

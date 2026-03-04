@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { db } from '@/db'
-import { useId } from '@/composables/useId'
+import { generateId } from '@/composables/useId'
 import { nowISO, todayISO } from '@/composables/useTimestamp'
 import { useToast } from '@/composables/useToast'
 import WorkspaceForm from '@/components/WorkspaceForm.vue'
@@ -22,7 +22,7 @@ async function handleSubmit(data: {
 }) {
   try {
     const now = nowISO()
-    const id = useId()
+    const id = generateId()
 
     await db.workspaces.add({
       id,
@@ -32,6 +32,7 @@ async function handleSubmit(data: {
       startDate: data.periodType === 'monthly' ? todayISO() : data.startDate,
       endDate: data.endDate,
       isDemo: false,
+      cashOnHand: null,
       createdAt: now,
       updatedAt: now,
     })

@@ -1,14 +1,19 @@
 /**
  * Vue Router configuration.
  *
+ * Requirement: Actuals-first single-screen workspace view replaces old 3-tab layout.
+ * Approach: workspace-detail renders WorkspaceDetailView which embeds WorkspaceDashboard
+ *   directly (no nested tab children). Import wizard is a separate route.
+ * Alternatives:
+ *   - Keep old tab children: Rejected — old tabs query dropped DB tables
+ *   - Nested route for dashboard: Rejected — single-screen view doesn't need nesting
+ *
  * Routes:
  *   / — Workspace list (home)
  *   /workspace/new — Create workspace
- *   /workspace/:id — Workspace detail with nested tab views
+ *   /workspace/:id — Workspace detail (single-screen dashboard)
  *   /workspace/:id/edit — Edit workspace
- *   /workspace/:id/expenses/new — Add expense
- *   /workspace/:id/expenses/:expenseId/edit — Edit expense
- *   /workspace/:id/import — Import actuals wizard
+ *   /workspace/:id/import — Import actuals wizard (3-step)
  */
 
 import { createRouter, createWebHistory } from 'vue-router'
@@ -37,44 +42,11 @@ const router = createRouter({
       name: 'workspace-detail',
       component: () => import('@/views/WorkspaceDetailView.vue'),
       props: true,
-      children: [
-        {
-          path: '',
-          redirect: (to) => ({ name: 'workspace-expenses', params: to.params }),
-        },
-        {
-          path: 'expenses',
-          name: 'workspace-expenses',
-          component: () => import('@/views/ExpensesTab.vue'),
-        },
-        {
-          path: 'projected',
-          name: 'workspace-projected',
-          component: () => import('@/views/ProjectedTab.vue'),
-        },
-        {
-          path: 'compare',
-          name: 'workspace-compare',
-          component: () => import('@/views/CompareTab.vue'),
-        },
-      ],
-    },
-    {
-      path: '/workspace/:id/expenses/new',
-      name: 'expense-create',
-      component: () => import('@/views/ExpenseCreateView.vue'),
-      props: true,
-    },
-    {
-      path: '/workspace/:id/expenses/:expenseId/edit',
-      name: 'expense-edit',
-      component: () => import('@/views/ExpenseEditView.vue'),
-      props: true,
     },
     {
       path: '/workspace/:id/import',
       name: 'import-actuals',
-      component: () => import('@/views/ImportWizardView.vue'),
+      component: () => import('@/views/NewImportWizard.vue'),
       props: true,
     },
     {

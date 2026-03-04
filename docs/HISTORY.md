@@ -2,6 +2,103 @@
 
 <!-- Changelog and record of completed work. Organized by date. -->
 
+## 2026-03-04 (Session 3)
+
+- **Full Codebase Audit — Bug Fixes and Dead Code Removal:**
+
+  **Critical Bug Fixes (C1-C3):**
+  - Fixed `detectFrequency()` in `NewImportWizard.vue` — was called with `string[]` (ISO dates) instead of `number[]` (day intervals). All new recurring patterns created during import had `frequency: null`, producing zero forecast projections. Now correctly computes intervals between consecutive dates before calling `detectFrequency()`, and handles the return value with proper fallback to `'monthly'`.
+
+  **High-Priority Fixes:**
+  - H1: Fixed timer leak in `WorkspaceDashboard.vue` — `cashSaveTimeout` now cleaned up on `onUnmounted`
+  - H2: Strengthened `validateImport()` in `exportImport.ts` — now validates `patterns` and `importBatches` are arrays when present, and spot-checks first transaction has required fields (id, date, amount)
+  - H3: Fixed `v-for` key in `MetricsGrid.vue` — changed from array index `i` to `m.label` (labels are unique)
+  - H4: Replaced inline duplicate detection in `NewImportWizard.vue` with existing `isDuplicate()` from `matching.ts` (includes `.trim()` that inline version omitted)
+
+  **Medium-Priority Fixes:**
+  - M1: Removed dead `categoryColumn` detection from `ImportStepUpload.vue` — auto-detected and emitted but never consumed by parent
+  - M3: Renamed `useId()` → `generateId()` — pure function with no Vue dependency shouldn't use `use*` composable naming convention
+
+  **Dead Code Removal:**
+  - L1: Removed orphaned `ScrollHint.vue` — zero imports across codebase
+  - L2-L4: Removed unused exports from `models.ts`: `primaryTag()`, `displayAmount()`, `isExpense()`
+  - L5: Removed unused `positiveNumber()` from `useFormValidation.ts`
+  - L6-L7: Removed unused `useTagAutocomplete()` composable and `touchTag()` (singular) from `useTagAutocomplete.ts` — only `touchTags()` (plural) was imported
+
+  **Verification:**
+  - 97 tests pass, build succeeds, type-check clean
+
+## 2026-03-04 (Session 2)
+
+- **Actuals-First Pivot — Phase 1 (Data Model) + Phase 3 (Forecasting Engine):**
+
+  **New Data Models (`types/models.ts`):**
+  - `Transaction` — unified model replacing separate Expense/Actual tables. Signed amounts (positive=income, negative=expense). Fields: date, amount, description, tags, source, classification, recurringGroupId, importBatchId.
+  - `RecurringPattern` — detected or user-defined recurring transaction pattern. Fields: expectedAmount (signed), amountStdDev, frequency (incl. new `biweekly`), anchorDay, isActive, autoAccept.
+  - `ImportBatch` — tracks CSV/JSON imports for duplicate detection.
+  - Helper function: `isIncome()`.
+  - Legacy types (`Expense`, `Actual`, `LineType`, `CategoryMapping`) removed — no longer needed after clean slate migration.
+
+  **DB Schema v6 (`db/index.ts`):**
+  - Clean slate migration: drops expenses, actuals, categoryMappings tables.
+  - New tables: transactions, patterns, importBatches.
+  - Workspace data cleared so demo re-seeds with new model.
+  - `cashOnHand` field added to Workspace (persisted, was ephemeral).
+
+  **New Engines:**
+  - `engine/patterns.ts` — Recurring pattern detection: frequency detection from transaction intervals (maps median interval to daily/weekly/biweekly/monthly/quarterly/annually), anchor day detection (mode of day-of-week or day-of-month), amount variability (CV > 0.3 = "variable recurring"), `projectPattern()` for deterministic forward scheduling with month-end overflow handling.
+  - `engine/forecast.ts` — Hybrid forecasting: Holt's double exponential smoothing (level + trend, alpha=0.2, beta=0.05), day-of-week seasonal multipliers (needs 4+ weeks), parametric confidence bands (80% CI, ±1.28σ√h), bootstrap bands for non-normal distributions, combined forecast (recurring items + variable residual). Falls back to simple average with <14 days of data.
+  - `engine/accuracy.ts` — Prediction accuracy: MAE (primary, in currency units), RMSE, bias (systematic over/under), WMAPE (for aggregates), hit rate (% within threshold). Replaces old MAPE-only approach.
+  - `engine/runway.ts` — Cash runway: daily balance projection from cash-on-hand, depletion detection, minimum balance tracking, `calculateRunwayWithBands()` for optimistic/expected/pessimistic scenarios.
+
+  **Updated:**
+  - `db/demoData.ts` — 2 months of signed transactions (48 total), 10 recurring patterns, cashOnHand R15,000.
+  - `WorkspaceCreateView.vue` — adds `cashOnHand: null` to new workspaces.
+
+  **Dependencies:**
+  - Added `simple-statistics` (~30KB) — mean, median, stddev, linear regression, quantiles.
+
+  **Tests:**
+  - `patterns.test.ts` — 24 tests: frequency detection (all 6 types), anchor day, variable detection, pattern projection, grouping
+  - `forecast.test.ts` — 24 tests: Holt init/update/forecast, runHolt trending, day-of-week factors, prediction bands, buildForecast with patterns/history
+  - `accuracy.test.ts` — 11 tests: daily accuracy, aggregation, MAE, RMSE, bias, WMAPE, hit rate
+  - `runway.test.ts` — 7 tests: depletion, survival, minimum balance, daily progression, band scenarios
+  - Total: 142 tests across 9 files, all passing. Type-check clean.
+
+  **Completed TODO items moved here:**
+  - Pattern detection engine — detect recurring transactions from import history
+  - Wire EMA/rolling-average aggregate forecast into UI (superseded by Holt's method)
+  - Surface forecast accuracy metrics to users (engine built, UI pending Phase 4)
+  - "Promote to recurring" action (superseded by import classification workflow)
+
+## 2026-03-04 (Session 1)
+
+- **Forecasting System Enhancement:**
+
+  **New Engines:**
+  - `engine/forecast.ts` — Statistical forecasting: EMA (alpha=0.3, min 3 months), rolling average fallback, daily expansion for charting. Functions: `calculateEMA()`, `calculateRollingAverage()`, `generateCategoryForecasts()`, `expandActualsToDailyPoints()`, `expandForecastToDailyPoints()`, `buildDailyCashflowData()`
+  - `engine/accuracy.ts` — Daily forecast accuracy: compares projected vs actual at day+category level. Computes MAPE, weighted MAPE, per-category and per-method breakdowns. Not persisted — computed on-the-fly. Hidden from users by default.
+
+  **New Components:**
+  - `components/CashflowChart.vue` — ApexCharts daily cashflow line chart. Cumulative (running balance) or daily net toggle. Optional forecast overlay as dashed line. Zoom/pan enabled.
+
+  **Modified:**
+  - `views/ProjectedTab.vue` — Added Table/Chart view toggle. Loads actuals alongside expenses. Computes daily chart data via forecast engine.
+  - `views/CompareTab.vue` — Variance display gated on `hasAnyActuals`. Shows empty state with import CTA until actuals uploaded. Displays actuals date range info.
+  - `engine/variance.ts` — Added `hasAnyActuals: boolean` and `actualsDateRange` to `ComparisonResult`.
+
+  **Dependencies:**
+  - Added `apexcharts` and `vue3-apexcharts`
+
+  **Tests:**
+  - `forecast.test.ts` — 14 tests: EMA, rolling average, category grouping, daily expansion, income exclusion
+  - `accuracy.test.ts` — 6 tests: empty input, daily accuracy, income exclusion, multi-category, MAPE summary
+  - Total: 96 tests across 7 files, all passing
+
+  **Completed TODO items moved here:**
+  - Forecasting with simple-statistics — variable spend prediction with confidence bands
+  - Add ApexCharts for category bar chart and monthly line chart
+
 ## 2026-03-03
 
 - **Documentation Audit — Full Codebase Review:**

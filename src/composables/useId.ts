@@ -5,6 +5,6 @@
  * Approach: crypto.randomUUID() — available in all modern browsers and PWA contexts
  */
 
-export function useId(): string {
+export function generateId(): string {
   return crypto.randomUUID()
 }

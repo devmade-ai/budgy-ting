@@ -1,12 +1,17 @@
 /**
  * Core data models for budgy-ting.
- * All dates stored as ISO strings without timezone.
+ * All dates stored as ISO strings (YYYY-MM-DD) without timezone.
  *
- * Requirement: Rename Budget → Workspace to reflect that this is a cashflow tool, not just budgeting
- * Approach: Rename the core type and all foreign key references (budgetId → workspaceId)
+ * Requirement: Pivot from budget-first to actuals-first paradigm. "Expense" becomes
+ *   "Transaction" — both historic actuals and future predictions are the same entity type.
+ *   Signed amounts: positive = income, negative = expense.
+ * Approach: Unified Transaction model + RecurringPattern for detected patterns + ImportBatch
+ *   for duplicate detection. Clean slate migration (v6) since app is pre-release with zero users.
  * Alternatives:
- *   - Keep "Budget" name: Rejected — misleading since the tool does cashflow forecasting
- *   - Use "Cashflow" as the type name: Rejected — "Workspace" is more generic and future-proof
+ *   - Keep separate expenses/actuals tables: Rejected — the unified model simplifies queries
+ *     and enables the actuals-first workflow where everything starts as a transaction
+ *   - Unsigned amounts with type field: Rejected — signed amounts simplify all arithmetic
+ *     (summing, netting, runway calculations) at the cost of Math.abs() in UI formatting
  */
 
 export type PeriodType = 'monthly' | 'custom'
@@ -15,14 +20,14 @@ export type Frequency =
   | 'once-off'
   | 'daily'
   | 'weekly'
+  | 'biweekly'
   | 'monthly'
   | 'quarterly'
   | 'annually'
 
-/** Whether an expense line represents money coming in or going out */
-export type LineType = 'income' | 'expense'
+export type TransactionSource = 'import' | 'manual'
 
-export type MatchConfidence = 'high' | 'medium' | 'low' | 'manual' | 'unmatched'
+export type TransactionClassification = 'recurring' | 'once-off'
 
 export interface Workspace {
   id: string
@@ -33,82 +38,96 @@ export interface Workspace {
   endDate: string | null
   /** Whether this is a demo workspace (pre-populated with sample data) */
   isDemo: boolean
-  createdAt: string
-  updatedAt: string
-}
-
-export interface Expense {
-  id: string
-  workspaceId: string
-  description: string
-  /**
-   * Flexible tags for categorisation, account references, and filtering.
-   * First tag is used as the primary "category" for grouping and rollups.
-   * Requirement: Multiple category tags instead of single category string
-   * Approach: string[] with first-tag-as-primary convention
-   * Alternatives:
-   *   - Separate category + tags fields: Rejected — adds complexity, tags are sufficient
-   *   - Single category string: Rejected — user needs multiple labels (category, account, etc.)
-   */
-  tags: string[]
-  amount: number
-  frequency: Frequency
-  /** Whether this is income (money in) or expense (money out). Defaults to 'expense'. */
-  type: LineType
-  startDate: string
-  endDate: string | null
-  createdAt: string
-  updatedAt: string
-}
-
-export interface Actual {
-  id: string
-  workspaceId: string
-  expenseId: string | null
-  date: string
-  amount: number
-  /** Tags inherited from matched expense or assigned during import */
-  tags: string[]
-  description: string
-  originalRow: Record<string, unknown>
-  matchConfidence: MatchConfidence
-  approved: boolean
+  /** Persisted cash on hand for runway calculations (was ephemeral, now stored) */
+  cashOnHand: number | null
   createdAt: string
   updatedAt: string
 }
 
 /**
+ * Unified transaction — both imported actuals and manually created items.
+ * Signed amounts: positive = income, negative = expense.
+ */
+export interface Transaction {
+  id: string
+  workspaceId: string
+  /** ISO date (YYYY-MM-DD) */
+  date: string
+  /** Signed amount: positive = income, negative = expense */
+  amount: number
+  description: string
+  /** Flexible tags for categorisation, filtering, account references */
+  tags: string[]
+  /** How this transaction entered the system */
+  source: TransactionSource
+  /** User-assigned classification during import */
+  classification: TransactionClassification
+  /** Links recurring instances together (references RecurringPattern.id) */
+  recurringGroupId: string | null
+  /** Original CSV row data (null for manual entries) */
+  originalRow: Record<string, string> | null
+  /** Which import batch this came from (null for manual entries) */
+  importBatchId: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+/**
+ * Recurring pattern — derived from classified transactions.
+ * Represents a detected or user-defined recurring transaction pattern.
+ * The expectedAmount is signed (positive = income, negative = expense).
+ */
+export interface RecurringPattern {
+  id: string
+  workspaceId: string
+  /** Pattern name (e.g., "Netflix", "Rent", "Salary") */
+  description: string
+  /** Median historical amount (signed: positive = income, negative = expense) */
+  expectedAmount: number
+  /** Standard deviation of historical amounts (always positive) */
+  amountStdDev: number
+  frequency: Frequency
+  /**
+   * Anchor day for scheduling:
+   * - daily: ignored
+   * - weekly/biweekly: day-of-week (0=Sunday, 6=Saturday)
+   * - monthly/quarterly/annually: day-of-month (1-31)
+   */
+  anchorDay: number
+  tags: string[]
+  /** Still expected to recur? */
+  isActive: boolean
+  /** Auto-approve matching transactions in future imports */
+  autoAccept: boolean
+  /** Most recent occurrence date */
+  lastSeenDate: string
+  createdAt: string
+  updatedAt: string
+}
+
+/**
+ * Import batch — tracks a single CSV/JSON import for duplicate detection.
+ */
+export interface ImportBatch {
+  id: string
+  workspaceId: string
+  fileName: string
+  dateRange: { start: string; end: string }
+  transactionCount: number
+  importedAt: string
+}
+
+/**
  * Cached tag for autocomplete suggestions.
- * Updated whenever a tag is used (expense created/edited, import confirmed).
+ * Updated whenever a tag is used (transaction created/edited, import confirmed).
  */
 export interface TagCache {
   tag: string
   lastUsed: string
 }
 
-/**
- * Learned mapping from transaction description patterns to tags.
- * Built up over time from imports so future imports auto-suggest tags.
- *
- * Requirement: Auto-categorise imported transactions based on previous imports
- * Approach: Store description→tags mappings, match against new imports
- * Alternatives:
- *   - Full ML classifier: Rejected — overkill for personal finance, large bundle size
- *   - Only manual tagging: Rejected — tedious for users importing the same merchants repeatedly
- */
-export interface CategoryMapping {
-  id: string
-  workspaceId: string
-  /** Lowercase pattern to match against transaction descriptions */
-  pattern: string
-  /** Tags to auto-assign when pattern matches */
-  tags: string[]
-  /** Whether the mapped transaction is typically income or expense */
-  type: LineType
-  createdAt: string
+/** Helper: is this an income transaction (positive amount)? */
+export function isIncome(amount: number): boolean {
+  return amount > 0
 }
 
-/** Helper: get the primary tag (first tag) from a tags array, or 'Uncategorised' if empty */
-export function primaryTag(tags: string[]): string {
-  return tags[0] || 'Uncategorised'
-}

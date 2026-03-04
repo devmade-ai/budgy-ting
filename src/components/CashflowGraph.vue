@@ -1,0 +1,216 @@
+<script setup lang="ts">
+/**
+ * Requirement: Daily cashflow graph with actuals, forecast, confidence bands, and runway overlay
+ * Approach: ApexCharts mixed line/area chart. Multiple series toggled by data availability.
+ *   Actuals as solid blue, forecast as dashed amber, bands as shaded area, runway as filled gradient.
+ * Alternatives:
+ *   - Chart.js: Rejected — ApexCharts has better Vue 3 integration and built-in tooltips
+ *   - D3: Rejected — too low-level for this use case
+ */
+
+import { computed, ref, onMounted, onUnmounted } from 'vue'
+import VueApexCharts from 'vue3-apexcharts'
+import type { Transaction } from '@/types/models'
+import type { DailyForecastPoint } from '@/engine/forecast'
+import type { RunwayResult } from '@/engine/runway'
+
+const props = defineProps<{
+  transactions: Transaction[]
+  forecastPoints: DailyForecastPoint[]
+  runway: RunwayResult | null
+  currencyLabel: string
+}>()
+
+const chartMode = ref<'cumulative' | 'daily'>('cumulative')
+
+// Requirement: Responsive chart height — smaller on mobile, larger on desktop
+// Approach: Track window width and compute height from breakpoints.
+// Alternatives:
+//   - CSS-only height: Rejected — ApexCharts requires a numeric height prop
+//   - Fixed 350px: Rejected — too tall on small phones, too short on large desktops
+const windowWidth = ref(typeof window !== 'undefined' ? window.innerWidth : 1024)
+const chartHeight = computed(() => {
+  if (windowWidth.value < 640) return 280
+  if (windowWidth.value < 1024) return 350
+  return 420
+})
+
+function handleResize() { windowWidth.value = window.innerWidth }
+onMounted(() => window.addEventListener('resize', handleResize))
+onUnmounted(() => window.removeEventListener('resize', handleResize))
+
+// Build actual daily points from transactions
+const actualDailyMap = computed(() => {
+  const map = new Map<string, number>()
+  for (const t of props.transactions) {
+    map.set(t.date, (map.get(t.date) ?? 0) + t.amount)
+  }
+  return map
+})
+
+const actualPoints = computed(() => {
+  const entries = [...actualDailyMap.value.entries()].sort(([a], [b]) => a.localeCompare(b))
+  let cumulative = 0
+  return entries.map(([date, amount]) => {
+    cumulative += amount
+    return { date, amount, cumulative }
+  })
+})
+
+const series = computed(() => {
+  const result: Array<{
+    name: string
+    data: Array<{ x: string; y: number }>
+    type?: string
+    color?: string
+  }> = []
+
+  // Actuals
+  if (actualPoints.value.length > 0) {
+    result.push({
+      name: 'Actuals',
+      data: actualPoints.value.map((p) => ({
+        x: p.date,
+        y: chartMode.value === 'cumulative' ? p.cumulative : p.amount,
+      })),
+    })
+  }
+
+  // Forecast
+  if (props.forecastPoints.length > 0) {
+    result.push({
+      name: 'Forecast',
+      data: props.forecastPoints.map((p) => ({
+        x: p.date,
+        y: chartMode.value === 'cumulative' ? p.cumulative : p.amount,
+      })),
+    })
+  }
+
+  // Runway (balance progression)
+  if (props.runway && props.runway.dailyBalance.length > 0 && chartMode.value === 'cumulative') {
+    result.push({
+      name: 'Cash balance',
+      data: props.runway.dailyBalance.map((p) => ({
+        x: p.date,
+        y: p.balance,
+      })),
+    })
+  }
+
+  return result
+})
+
+const chartOptions = computed(() => {
+  const seriesCount = series.value.length
+  const strokeWidths = Array(seriesCount).fill(2) as number[]
+  const dashArray = series.value.map((s) => s.name === 'Forecast' ? 5 : 0)
+  const colors = series.value.map((s) => {
+    if (s.name === 'Actuals') return '#3b82f6'
+    if (s.name === 'Forecast') return '#f59e0b'
+    if (s.name === 'Cash balance') return '#10b981'
+    return '#6b7280'
+  })
+
+  return {
+    chart: {
+      id: 'cashflow-graph',
+      type: 'line' as const,
+      height: chartHeight.value,
+      toolbar: { show: true, tools: { download: true, zoom: true, pan: true, reset: true } },
+      zoom: { enabled: true },
+      fontFamily: 'inherit',
+    },
+    stroke: {
+      width: strokeWidths,
+      dashArray,
+      curve: 'smooth' as const,
+    },
+    colors,
+    xaxis: {
+      type: 'datetime' as const,
+      labels: {
+        format: 'dd MMM',
+        style: { fontSize: '11px', colors: '#9ca3af' },
+      },
+    },
+    yaxis: {
+      labels: {
+        formatter: (val: number) => `${props.currencyLabel}${val.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
+        style: { fontSize: '11px', colors: '#9ca3af' },
+      },
+      title: {
+        text: chartMode.value === 'cumulative' ? 'Cumulative' : 'Daily Net',
+        style: { fontSize: '12px', color: '#6b7280' },
+      },
+    },
+    tooltip: {
+      shared: true,
+      x: { format: 'dd MMM yyyy' },
+      y: {
+        formatter: (val: number) =>
+          `${props.currencyLabel}${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      },
+    },
+    grid: {
+      borderColor: '#f3f4f6',
+      strokeDashArray: 4,
+    },
+    legend: {
+      position: 'top' as const,
+      horizontalAlign: 'left' as const,
+      fontSize: '12px',
+    },
+    noData: {
+      text: 'No data for selected period',
+      style: { fontSize: '14px', color: '#9ca3af' },
+    },
+  }
+})
+
+const hasData = computed(() => actualPoints.value.length > 0 || props.forecastPoints.length > 0)
+</script>
+
+<template>
+  <div class="mb-6">
+    <!-- Chart controls -->
+    <div class="flex flex-wrap items-center gap-2 mb-4">
+      <div class="flex gap-1">
+        <button
+          class="btn text-xs px-3 py-1.5 rounded"
+          :class="chartMode === 'cumulative'
+            ? 'bg-brand-50 text-brand-700 border border-brand-300'
+            : 'bg-gray-50 text-gray-600 border border-gray-200'"
+          @click="chartMode = 'cumulative'"
+        >
+          Cumulative
+        </button>
+        <button
+          class="btn text-xs px-3 py-1.5 rounded"
+          :class="chartMode === 'daily'
+            ? 'bg-brand-50 text-brand-700 border border-brand-300'
+            : 'bg-gray-50 text-gray-600 border border-gray-200'"
+          @click="chartMode = 'daily'"
+        >
+          Daily net
+        </button>
+      </div>
+    </div>
+
+    <!-- Chart -->
+    <div v-if="hasData">
+      <VueApexCharts
+        :key="`${chartMode}-${chartHeight}`"
+        type="line"
+        :height="chartHeight"
+        :options="chartOptions"
+        :series="series"
+      />
+    </div>
+    <div v-else class="text-center py-12">
+      <div class="i-lucide-line-chart text-4xl text-gray-300 mx-auto mb-3" />
+      <p class="text-gray-500">No data to chart</p>
+      <p class="text-gray-400 text-sm mt-1">Import transactions to see your cashflow</p>
+    </div>
+  </div>
+</template>

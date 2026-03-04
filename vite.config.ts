@@ -29,6 +29,17 @@ export default defineConfig({
         // Without this, Chrome may skip beforeinstallprompt if it thinks a
         // related native app exists.
         prefer_related_applications: false,
+        // Requirement: Register as PWA share target for CSV/JSON files
+        // Approach: share_target in manifest lets users share files directly
+        //   to budgy-ting from their phone's file manager or banking app
+        share_target: {
+          action: '/',
+          method: 'POST',
+          enctype: 'multipart/form-data',
+          params: {
+            files: [{ name: 'file', accept: ['.csv', 'text/csv', '.json', 'application/json'] }],
+          },
+        },
         icons: [
           {
             src: 'pwa-192x192.png',

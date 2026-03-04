@@ -5,8 +5,7 @@
  * Approach: Single helper using Intl-backed toLocaleString
  * Alternatives:
  *   - Intl.NumberFormat instance: Considered — toLocaleString is simpler, no locale config needed
- *   - Per-component inline: Rejected — was duplicated in 4 files (ExpensesTab, ProjectedTab,
- *     CompareTab, ImportWizardView)
+ *   - Per-component inline: Rejected — was duplicated across multiple view files
  */
 
 /**
