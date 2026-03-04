@@ -17,7 +17,7 @@ import ErrorAlert from '@/components/ErrorAlert.vue'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import { formatAmount } from '@/composables/useFormat'
-import type { Workspace, Expense } from '@/types/models'
+import type { Workspace } from '@/types/models'
 import type { ExportSchema } from '@/engine/exportImport'
 
 const router = useRouter()
@@ -25,28 +25,27 @@ const { show: showToast } = useToast()
 const workspaces = ref<Workspace[]>([])
 const loading = ref(true)
 
-// Summary data per workspace (expense count + monthly total)
+// Summary data per workspace (transaction count + monthly spend estimate)
 const workspaceSummaries = ref<Record<string, { count: number; monthlyTotal: number }>>({})
-
-function monthlyEquivalent(exp: Expense): number {
-  if (exp.frequency === 'monthly') return exp.amount
-  if (exp.frequency === 'once-off') return exp.amount
-  if (exp.frequency === 'daily') return exp.amount * 30
-  if (exp.frequency === 'weekly') return exp.amount * 4.33
-  if (exp.frequency === 'quarterly') return exp.amount / 3
-  if (exp.frequency === 'annually') return exp.amount / 12
-  return 0
-}
 
 async function loadSummaries(wsList: Workspace[]) {
   const summaries: Record<string, { count: number; monthlyTotal: number }> = {}
   for (const ws of wsList) {
     try {
-      const expenses = await db.expenses.where('workspaceId').equals(ws.id).toArray()
-      const monthlyTotal = expenses
-        .filter((e) => e.type !== 'income')
-        .reduce((sum, e) => sum + monthlyEquivalent(e), 0)
-      summaries[ws.id] = { count: expenses.length, monthlyTotal }
+      const transactions = await db.transactions.where('workspaceId').equals(ws.id).toArray()
+      // Estimate monthly spend from negative transactions (expenses)
+      const expenses = transactions.filter((t) => t.amount < 0)
+      if (expenses.length === 0) {
+        summaries[ws.id] = { count: transactions.length, monthlyTotal: 0 }
+        continue
+      }
+      const dates = expenses.map((t) => t.date).sort()
+      const firstDate = new Date(dates[0]!)
+      const lastDate = new Date(dates[dates.length - 1]!)
+      const daySpan = Math.max(1, (lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24))
+      const totalSpend = expenses.reduce((sum, t) => sum + Math.abs(t.amount), 0)
+      const monthlyTotal = daySpan > 0 ? (totalSpend / daySpan) * 30 : totalSpend
+      summaries[ws.id] = { count: transactions.length, monthlyTotal }
     } catch {
       summaries[ws.id] = { count: 0, monthlyTotal: 0 }
     }
@@ -154,9 +153,10 @@ async function confirmReplace() {
 
 async function handleClearAll() {
   try {
-    await db.transaction('rw', [db.workspaces, db.expenses, db.actuals, db.tagCache], async () => {
-      await db.actuals.clear()
-      await db.expenses.clear()
+    await db.transaction('rw', [db.workspaces, db.transactions, db.patterns, db.importBatches, db.tagCache], async () => {
+      await db.transactions.clear()
+      await db.patterns.clear()
+      await db.importBatches.clear()
       await db.workspaces.clear()
       await db.tagCache.clear()
     })
@@ -237,7 +237,7 @@ const showClearConfirm = ref(false)
                   &middot; {{ ws.currencyLabel }}
                 </span>
                 <template v-if="workspaceSummaries[ws.id]">
-                  &middot; {{ workspaceSummaries[ws.id]!.count }} item{{ workspaceSummaries[ws.id]!.count === 1 ? '' : 's' }}
+                  &middot; {{ workspaceSummaries[ws.id]!.count }} transaction{{ workspaceSummaries[ws.id]!.count === 1 ? '' : 's' }}
                   <template v-if="workspaceSummaries[ws.id]!.monthlyTotal > 0">
                     &middot; {{ ws.currencyLabel }}{{ formatAmount(workspaceSummaries[ws.id]!.monthlyTotal) }}/mo
                   </template>

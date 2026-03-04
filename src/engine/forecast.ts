@@ -20,28 +20,6 @@ import type { Transaction, RecurringPattern } from '@/types/models'
 import { projectPattern } from './patterns'
 import { formatDate } from './dateUtils'
 
-// ── Legacy compatibility types and stubs ──
-// Kept for backward compat with CashflowChart.vue and ProjectedTab.vue.
-// Will be removed when the UI migrates to the new forecast model (Phase 4).
-
-export interface DailyPoint {
-  date: string
-  amount: number
-  cumulative: number
-}
-
-/** Legacy stub — returns empty array. Replaced by buildForecast(). */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function expandActualsToDailyPoints(..._args: unknown[]): DailyPoint[] {
-  return []
-}
-
-/** Legacy stub — returns empty array. Replaced by buildForecast(). */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function expandForecastToDailyPoints(..._args: unknown[]): DailyPoint[] {
-  return []
-}
-
 // ── Holt's Double Exponential Smoothing ──
 
 export interface HoltState {

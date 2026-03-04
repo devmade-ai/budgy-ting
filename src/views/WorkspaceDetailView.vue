@@ -1,16 +1,24 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+/**
+ * Requirement: Workspace detail — single-screen dashboard replacing old 3-tab layout
+ * Approach: Header with actions (Import, Export, Edit, Delete) + WorkspaceDashboard child
+ * Alternatives:
+ *   - Keep 3-tab layout: Rejected — old tabs query dropped DB tables, single screen is simpler
+ *   - Merge header into dashboard: Rejected — keeps navigation concerns separate from data display
+ */
+
+import { ref, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { db } from '@/db'
 import { exportWorkspace, downloadJSON } from '@/engine/exportImport'
 import { useToast } from '@/composables/useToast'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import ErrorAlert from '@/components/ErrorAlert.vue'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
+import WorkspaceDashboard from '@/views/WorkspaceDashboard.vue'
 import type { Workspace } from '@/types/models'
 
 const props = defineProps<{ id: string }>()
-const route = useRoute()
 const router = useRouter()
 const { show: showToast } = useToast()
 
@@ -53,15 +61,6 @@ onUnmounted(() => {
   document.removeEventListener('click', handleActionsOutsideClick)
 })
 
-// Requirement: Tab labels must be plain language for non-technical users
-const tabs = [
-  { name: 'workspace-expenses', label: 'Expenses', icon: 'i-lucide-list' },
-  { name: 'workspace-projected', label: 'Forecast', icon: 'i-lucide-trending-up' },
-  { name: 'workspace-compare', label: 'Compare', icon: 'i-lucide-bar-chart-3' },
-] as const
-
-const activeTab = computed(() => route.name as string)
-
 function editWorkspace() {
   router.push({ name: 'workspace-edit', params: { id: props.id } })
 }
@@ -80,14 +79,15 @@ async function handleExport() {
 
 async function deleteWorkspace() {
   // Requirement: Deleting a workspace removes all related data
-  // Approach: Cascade delete in a single transaction — actuals, then expenses, then workspace
+  // Approach: Cascade delete in a single transaction — transactions, patterns, importBatches, then workspace
   // Alternatives:
   //   - Soft-delete with archival: Rejected — adds complexity for an MVP with JSON export backup
   //   - Leave orphaned data: Rejected — wastes IndexedDB space, confuses future queries
   try {
-    await db.transaction('rw', [db.workspaces, db.expenses, db.actuals], async () => {
-      await db.actuals.where('workspaceId').equals(props.id).delete()
-      await db.expenses.where('workspaceId').equals(props.id).delete()
+    await db.transaction('rw', [db.workspaces, db.transactions, db.patterns, db.importBatches], async () => {
+      await db.transactions.where('workspaceId').equals(props.id).delete()
+      await db.patterns.where('workspaceId').equals(props.id).delete()
+      await db.importBatches.where('workspaceId').equals(props.id).delete()
       await db.workspaces.delete(props.id)
     })
     showToast('Workspace deleted')
@@ -183,26 +183,8 @@ async function deleteWorkspace() {
       </div>
     </div>
 
-    <!-- Tab navigation — overflow-x-auto + nowrap prevents wrapping on narrow screens -->
-    <nav class="flex border-b border-gray-200 mb-6 overflow-x-auto -mx-4 px-4">
-      <RouterLink
-        v-for="tab in tabs"
-        :key="tab.name"
-        :to="{ name: tab.name, params: { id: workspace.id } }"
-        class="px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap shrink-0"
-        :class="
-          activeTab === tab.name
-            ? 'border-brand-500 text-brand-600'
-            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-        "
-      >
-        <span :class="tab.icon" class="mr-1.5" />
-        {{ tab.label }}
-      </RouterLink>
-    </nav>
-
-    <!-- Tab content -->
-    <RouterView :workspace="workspace" />
+    <!-- Single-screen dashboard — replaces old 3-tab layout -->
+    <WorkspaceDashboard :workspace="workspace" />
 
     <!-- Delete confirmation -->
     <ConfirmDialog
