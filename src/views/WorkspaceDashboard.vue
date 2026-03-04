@@ -118,7 +118,7 @@ onUnmounted(() => {
           min="0"
           step="100"
           placeholder="0.00"
-          class="input text-sm w-32"
+          class="input text-sm w-32 min-h-[44px]"
         />
       </div>
       <span v-if="runway && runway.daysRemaining !== null" class="text-sm text-red-500">

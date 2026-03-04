@@ -346,16 +346,35 @@ export function projectPattern(
       const endYear = end.getFullYear()
       const endMonth = end.getMonth()
 
-      // Find the first quarterly month on or after start
-      // Use lastSeenDate to determine the quarterly phase
+      // Requirement: Phase quarterly projections from lastSeenDate, handling gaps > 6 months
+      // Approach: Step forward from lastSeenDate by 3-month increments until we enter the
+      //   projection window. This ensures correct phasing even if the last occurrence was
+      //   multiple quarters ago (e.g., skipped a quarter).
+      // Alternatives:
+      //   - Simple modulo on startMonth: Rejected — misaligns if gap > 1 quarter
+      //   - Only project from lastSeen forward: Rejected — may miss occurrences before start
       const lastSeen = new Date(pattern.lastSeenDate + 'T00:00:00')
-      const phase = lastSeen.getMonth() % 3
+      let nextM = lastSeen.getMonth()
+      let nextY = lastSeen.getFullYear()
 
-      let y = startYear
-      let m = startMonth
-      // Align to the quarterly phase
-      while (m % 3 !== phase) { m++; if (m > 11) { m = 0; y++ } }
+      // Step forward by quarters from lastSeen until we reach or pass the start
+      while (new Date(nextY, nextM, 1) < new Date(startYear, startMonth, 1)) {
+        nextM += 3
+        if (nextM > 11) { nextM -= 12; nextY++ }
+      }
 
+      // Also check if we need to step back one quarter (lastSeen's quarter may overlap start)
+      const prevM = nextM - 3 < 0 ? nextM + 9 : nextM - 3
+      const prevY = nextM - 3 < 0 ? nextY - 1 : nextY
+      const prevDaysInMonth = new Date(prevY, prevM + 1, 0).getDate()
+      const prevDay = Math.min(pattern.anchorDay, prevDaysInMonth)
+      const prevD = new Date(prevY, prevM, prevDay)
+      if (prevD >= start && prevD <= end) {
+        points.push({ date: formatDate(prevD), amount: pattern.expectedAmount })
+      }
+
+      let y = nextY
+      let m = nextM
       while (y < endYear || (y === endYear && m <= endMonth)) {
         const daysInMonth = new Date(y, m + 1, 0).getDate()
         const day = Math.min(pattern.anchorDay, daysInMonth)

@@ -1,8 +1,9 @@
 <script setup lang="ts">
 /**
- * Requirement: Paginated, filterable transaction table for the single-screen workspace view
- * Approach: Client-side filtering + pagination. Plain table with sort by date.
+ * Requirement: Paginated, filterable transaction display for the single-screen workspace view
+ * Approach: Table on desktop, stacked cards on mobile. Client-side filtering + pagination.
  * Alternatives:
+ *   - Table-only with horizontal scroll: Rejected — cards are much easier to scan on mobile
  *   - Virtual scrolling (vue-virtual-scroller): Deferred — paginate first, upgrade later
  *   - Server-side pagination: N/A — local-first IndexedDB app
  */
@@ -78,24 +79,24 @@ function formatDate(dateStr: string): string {
 
 <template>
   <div>
-    <!-- Filters -->
+    <!-- Filters — touch-friendly input sizing (min-h-44px) -->
     <div v-if="transactions.length > 5" class="flex flex-wrap gap-2 mb-4">
       <input
         v-model="search"
         type="text"
         placeholder="Search transactions..."
-        class="input text-sm flex-1 min-w-48"
+        class="input text-sm flex-1 min-w-48 min-h-[44px]"
       />
       <select
         v-model="filterTag"
-        class="input text-sm w-auto"
+        class="input text-sm w-auto min-h-[44px]"
       >
         <option value="">All tags</option>
         <option v-for="tag in allTags" :key="tag" :value="tag">{{ tag }}</option>
       </select>
       <select
         v-model="filterClassification"
-        class="input text-sm w-auto"
+        class="input text-sm w-auto min-h-[44px]"
       >
         <option value="">All types</option>
         <option value="recurring">Recurring</option>
@@ -103,8 +104,57 @@ function formatDate(dateStr: string): string {
       </select>
     </div>
 
-    <!-- Table -->
-    <div class="overflow-x-auto">
+    <!-- Mobile card layout (< sm breakpoint) -->
+    <!-- Requirement: Stacked cards are easier to scan than side-scrolling tables on narrow screens
+         Approach: Show cards on mobile, table on sm+. Each card shows date + description + amount.
+         Alternatives:
+           - Horizontal-scroll table everywhere: Rejected — poor scan-ability on narrow screens
+           - Cards everywhere: Rejected — table is more information-dense on desktop -->
+    <div class="sm:hidden space-y-2">
+      <div
+        v-for="txn in paginatedRows"
+        :key="txn.id"
+        class="bg-white rounded-lg border border-gray-200 p-3"
+      >
+        <div class="flex items-start justify-between gap-2">
+          <div class="min-w-0 flex-1">
+            <p class="text-sm font-medium text-gray-900 truncate">{{ txn.description }}</p>
+            <p class="text-xs text-gray-500 mt-0.5">
+              {{ formatDate(txn.date) }}
+              <span
+                class="ml-1.5 inline-block text-xs px-1.5 py-0.5 rounded"
+                :class="txn.classification === 'recurring'
+                  ? 'bg-blue-50 text-blue-600'
+                  : 'bg-gray-50 text-gray-500'"
+              >
+                {{ txn.classification === 'recurring' ? 'Recurring' : 'Once-off' }}
+              </span>
+            </p>
+          </div>
+          <span
+            class="text-sm font-semibold whitespace-nowrap"
+            :class="isIncome(txn.amount) ? 'text-green-600' : 'text-red-600'"
+          >
+            {{ isIncome(txn.amount) ? '+' : '-' }}{{ currencyLabel }}{{ formatAmount(Math.abs(txn.amount)) }}
+          </span>
+        </div>
+        <div v-if="txn.tags.length > 0" class="mt-1.5 flex flex-wrap gap-1">
+          <span
+            v-for="tag in txn.tags"
+            :key="tag"
+            class="text-xs bg-gray-100 text-gray-600 rounded px-1.5 py-0.5"
+          >
+            {{ tag }}
+          </span>
+        </div>
+      </div>
+      <div v-if="paginatedRows.length === 0" class="py-8 text-center text-gray-400 text-sm">
+        {{ search || filterTag || filterClassification ? 'No matching transactions' : 'No transactions yet' }}
+      </div>
+    </div>
+
+    <!-- Desktop table (sm+ breakpoint) -->
+    <div class="hidden sm:block overflow-x-auto">
       <table class="w-full text-sm">
         <thead>
           <tr class="border-b border-gray-200 text-left text-xs text-gray-500 uppercase tracking-wide">
@@ -167,15 +217,15 @@ function formatDate(dateStr: string): string {
       <span>{{ filtered.length }} transaction{{ filtered.length === 1 ? '' : 's' }}</span>
       <div class="flex gap-1">
         <button
-          class="px-3 py-1 rounded border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
+          class="px-3 py-2 min-h-[44px] rounded border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
           :disabled="currentPage <= 1"
           @click="currentPage--"
         >
           Previous
         </button>
-        <span class="px-3 py-1">{{ currentPage }} / {{ totalPages }}</span>
+        <span class="px-3 py-2">{{ currentPage }} / {{ totalPages }}</span>
         <button
-          class="px-3 py-1 rounded border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
+          class="px-3 py-2 min-h-[44px] rounded border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
           :disabled="currentPage >= totalPages"
           @click="currentPage++"
         >

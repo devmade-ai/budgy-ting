@@ -337,6 +337,13 @@ export function buildForecast(
   } else if (residualSeries.length > 0) {
     variableMethod = 'average'
     variableDailyForecast = mean(residualSeries)
+    // Requirement: Generate meaningful prediction bands even with sparse data
+    // Approach: Compute residual errors from the simple average so bands aren't flat.
+    //   Without this, users see confidently narrow bands despite data scarcity.
+    // Alternatives:
+    //   - Flat bands (no errors): Rejected — misleadingly confident with sparse data
+    //   - Fixed multiplier: Rejected — actual variance is more informative
+    predictionErrors = residualSeries.map((v) => v - variableDailyForecast)
   }
 
   // ── Step 4: Day-of-week factors ──

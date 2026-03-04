@@ -8,7 +8,7 @@
  *   - D3: Rejected — too low-level for this use case
  */
 
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import VueApexCharts from 'vue3-apexcharts'
 import type { Transaction } from '@/types/models'
 import type { DailyForecastPoint } from '@/engine/forecast'
@@ -22,6 +22,22 @@ const props = defineProps<{
 }>()
 
 const chartMode = ref<'cumulative' | 'daily'>('cumulative')
+
+// Requirement: Responsive chart height — smaller on mobile, larger on desktop
+// Approach: Track window width and compute height from breakpoints.
+// Alternatives:
+//   - CSS-only height: Rejected — ApexCharts requires a numeric height prop
+//   - Fixed 350px: Rejected — too tall on small phones, too short on large desktops
+const windowWidth = ref(typeof window !== 'undefined' ? window.innerWidth : 1024)
+const chartHeight = computed(() => {
+  if (windowWidth.value < 640) return 280
+  if (windowWidth.value < 1024) return 350
+  return 420
+})
+
+function handleResize() { windowWidth.value = window.innerWidth }
+onMounted(() => window.addEventListener('resize', handleResize))
+onUnmounted(() => window.removeEventListener('resize', handleResize))
 
 // Build actual daily points from transactions
 const actualDailyMap = computed(() => {
@@ -100,7 +116,7 @@ const chartOptions = computed(() => {
     chart: {
       id: 'cashflow-graph',
       type: 'line' as const,
-      height: 350,
+      height: chartHeight.value,
       toolbar: { show: true, tools: { download: true, zoom: true, pan: true, reset: true } },
       zoom: { enabled: true },
       fontFamily: 'inherit',
@@ -184,9 +200,9 @@ const hasData = computed(() => actualPoints.value.length > 0 || props.forecastPo
     <!-- Chart -->
     <div v-if="hasData">
       <VueApexCharts
-        :key="chartMode"
+        :key="`${chartMode}-${chartHeight}`"
         type="line"
-        height="350"
+        :height="chartHeight"
         :options="chartOptions"
         :series="series"
       />

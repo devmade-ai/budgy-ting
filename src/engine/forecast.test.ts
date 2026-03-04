@@ -323,4 +323,50 @@ describe('buildForecast', () => {
     expect(result.daily[1]!.cumulative).toBeCloseTo(-200, 0)
     expect(result.daily[2]!.cumulative).toBeCloseTo(-300, 0)
   })
+
+  it('generates prediction errors for sparse data (< 14 days, average method)', () => {
+    // Requirement: Sparse data should still produce meaningful prediction bands
+    const txns: Transaction[] = []
+    for (let i = 1; i <= 8; i++) {
+      txns.push(makeTxn({
+        id: `t-${i}`,
+        date: `2026-02-${String(i).padStart(2, '0')}`,
+        amount: -(40 + i * 5), // variable amounts: -45, -50, -55...
+      }))
+    }
+
+    const result = buildForecast(txns, [], '2026-03-01', '2026-03-07')
+    expect(result.variableMethod).toBe('average')
+    // Should have prediction errors computed from residuals vs average
+    expect(result.predictionErrors.length).toBeGreaterThan(0)
+    // Should have non-zero band widths (not flat)
+    const withBands = result.daily.filter((d) => d.band !== null && d.band.upper !== d.band.lower)
+    expect(withBands.length).toBeGreaterThan(0)
+  })
+
+  it('handles zero starting balance runway with empty forecast', () => {
+    const result = buildForecast([], [], '2026-03-01', '2026-03-07')
+    expect(result.daily).toHaveLength(7)
+    // All zero amounts, all zero cumulative
+    for (const p of result.daily) {
+      expect(p.amount).toBe(0)
+      expect(p.cumulative).toBe(0)
+    }
+  })
+
+  it('handles constant-series Holt initialization gracefully', () => {
+    // A constant series should produce near-zero trend
+    const txns: Transaction[] = []
+    for (let i = 1; i <= 20; i++) {
+      txns.push(makeTxn({
+        id: `t-${i}`,
+        date: `2026-02-${String(i).padStart(2, '0')}`,
+        amount: -100, // constant
+      }))
+    }
+    const result = buildForecast(txns, [], '2026-03-01', '2026-03-07')
+    expect(result.variableMethod).toBe('holt')
+    // Trend should be near zero for constant series
+    expect(Math.abs(result.variableState!.trend)).toBeLessThan(1)
+  })
 })

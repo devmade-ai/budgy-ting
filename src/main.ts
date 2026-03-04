@@ -3,6 +3,7 @@ import App from './App.vue'
 import router from './router'
 import { debugLog } from './debug/debugLog'
 import { seedDemoWorkspace } from './db/demoData'
+import { pruneStaleTagCache } from './composables/useTagAutocomplete'
 
 import '@unocss/reset/tailwind.css'
 import 'virtual:uno.css'
@@ -12,6 +13,11 @@ debugLog('boot', 'info', 'Application starting')
 // Seed demo workspace on first visit (empty DB) — non-blocking
 seedDemoWorkspace().then((created) => {
   if (created) debugLog('boot', 'info', 'Demo workspace created')
+})
+
+// Prune stale tags on startup — non-blocking
+pruneStaleTagCache().then((count) => {
+  if (count > 0) debugLog('boot', 'info', `Pruned ${count} stale tag(s) from cache`)
 })
 
 const app = createApp(App)

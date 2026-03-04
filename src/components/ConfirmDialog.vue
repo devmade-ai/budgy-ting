@@ -6,6 +6,7 @@
 
 import { ref } from 'vue'
 import { useDialogA11y } from '@/composables/useDialogA11y'
+import { hapticConfirm } from '@/composables/useHaptic'
 
 defineProps<{
   title: string
@@ -39,7 +40,7 @@ useDialogA11y(dialogRef, () => emit('cancel'))
         role="alertdialog"
         :aria-label="title"
         aria-modal="true"
-        class="relative bg-white rounded-xl shadow-xl max-w-sm w-full p-6"
+        class="relative bg-white rounded-xl shadow-xl max-w-sm w-full max-w-[calc(100%-2rem)] p-6"
       >
         <h3 class="text-lg font-semibold text-gray-900 mb-2">{{ title }}</h3>
         <p class="text-sm text-gray-600 mb-6">{{ message }}</p>
@@ -47,7 +48,7 @@ useDialogA11y(dialogRef, () => emit('cancel'))
           <button
             class="flex-1"
             :class="danger ? 'btn-danger' : 'btn-primary'"
-            @click="emit('confirm')"
+            @click="hapticConfirm(); emit('confirm')"
           >
             {{ confirmLabel || 'Confirm' }}
           </button>

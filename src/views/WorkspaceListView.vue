@@ -12,9 +12,10 @@ import { useRouter } from 'vue-router'
 import { db } from '@/db'
 import { validateImport, importWorkspace } from '@/engine/exportImport'
 import { useToast } from '@/composables/useToast'
+import { usePullToRefresh } from '@/composables/usePullToRefresh'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import ErrorAlert from '@/components/ErrorAlert.vue'
-import LoadingSpinner from '@/components/LoadingSpinner.vue'
+import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import { formatAmount } from '@/composables/useFormat'
 import type { Workspace } from '@/types/models'
@@ -24,6 +25,9 @@ const router = useRouter()
 const { show: showToast } = useToast()
 const workspaces = ref<Workspace[]>([])
 const loading = ref(true)
+
+// Pull-to-refresh for mobile
+const { pulling, pullDistance, refreshing } = usePullToRefresh(refreshList)
 
 // Summary data per workspace (transaction count + monthly spend estimate)
 const workspaceSummaries = ref<Record<string, { count: number; monthlyTotal: number }>>({})
@@ -62,6 +66,7 @@ const pendingImportData = ref<ExportSchema | null>(null)
 const error = ref('')
 
 onMounted(async () => {
+  checkInstallReminder()
   try {
     workspaces.value = await db.workspaces.orderBy('createdAt').reverse().toArray()
     loadSummaries(workspaces.value)
@@ -168,6 +173,34 @@ async function handleClearAll() {
 }
 
 const showClearConfirm = ref(false)
+
+// Requirement: Gentle install reminder for repeat users who haven't installed the PWA
+// Approach: After 3+ visits, show a subtle reminder banner if not already installed or dismissed.
+//   Uses a separate localStorage counter from the main install prompt.
+const VISIT_COUNT_KEY = 'budgy-ting:visit-count'
+const REMINDER_DISMISSED_KEY = 'budgy-ting:install-reminder-dismissed'
+const showInstallReminder = ref(false)
+
+function checkInstallReminder() {
+  try {
+    // Don't show if already installed as PWA
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+    if (isStandalone) return
+    if (localStorage.getItem(REMINDER_DISMISSED_KEY) === 'true') return
+
+    const count = parseInt(localStorage.getItem(VISIT_COUNT_KEY) ?? '0', 10) + 1
+    localStorage.setItem(VISIT_COUNT_KEY, String(count))
+
+    if (count >= 3) {
+      showInstallReminder.value = true
+    }
+  } catch { /* ignore localStorage errors */ }
+}
+
+function dismissInstallReminder() {
+  showInstallReminder.value = false
+  try { localStorage.setItem(REMINDER_DISMISSED_KEY, 'true') } catch { /* ignore */ }
+}
 </script>
 
 <template>
@@ -192,10 +225,36 @@ const showClearConfirm = ref(false)
       </div>
     </div>
 
+    <!-- Install reminder for repeat users -->
+    <div
+      v-if="showInstallReminder"
+      class="bg-brand-50 border border-brand-200 rounded-lg p-3 mb-4 flex items-center justify-between text-sm"
+    >
+      <div class="flex items-center gap-2 text-brand-700">
+        <span class="i-lucide-smartphone text-lg" />
+        <span>Add budgy-ting to your home screen for quick access</span>
+      </div>
+      <button
+        class="text-brand-400 hover:text-brand-600 text-xs ml-2 whitespace-nowrap"
+        @click="dismissInstallReminder"
+      >
+        Dismiss
+      </button>
+    </div>
+
     <ErrorAlert v-if="error" :message="error" @dismiss="error = ''" />
     <ErrorAlert v-if="importError" :message="importError" @dismiss="importError = ''" />
 
-    <LoadingSpinner v-if="loading" />
+    <!-- Pull-to-refresh indicator -->
+    <div
+      v-if="pulling || refreshing"
+      class="flex justify-center py-2 text-xs text-gray-400 transition-all"
+      :style="{ height: `${Math.max(pullDistance, refreshing ? 32 : 0)}px` }"
+    >
+      {{ refreshing ? 'Refreshing...' : pullDistance >= 80 ? 'Release to refresh' : 'Pull to refresh' }}
+    </div>
+
+    <SkeletonLoader v-if="loading" variant="list" />
 
     <EmptyState
       v-else-if="workspaces.length === 0"

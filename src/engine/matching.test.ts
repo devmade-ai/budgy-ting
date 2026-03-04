@@ -93,4 +93,47 @@ describe('isDuplicate', () => {
     const existing = [{ date: '2026-01-16', amount: 500, description: 'Groceries' }]
     expect(isDuplicate(row, existing)).toBe(false)
   })
+
+  it('tolerates small rounding differences (within 0.5%)', () => {
+    const row = { date: '2026-01-15', amount: 1000, description: 'Rent' }
+    const existing = [{ date: '2026-01-15', amount: 1004, description: 'Rent' }]
+    expect(isDuplicate(row, existing)).toBe(true) // 4 < 1000 * 0.005 = 5
+  })
+
+  it('rejects amounts beyond tolerance', () => {
+    const row = { date: '2026-01-15', amount: 1000, description: 'Rent' }
+    const existing = [{ date: '2026-01-15', amount: 1010, description: 'Rent' }]
+    expect(isDuplicate(row, existing)).toBe(false) // 10 > 1000 * 0.005 = 5
+  })
+})
+
+describe('detectDateFormat disambiguation', () => {
+  it('detects DD/MM when first segment > 12', () => {
+    const fmt = detectDateFormat(['15/01/2026', '20/02/2026', '28/03/2026'])
+    expect(fmt?.label).toBe('DD/MM/YYYY')
+  })
+
+  it('detects MM/DD when second segment > 12', () => {
+    const fmt = detectDateFormat(['01/15/2026', '02/20/2026', '03/28/2026'])
+    expect(fmt?.label).toBe('MM/DD/YYYY')
+  })
+
+  it('defaults to DD/MM when ambiguous (all values <= 12)', () => {
+    const fmt = detectDateFormat(['01/02/2026', '03/04/2026', '05/06/2026'])
+    expect(fmt?.label).toBe('DD/MM/YYYY')
+  })
+})
+
+describe('parseAmount expanded currencies', () => {
+  it('strips Korean won symbol', () => {
+    expect(parseAmount('₩50000')).toBe(50000)
+  })
+
+  it('strips Thai baht symbol', () => {
+    expect(parseAmount('฿1500')).toBe(1500)
+  })
+
+  it('strips letter-based currency codes', () => {
+    expect(parseAmount('CHF 100.50')).toBe(100.5)
+  })
 })

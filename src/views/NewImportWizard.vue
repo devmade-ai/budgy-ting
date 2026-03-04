@@ -17,6 +17,8 @@ import { db } from '@/db'
 import { generateId } from '@/composables/useId'
 import { nowISO } from '@/composables/useTimestamp'
 import { touchTags } from '@/composables/useTagAutocomplete'
+import { hapticSuccess } from '@/composables/useHaptic'
+import { useToast } from '@/composables/useToast'
 import { parseDate, parseAmount, isDuplicate } from '@/engine/matching'
 import { detectFrequency, detectAnchorDay } from '@/engine/patterns'
 import ErrorAlert from '@/components/ErrorAlert.vue'
@@ -29,6 +31,10 @@ import type { ParsedTransaction, TransactionGroup } from './import-steps/ImportS
 
 const props = defineProps<{ id: string }>()
 const router = useRouter()
+const { show: showToast } = useToast()
+
+/** Step labels for indicator text */
+const stepLabels = ['Upload', 'Classify', 'Confirm'] as const
 
 const workspace = ref<Workspace | null>(null)
 const existingPatterns = ref<RecurringPattern[]>([])
@@ -245,10 +251,12 @@ async function handleConfirmImport() {
     }
 
     importedCount.value = newTransactions.length
-    step.value = 3 // Show success in step 3
     saving.value = false
 
-    // Navigate back to workspace
+    // Requirement: Success feedback before navigating away
+    // Approach: Toast + haptic pulse, then navigate. Brief visual confirmation.
+    hapticSuccess()
+    showToast(`Imported ${newTransactions.length} transaction${newTransactions.length === 1 ? '' : 's'}`)
     router.push({ name: 'workspace-detail', params: { id: props.id } })
   } catch {
     error.value = 'Couldn\'t save imported data. Please try again.'
@@ -281,26 +289,37 @@ function goBack() {
     <LoadingSpinner v-if="loading" />
 
     <template v-else-if="workspace">
-      <!-- Step indicator -->
-      <div class="flex items-center gap-2 mb-6">
+      <!-- Step indicator with text labels
+           Requirement: Step numbers + text labels for non-technical users
+           Approach: Circle + label below each step, connected by lines -->
+      <div class="flex items-start gap-2 mb-6">
         <template v-for="s in [1, 2, 3]" :key="s">
-          <div
-            class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium"
-            :class="s === step
-              ? 'bg-brand-500 text-white'
-              : s < step
-                ? 'bg-brand-100 text-brand-600'
-                : 'bg-gray-100 text-gray-400'"
-          >
-            {{ s < step ? '✓' : s }}
+          <div class="flex flex-col items-center min-w-0">
+            <div
+              class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium"
+              :class="s === step
+                ? 'bg-brand-500 text-white'
+                : s < step
+                  ? 'bg-brand-100 text-brand-600'
+                  : 'bg-gray-100 text-gray-400'"
+            >
+              {{ s < step ? '✓' : s }}
+            </div>
+            <span
+              class="text-xs mt-1"
+              :class="s === step ? 'text-brand-600 font-medium' : 'text-gray-400'"
+            >
+              {{ stepLabels[s - 1] }}
+            </span>
           </div>
           <div
             v-if="s < 3"
-            class="flex-1 h-0.5"
+            class="flex-1 h-0.5 mt-4"
             :class="s < step ? 'bg-brand-300' : 'bg-gray-200'"
           />
         </template>
       </div>
+      <p class="text-xs text-gray-400 mb-4">Step {{ step }} of 3</p>
 
       <!-- Step 1: Upload & Map -->
       <ImportStepUpload

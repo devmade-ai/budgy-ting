@@ -100,13 +100,46 @@ export function validateImport(data: unknown): { valid: boolean; error?: string;
     return { valid: false, error: 'Workspace data is incomplete (missing name)' }
   }
 
-  // Spot-check first transaction has required fields to catch malformed data early
+  // Requirement: Validate field types to catch corrupted/tampered import files
+  // Approach: Spot-check first transaction AND first pattern for required field types.
+  // Alternatives:
+  //   - Full Zod schema: Rejected — adds a dependency for a pre-release app
+  //   - Trust the data: Rejected — corrupted files could inject invalid data into IndexedDB
   const txns = obj['transactions'] as Record<string, unknown>[]
   if (txns.length > 0) {
     const sample = txns[0]!
     if (typeof sample['id'] !== 'string' || typeof sample['date'] !== 'string' || typeof sample['amount'] !== 'number') {
       return { valid: false, error: 'Transaction data is malformed (missing id, date, or amount)' }
     }
+    if (typeof sample['description'] !== 'string') {
+      return { valid: false, error: 'Transaction data is malformed (missing description)' }
+    }
+    if (!Array.isArray(sample['tags'])) {
+      return { valid: false, error: 'Transaction data is malformed (tags must be an array)' }
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(sample['date'] as string)) {
+      return { valid: false, error: 'Transaction date format is invalid (expected YYYY-MM-DD)' }
+    }
+  }
+
+  // Validate patterns if present
+  const pats = obj['patterns'] as Record<string, unknown>[] | undefined
+  if (Array.isArray(pats) && pats.length > 0) {
+    const sample = pats[0]!
+    if (typeof sample['id'] !== 'string' || typeof sample['description'] !== 'string') {
+      return { valid: false, error: 'Pattern data is malformed (missing id or description)' }
+    }
+    if (typeof sample['expectedAmount'] !== 'number') {
+      return { valid: false, error: 'Pattern data is malformed (expectedAmount must be a number)' }
+    }
+    if (typeof sample['frequency'] !== 'string') {
+      return { valid: false, error: 'Pattern data is malformed (frequency must be a string)' }
+    }
+  }
+
+  // Validate workspace has required fields
+  if (typeof wsData['currencyLabel'] !== 'string') {
+    return { valid: false, error: 'Workspace data is incomplete (missing currencyLabel)' }
   }
 
   return { valid: true, data: obj as unknown as ExportSchema }

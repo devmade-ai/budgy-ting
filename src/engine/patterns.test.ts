@@ -248,6 +248,21 @@ describe('projectPattern', () => {
     expect(points[1]!.date).toBe('2027-03-10')
   })
 
+  it('projects quarterly pattern with gap (> 6 months since last seen)', () => {
+    // Last seen Jan 2025, projecting Oct 2026–Dec 2026 — must still phase correctly
+    const points = projectPattern(
+      { frequency: 'quarterly', anchorDay: 15, expectedAmount: -3000, lastSeenDate: '2025-01-15' },
+      '2026-10-01',
+      '2026-12-31',
+    )
+    // Should find Oct 15 in the range
+    expect(points.some((p) => p.date === '2026-10-15')).toBe(true)
+    // All projected points should be on the 15th
+    for (const p of points) {
+      expect(p.date.endsWith('-15')).toBe(true)
+    }
+  })
+
   it('projects daily pattern', () => {
     const points = projectPattern(
       { frequency: 'daily', anchorDay: 0, expectedAmount: -15, lastSeenDate: '2026-01-01' },
