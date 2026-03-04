@@ -29,7 +29,6 @@ export type TransactionSource = 'import' | 'manual'
 
 export type TransactionClassification = 'recurring' | 'once-off'
 
-export type MatchConfidence = 'high' | 'medium' | 'low' | 'manual' | 'unmatched'
 
 export interface Workspace {
   id: string
@@ -148,52 +147,3 @@ export function isExpense(amount: number): boolean {
   return amount < 0
 }
 
-// ── Legacy Compatibility Types ──
-// These types are kept for backward compatibility with existing engines
-// (projection.ts, variance.ts, matching.ts, exportImport.ts) and views
-// that haven't been migrated to the new Transaction model yet.
-// They will be removed once the UI is fully migrated (Phase 4).
-
-/** @deprecated Use Transaction with signed amounts instead. Remove in Phase 4. */
-export type LineType = 'income' | 'expense'
-
-/** @deprecated Use Transaction model instead. Remove in Phase 4. */
-export interface Expense {
-  id: string
-  workspaceId: string
-  description: string
-  tags: string[]
-  amount: number
-  frequency: Frequency
-  type: LineType
-  startDate: string
-  endDate: string | null
-  createdAt: string
-  updatedAt: string
-}
-
-/** @deprecated Use Transaction model instead. Remove in Phase 4. */
-export interface Actual {
-  id: string
-  workspaceId: string
-  expenseId: string | null
-  date: string
-  amount: number
-  tags: string[]
-  description: string
-  originalRow: Record<string, unknown>
-  matchConfidence: MatchConfidence
-  approved: boolean
-  createdAt: string
-  updatedAt: string
-}
-
-/** @deprecated Use tags on Transaction instead. Remove in Phase 4. */
-export interface CategoryMapping {
-  id: string
-  workspaceId: string
-  pattern: string
-  tags: string[]
-  type: LineType
-  createdAt: string
-}

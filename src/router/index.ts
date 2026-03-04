@@ -4,11 +4,8 @@
  * Routes:
  *   / — Workspace list (home)
  *   /workspace/new — Create workspace
- *   /workspace/:id — Workspace detail with nested tab views
+ *   /workspace/:id — Workspace detail
  *   /workspace/:id/edit — Edit workspace
- *   /workspace/:id/expenses/new — Add expense
- *   /workspace/:id/expenses/:expenseId/edit — Edit expense
- *   /workspace/:id/import — Import actuals wizard
  */
 
 import { createRouter, createWebHistory } from 'vue-router'
@@ -36,45 +33,6 @@ const router = createRouter({
       path: '/workspace/:id',
       name: 'workspace-detail',
       component: () => import('@/views/WorkspaceDetailView.vue'),
-      props: true,
-      children: [
-        {
-          path: '',
-          redirect: (to) => ({ name: 'workspace-expenses', params: to.params }),
-        },
-        {
-          path: 'expenses',
-          name: 'workspace-expenses',
-          component: () => import('@/views/ExpensesTab.vue'),
-        },
-        {
-          path: 'projected',
-          name: 'workspace-projected',
-          component: () => import('@/views/ProjectedTab.vue'),
-        },
-        {
-          path: 'compare',
-          name: 'workspace-compare',
-          component: () => import('@/views/CompareTab.vue'),
-        },
-      ],
-    },
-    {
-      path: '/workspace/:id/expenses/new',
-      name: 'expense-create',
-      component: () => import('@/views/ExpenseCreateView.vue'),
-      props: true,
-    },
-    {
-      path: '/workspace/:id/expenses/:expenseId/edit',
-      name: 'expense-edit',
-      component: () => import('@/views/ExpenseEditView.vue'),
-      props: true,
-    },
-    {
-      path: '/workspace/:id/import',
-      name: 'import-actuals',
-      component: () => import('@/views/ImportWizardView.vue'),
       props: true,
     },
     {
