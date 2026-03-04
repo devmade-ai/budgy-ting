@@ -264,7 +264,7 @@ const showClearConfirm = ref(false)
     <ConfirmDialog
       v-if="showReplaceConfirm && pendingImportData"
       title="Replace existing workspace?"
-      :message="`A workspace named '${pendingImportData.workspace.name}' already exists. Replacing it will overwrite all its expenses and imported data.`"
+      :message="`A workspace named '${pendingImportData.workspace.name}' already exists. Replacing it will overwrite all its transactions, patterns, and imported data.`"
       confirm-label="Replace"
       :danger="true"
       @confirm="confirmReplace"
@@ -275,7 +275,7 @@ const showClearConfirm = ref(false)
     <ConfirmDialog
       v-if="showClearConfirm"
       title="Clear all data?"
-      message="This will permanently delete all workspaces, expenses, and imported data. This cannot be undone. Make sure you've exported anything you want to keep."
+      message="This will permanently delete all workspaces, transactions, patterns, and imported data. This cannot be undone. Make sure you've exported anything you want to keep."
       confirm-label="Clear everything"
       :danger="true"
       @confirm="handleClearAll(); showClearConfirm = false"

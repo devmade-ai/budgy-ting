@@ -190,7 +190,7 @@ async function deleteWorkspace() {
     <ConfirmDialog
       v-if="showDeleteConfirm"
       title="Delete workspace?"
-      :message="`This will permanently delete '${workspace.name}' and all its expenses and imported data. This cannot be undone.`"
+      :message="`This will permanently delete '${workspace.name}' and all its transactions, patterns, and imported data. This cannot be undone.`"
       confirm-label="Delete workspace"
       :danger="true"
       @confirm="deleteWorkspace"

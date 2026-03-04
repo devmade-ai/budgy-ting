@@ -37,7 +37,7 @@
   - `RecurringPattern` — detected or user-defined recurring transaction pattern. Fields: expectedAmount (signed), amountStdDev, frequency (incl. new `biweekly`), anchorDay, isActive, autoAccept.
   - `ImportBatch` — tracks CSV/JSON imports for duplicate detection.
   - Helper function: `isIncome()`.
-  - Legacy types (`Expense`, `Actual`, `LineType`, `CategoryMapping`) retained for backward compat.
+  - Legacy types (`Expense`, `Actual`, `LineType`, `CategoryMapping`) removed — no longer needed after clean slate migration.
 
   **DB Schema v6 (`db/index.ts`):**
   - Clean slate migration: drops expenses, actuals, categoryMappings tables.

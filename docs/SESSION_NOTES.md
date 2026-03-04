@@ -4,25 +4,28 @@
 
 ## Worked on
 
-Full codebase audit — fixing bugs, dead code, and code quality issues identified by comprehensive review.
+Documentation audit and full rewrite — all docs were severely outdated after the actuals-first pivot.
 
 ## Accomplished
 
-- **Fixed critical bug (C1-C3):** `detectFrequency()` in `NewImportWizard.vue` was called with `string[]` dates instead of `number[]` intervals. Every new recurring pattern during import got `frequency: null`, producing zero forecast projections. Now computes day intervals correctly.
-- **Fixed timer leak (H1):** `WorkspaceDashboard.vue` `cashSaveTimeout` now cleaned up on unmount.
-- **Strengthened import validation (H2):** `validateImport()` now checks `patterns`/`importBatches` types and spot-checks transaction structure.
-- **Fixed v-for key (H3):** `MetricsGrid.vue` uses `m.label` instead of array index.
-- **Reused existing dedup (H4):** Replaced inline duplicate check with `isDuplicate()` from `matching.ts`.
-- **Removed dead code:** `ScrollHint.vue`, `categoryColumn` detection, `primaryTag()`, `displayAmount()`, `isExpense()`, `positiveNumber()`, `useTagAutocomplete()`, `touchTag()`.
-- **Renamed `useId()` → `generateId()`** — not a Vue composable.
+- **Rewrote README.md** — Project structure now matches actual codebase (18 components, 10 composables, 8 engine files, 6 views). Feature descriptions updated from old expense/forecast/compare model to dashboard/import/patterns model. Tech stack includes all deps (apexcharts, simple-statistics, marked).
+- **Rewrote USER_GUIDE.md** — Replaced old 3-tab workflow (Expenses/Forecast/Compare) with single-screen dashboard guide. Replaced 4-step import wizard docs with 3-step (upload, classify, confirm). Removed stale expense CRUD sections.
+- **Rewrote TESTING_GUIDE.md** — All test scenarios rewritten for dashboard UI, 3-step import, and kebab menu. Removed old expense management, projected spend, and compare tab scenarios.
+- **Updated TutorialModal.vue** — 6 steps now describe: welcome, create workspace, import transactions, detect patterns, see forecast, track runway. Previously described old add-expenses/see-projections/compare flow.
+- **Fixed stale user-facing strings** — Confirmation dialogs in WorkspaceDetailView and WorkspaceListView said "expenses" instead of "transactions/patterns".
+- **Fixed stale code comments** — useFormat.ts, useFormValidation.ts, useTagAutocomplete.ts referenced deleted files/tables.
+- **Fixed HISTORY.md** — Legacy types entry said "retained for backward compat" but they were removed in clean slate migration.
 
 ## Current state
 
-All audit findings fixed. 97 tests pass, build succeeds, type-check clean. App is fully functional.
+All documentation matches actual codebase. Code comments are accurate. App is fully functional. 97 tests pass, build succeeds, type-check clean.
 
 ## Key context
 
+- App uses single-screen `WorkspaceDashboard.vue` (not 3 tabs) — graph + metrics + transaction table
+- Import is 3-step: upload → classify (recurring/once-off/ignore) → confirm
+- Data model: `Transaction` (unified), `RecurringPattern`, `ImportBatch` — no separate Expense/Actual
+- Export schema is v3, DB schema is v6
 - `generateId()` replaces `useId()` — import path is still `@/composables/useId`
-- `useTagAutocomplete.ts` now only exports `touchTags()` — the composable function and singular `touchTag()` were removed as dead code
-- `models.ts` only exports `isIncome()` helper now — `primaryTag()`, `displayAmount()`, `isExpense()` removed
-- Import validation now spot-checks first transaction for required fields
+- `useTagAutocomplete.ts` only exports `touchTags()`
+- `models.ts` only exports `isIncome()` helper

@@ -1,12 +1,12 @@
 # User Guide
 
-Everything you need to know about using budgy-ting to plan and track your spending.
+Everything you need to know about using budgy-ting to track and forecast your spending.
 
 ---
 
 ## Getting Started
 
-budgy-ting is a budgeting tool that runs entirely on your device. No accounts, no cloud, no sign-ups. Your data stays in your browser and never leaves your device.
+budgy-ting is a cashflow tracking tool that runs entirely on your device. No accounts, no cloud, no sign-ups. Your data stays in your browser and never leaves your device.
 
 When you first open the app, a **Demo Household** workspace is created automatically with realistic sample data — salary, rent, groceries, and more. This lets you explore all the features before creating your own workspace.
 
@@ -16,43 +16,43 @@ You can also reopen the tutorial any time from the **menu** (hamburger icon) in 
 
 ## Workspaces
 
-A workspace is the top-level container for your spending plan. Each workspace has its own expenses, projections, and imported data.
+A workspace is the top-level container for your transactions, recurring patterns, and forecasts.
 
 ### Creating a Workspace
 
 1. From the home screen, click **New Workspace** (or **Create your first workspace** if you have none yet)
 2. Fill in the form:
-   - **Workspace name** — Give it a meaningful name (e.g. "Wedding Budget", "Q1 Marketing")
+   - **Workspace name** — Give it a meaningful name (e.g. "Household", "Side Business")
    - **Currency symbol** — The symbol shown next to amounts (e.g. "R", "$", "€"). Display only — doesn't do conversions
-   - **Period type** — Choose **Monthly** (rolling 12-month view) or **Custom dates** (fixed start and end dates)
+   - **Period type** — Choose **Monthly** (rolling view) or **Custom dates** (fixed start and end dates)
    - **Start date** / **End date** — Only shown for custom-date workspaces. End date is optional
 3. Click **Create workspace**
 
 ### Editing a Workspace
 
 1. Open the workspace you want to edit
-2. Click the **Edit** button (pencil icon) in the top-right
+2. Click the **⋮** menu (three dots) in the top-right, then **Edit workspace**
 3. Change any fields and click **Save changes**
 
 ### Deleting a Workspace
 
 1. Open the workspace
-2. Click the **Delete** button (trash icon, red)
-3. A confirmation dialog will explain what gets deleted: the workspace, all its expenses, and all imported data
+2. Click the **⋮** menu, then **Delete workspace**
+3. A confirmation dialog will explain what gets deleted: the workspace, all its transactions, patterns, and imported data
 4. Click **Delete workspace** to confirm, or **Cancel** to go back
 
 ### Exporting a Workspace
 
 1. Open the workspace
-2. Click **Export** (download icon)
-3. A JSON file downloads to your device containing the workspace, all expenses, and all imported data
+2. Click the **⋮** menu, then **Export**
+3. A JSON file downloads to your device containing the workspace and all its data
 4. Use this file as a backup or to move your workspace to another device
 
 ### Restoring from a Backup
 
 1. From the home screen, click **Restore** (or **Restore from file** if you have no workspaces)
-2. Select a previously exported JSON file (max 10 MB)
-3. If a workspace with the same name already exists, you'll be asked whether to **Replace** it or **Cancel**
+2. Select a previously exported JSON file
+3. If a workspace with the same ID already exists, you'll be asked whether to **Replace** it or **Cancel**
 4. The workspace and all its data will be restored
 
 ### Clearing All Data
@@ -64,170 +64,75 @@ A workspace is the top-level container for your spending plan. Each workspace ha
 
 ---
 
-## Expenses
+## The Dashboard
 
-Expenses are the individual line items in your workspace — the things you plan to spend on (or earn).
-
-### Adding an Expense
-
-1. Open a workspace and go to the **Expenses** tab
-2. Click **Add Item** (or **Add your first item** if the list is empty)
-3. Fill in the form:
-   - **Type** — Choose **Expense** (money going out) or **Income** (money coming in)
-   - **Description** — What the item is (e.g. "Venue hire", "Monthly hosting")
-   - **Tags** — Labels for grouping (e.g. "Housing", "Food", "Transport"). Type a tag and press Enter or comma to add it. Suggestions appear from tags you've used before. You can add multiple tags per item
-   - **Amount** — The cost per occurrence (always a positive number)
-   - **How often?** — How frequently this item repeats:
-     - **Once-off** — Happens only once
-     - **Daily** — Every day
-     - **Weekly** — Every week
-     - **Monthly** — Every month
-     - **Quarterly** — Every 3 months
-     - **Annually** — Once a year
-   - **Start date** — When this expense begins
-   - **End date** (optional) — When this expense stops recurring
-4. Click **Add expense** (or **Add income** for income items)
-
-### Editing an Expense
-
-1. In the Expenses tab, find the item and click the **edit** icon (pencil)
-2. Change any fields and click **Save changes**
-
-### Deleting an Expense
-
-1. In the Expenses tab, find the item and click the **delete** icon (trash)
-2. The confirmation dialog shows the item name and amount
-3. If you've imported actual spending matched to this expense, those imports will be unlinked (not deleted)
-4. Click **Delete expense** to confirm
-
-### Understanding the Expenses List
-
-- Items are grouped by **primary tag** (first tag, alphabetically)
-- Each item shows its description, amount, and frequency (e.g. "R500/month")
-- Income items are tagged with a green **income** badge
-- The header bar shows:
-  - Total item count
-  - Total income (green, with "+")
-  - Total expenses (red, with "-")
-  - All amounts are converted to a monthly equivalent for easy comparison
-
----
-
-## Projected Spend
-
-The Forecast tab shows a month-by-month breakdown of your planned spending based on your expense items and their frequencies.
-
-### Viewing Projections
-
-1. Open a workspace and click the **Forecast** tab (trending-up icon)
-2. The table shows:
-   - **Rows:** Your expense items (or categories, depending on view mode)
-   - **Columns:** One column per month, plus a **Total** column
-   - **Income section** (green) if you have income items
-   - **Expenses section** with per-row and total amounts
-   - **Net section** showing income minus expenses (if you have income items)
-
-### Switching Views
-
-- Click **Each item** to see each individual expense as its own row
-- Click **Group by tag** to see expenses grouped and totalled by tag
+When you open a workspace, you see a single-screen dashboard with three sections:
 
 ### Cash on Hand
 
-At the top of the Forecast tab, there's a **Cash on hand** input where you can enter how much cash you currently have. This is not stored — it's a quick calculator to see how long your cash will last based on your forecast.
+At the top, there's a **Cash on hand** input where you can enter how much cash you currently have. This is saved to the workspace automatically.
 
-- **Enter any amount** and the app immediately shows:
-  - If your cash **runs out**: "Runs out in [month]"
-  - If your cash **grows** (income exceeds expenses): "Cash is growing — R[amount] after [N] months"
-  - If your cash **lasts**: "Lasts all [N] months — R[amount] remaining"
+- Enter any amount and the app shows your projected end balance or when your cash runs out
+- The forecast is based on your recurring patterns and transaction history
 
----
+### Cashflow Graph
 
-## Compare (Budget vs Actuals)
+An interactive line chart showing:
+- **Historical transactions** — your actual daily cashflow
+- **Forecast** — projected future cashflow based on patterns (shown as a dashed line)
 
-The Compare tab shows how your actual spending stacks up against your planned budget. You need to import actual spending data first (see Import section below).
+### Metrics Grid
 
-### Summary Bar
+Key financial metrics at a glance:
+- Transaction counts and totals
+- Forecast accuracy (MAE, hit rate) when enough historical data exists
+- Runway information (when cash on hand is set)
 
-At the top, three figures show:
-- **Budgeted** — Total planned spend
-- **Actual** — Total actual spend from imports
-- **Variance** — The difference (red if over budget, green if under)
+### Transaction Table
 
-### Three View Modes
-
-Click the toggle buttons to switch between views:
-
-**Line Items** — Shows each expense individually:
-- Columns: Expense name, Budgeted, Actual, Variance, %
-- Red = over budget, green = under budget
-- An "Unbudgeted Spending" section at the bottom shows any imported transactions that weren't matched to an expense
-
-**Categories** — Groups spending by category:
-- Columns: Category, Budgeted, Actual, Variance, %
-- Visual bar chart below showing budgeted vs actual per category
-- Legend: blue = budgeted, green = under budget, red = over budget
-
-**Monthly** — Shows month-by-month comparison:
-- Columns: Month, Projected, Actual, Variance, %
-- Dimmed rows indicate months with no actual data yet
-- Visual bar chart below showing projected vs actual per month
+A list of all transactions in the workspace, showing date, description, amount, and tags.
 
 ---
 
-## Importing Actual Spending
+## Importing Transactions
 
-The import wizard lets you upload your bank statement or spending data and match it against your budget. It's a 4-step process.
+The import wizard lets you upload your bank statement and classify transactions. It's a 3-step process.
 
 For details on file format, supported columns, and a ready-to-copy AI prompt for converting bank statements, open **Import Format** from the menu. A **Sample CSV** is also available there to test with.
 
 ### Step 1: Upload File
 
-1. From the workspace detail page, click **Import**
+1. From the workspace, click **Import**
 2. Click **Choose a file** and select a CSV or JSON file (max 10 MB)
-3. The app reads your file and auto-detects which columns contain dates, amounts, categories, and descriptions
+3. The app reads your file and auto-detects which columns contain dates, amounts, and descriptions
 4. A preview table shows the first few rows
-5. Click **Continue to mapping**
+5. Select the correct columns if auto-detection was wrong
+6. Click **Continue**
 
-### Step 2: Map Columns
+Duplicate transactions (matching date, amount, and description) are automatically skipped.
 
-1. The app shows dropdown selectors for each column type:
-   - **Date column** (required) — Which column has the transaction date
-   - **Amount column** (required) — Which column has the amount
-   - **Category column** (optional) — Which column has the merchant or category
-   - **Description column** (optional) — Which column has the transaction description
-   - At least one of Category or Description is required
-2. Select a **date format** if the auto-detected one is wrong
-3. A preview table shows how the first 5 rows will be parsed
-4. Click **Run matching** to proceed
+### Step 2: Classify Transactions
 
-### Step 3: Review Matches
+The app groups similar transactions together and lets you classify each group:
 
-The app automatically matches your imported transactions to your budget expenses using a 3-pass algorithm:
+- **Recurring** — This is a regular payment (rent, salary, subscription). A recurring pattern will be created or updated, and these transactions will feed the forecast engine.
+- **Once-off** — A one-time transaction (doesn't repeat). Still imported, but not used for pattern-based forecasting.
+- **Ignore** — Skip this group entirely (won't be imported).
 
-- **High confidence** (green) — Exact category and amount match. Auto-approved
-- **Medium confidence** (yellow) — Close category/description match with exact amount. Needs review
-- **Low confidence** (orange) — Amount match only. Needs review
-- **Unmatched** (gray) — No match found
+For each group, you can see:
+- The description and number of occurrences
+- The average amount and detected frequency
+- Whether it matches an existing recurring pattern
 
-For each transaction, you can:
-- **Approve or un-approve** — Click the approve button to include/exclude the row
-- **Reassign** — Use the dropdown to assign the transaction to a different expense, or select "Unbudgeted" for transactions that aren't in your plan
-- **Create a new expense** — Select **+ Create new...** from the dropdown to create a new expense line right from the import screen. The form pre-fills from the imported row data
+Click **Continue** when you've classified all groups.
 
-Bulk actions at the top let you **Approve all likely** or **Approve all possible** matches at once.
-
-The summary badges show how many transactions are in each confidence level.
-
-Click **Import [N] rows** when you're happy with the matches.
-
-### Step 4: Complete
+### Step 3: Confirm & Import
 
 A summary shows:
-- How many transactions were imported
-- How many were auto-matched, manually approved, or unbudgeted
+- How many recurring groups and once-off transactions will be imported
+- Total transaction count
 
-Click **View comparison** to go straight to the Compare tab and see your budget vs actuals.
+Click **Import transactions** to save everything. You'll be redirected back to the workspace dashboard.
 
 ---
 
@@ -249,7 +154,6 @@ After your first visit, the app works fully offline. A green notification confir
 
 - Click **budgy-ting** in the header to go back to the home screen from anywhere
 - On workspace pages, click **Workspaces** in the breadcrumb to return to the workspace list
-- Use the tab bar (Expenses, Forecast, Compare) to switch between views within a workspace
 
 ### Help Menu
 

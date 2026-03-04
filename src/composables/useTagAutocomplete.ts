@@ -6,7 +6,7 @@
  *   to substring matching for remaining slots
  * Alternatives:
  *   - Full-table scan + JS filter: Rejected — loads all tags every keystroke
- *   - Query expenses table directly: Rejected — slower, requires distinct aggregation
+ *   - Query transactions table directly: Rejected — slower, requires distinct aggregation
  *   - In-memory cache: Rejected — tagCache table handles persistence across sessions
  */
 
