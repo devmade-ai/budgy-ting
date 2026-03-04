@@ -126,23 +126,8 @@ export interface TagCache {
   lastUsed: string
 }
 
-/** Helper: get the primary tag (first tag) from a tags array, or 'Uncategorised' if empty */
-export function primaryTag(tags: string[]): string {
-  return tags[0] || 'Uncategorised'
-}
-
-/** Helper: format a signed amount for display (always shows absolute value) */
-export function displayAmount(amount: number): number {
-  return Math.abs(amount)
-}
-
 /** Helper: is this an income transaction (positive amount)? */
 export function isIncome(amount: number): boolean {
   return amount > 0
-}
-
-/** Helper: is this an expense transaction (negative amount)? */
-export function isExpense(amount: number): boolean {
-  return amount < 0
 }
 

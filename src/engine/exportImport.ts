@@ -85,11 +85,28 @@ export function validateImport(data: unknown): { valid: boolean; error?: string;
     return { valid: false, error: 'Missing transactions data in file' }
   }
 
+  // Validate patterns and importBatches are arrays when present
+  if (obj['patterns'] !== undefined && !Array.isArray(obj['patterns'])) {
+    return { valid: false, error: 'Invalid patterns data in file (expected array)' }
+  }
+  if (obj['importBatches'] !== undefined && !Array.isArray(obj['importBatches'])) {
+    return { valid: false, error: 'Invalid import batches data in file (expected array)' }
+  }
+
   if (!wsData['id'] || typeof wsData['id'] !== 'string') {
     return { valid: false, error: 'Workspace data is incomplete (missing id)' }
   }
   if (!wsData['name'] || typeof wsData['name'] !== 'string') {
     return { valid: false, error: 'Workspace data is incomplete (missing name)' }
+  }
+
+  // Spot-check first transaction has required fields to catch malformed data early
+  const txns = obj['transactions'] as Record<string, unknown>[]
+  if (txns.length > 0) {
+    const sample = txns[0]!
+    if (typeof sample['id'] !== 'string' || typeof sample['date'] !== 'string' || typeof sample['amount'] !== 'number') {
+      return { valid: false, error: 'Transaction data is malformed (missing id, date, or amount)' }
+    }
   }
 
   return { valid: true, data: obj as unknown as ExportSchema }

@@ -52,17 +52,6 @@ export function required(field: string, value: Ref<string>, message = `${field} 
   return { field, check: () => value.value.trim().length > 0, message }
 }
 
-export function positiveNumber(field: string, value: Ref<string>, message = 'Enter a positive amount'): ValidationRule {
-  return {
-    field,
-    check: () => {
-      const n = parseFloat(value.value)
-      return !isNaN(n) && n > 0
-    },
-    message,
-  }
-}
-
 export function dateAfter(
   field: string,
   startDate: Ref<string>,

@@ -14,7 +14,6 @@ const emit = defineEmits<{
     parsedData: ParsedCSV
     dateColumn: string
     amountColumn: string
-    categoryColumn: string
     descriptionColumn: string
     dateFormatIndex: number
   }]
@@ -26,7 +25,6 @@ const fileError = ref('')
 // Column auto-detection results
 const dateColumn = ref('')
 const amountColumn = ref('')
-const categoryColumn = ref('')
 const descriptionColumn = ref('')
 const dateFormatIndex = ref(0)
 
@@ -80,10 +78,6 @@ function autoDetectColumns() {
   const amountIdx = headers.findIndex((h) => amountHints.some((hint) => h.includes(hint)))
   if (amountIdx >= 0) amountColumn.value = parsedData.value.headers[amountIdx]!
 
-  const catHints = ['category', 'type', 'group']
-  const catIdx = headers.findIndex((h) => catHints.some((hint) => h.includes(hint)))
-  if (catIdx >= 0) categoryColumn.value = parsedData.value.headers[catIdx]!
-
   const descHints = ['description', 'desc', 'memo', 'reference', 'narrative', 'details']
   const descIdx = headers.findIndex((h) => descHints.some((hint) => h.includes(hint)))
   if (descIdx >= 0) descriptionColumn.value = parsedData.value.headers[descIdx]!
@@ -106,7 +100,6 @@ function handleContinue() {
     parsedData: parsedData.value,
     dateColumn: dateColumn.value,
     amountColumn: amountColumn.value,
-    categoryColumn: categoryColumn.value,
     descriptionColumn: descriptionColumn.value,
     dateFormatIndex: dateFormatIndex.value,
   })

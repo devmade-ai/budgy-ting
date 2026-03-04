@@ -14,16 +14,16 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { db } from '@/db'
-import { useId } from '@/composables/useId'
+import { generateId } from '@/composables/useId'
 import { nowISO } from '@/composables/useTimestamp'
 import { touchTags } from '@/composables/useTagAutocomplete'
-import { parseDate, parseAmount } from '@/engine/matching'
+import { parseDate, parseAmount, isDuplicate } from '@/engine/matching'
 import { detectFrequency, detectAnchorDay } from '@/engine/patterns'
 import ErrorAlert from '@/components/ErrorAlert.vue'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import ImportStepUpload from './import-steps/ImportStepUpload.vue'
 import ImportStepClassify from './import-steps/ImportStepClassify.vue'
-import type { Workspace, Transaction, RecurringPattern } from '@/types/models'
+import type { Workspace, Transaction, RecurringPattern, Frequency } from '@/types/models'
 import type { ParsedCSV } from '@/engine/csvParser'
 import type { ParsedTransaction, TransactionGroup } from './import-steps/ImportStepClassify.vue'
 
@@ -86,12 +86,8 @@ function handleUploadComplete(data: {
     }
 
     // Duplicate detection against existing transactions
-    const isDup = existingTransactions.value.some((t) =>
-      t.date === dateStr &&
-      Math.abs(t.amount - amount) < 0.01 &&
-      t.description.toLowerCase() === description.toLowerCase(),
-    )
-    if (isDup) {
+    // Requirement: Reuse existing isDuplicate() from matching.ts (includes .trim())
+    if (isDuplicate({ date: dateStr, amount, description }, existingTransactions.value)) {
       skipped++
       continue
     }
@@ -133,7 +129,7 @@ async function handleConfirmImport() {
 
   try {
     const now = nowISO()
-    const batchId = useId()
+    const batchId = generateId()
     const newTransactions: Transaction[] = []
     const patternUpdates: Array<{ pattern: RecurringPattern; isNew: boolean }> = []
     const allTags = new Set<string>()
@@ -166,13 +162,24 @@ async function handleConfirmImport() {
           }
         } else {
           // Create new pattern from the group
-          const amounts = group.rows.map((r) => r.amount)
+          // Requirement: detectFrequency expects number[] of day-intervals, not string[] of dates.
+          // Compute intervals between consecutive sorted dates, then detect frequency.
           const dates = group.rows.map((r) => r.date).sort()
-          const frequency = dates.length > 1 ? detectFrequency(dates) : 'monthly'
+          let frequency: Frequency = 'monthly'
+          if (dates.length > 1) {
+            const intervals: number[] = []
+            for (let i = 1; i < dates.length; i++) {
+              const dA = new Date(dates[i - 1]! + 'T00:00:00')
+              const dB = new Date(dates[i]! + 'T00:00:00')
+              intervals.push(Math.round(Math.abs(dB.getTime() - dA.getTime()) / 86_400_000))
+            }
+            const detected = detectFrequency(intervals)
+            frequency = detected?.frequency ?? 'monthly'
+          }
           const anchorDay = detectAnchorDay(dates, frequency)
 
           const newPattern: RecurringPattern = {
-            id: useId(),
+            id: generateId(),
             workspaceId: workspace.value!.id,
             description: group.description,
             expectedAmount: group.avgAmount,
@@ -194,7 +201,7 @@ async function handleConfirmImport() {
       // Create transactions
       for (const row of group.rows) {
         newTransactions.push({
-          id: useId(),
+          id: generateId(),
           workspaceId: workspace.value!.id,
           date: row.date,
           amount: row.amount,

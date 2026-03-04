@@ -9,7 +9,7 @@
  *   - Lazy-load engines: Considered — data is small enough to compute eagerly
  */
 
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { db } from '@/db'
 import { buildForecast } from '@/engine/forecast'
 import { calculateRunway } from '@/engine/runway'
@@ -93,6 +93,10 @@ watch(cashOnHand, (val) => {
       // Silent — non-critical persistence
     }
   }, 500)
+})
+
+onUnmounted(() => {
+  if (cashSaveTimeout) clearTimeout(cashSaveTimeout)
 })
 </script>
 

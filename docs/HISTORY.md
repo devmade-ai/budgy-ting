@@ -2,6 +2,32 @@
 
 <!-- Changelog and record of completed work. Organized by date. -->
 
+## 2026-03-04 (Session 3)
+
+- **Full Codebase Audit — Bug Fixes and Dead Code Removal:**
+
+  **Critical Bug Fixes (C1-C3):**
+  - Fixed `detectFrequency()` in `NewImportWizard.vue` — was called with `string[]` (ISO dates) instead of `number[]` (day intervals). All new recurring patterns created during import had `frequency: null`, producing zero forecast projections. Now correctly computes intervals between consecutive dates before calling `detectFrequency()`, and handles the return value with proper fallback to `'monthly'`.
+
+  **High-Priority Fixes:**
+  - H1: Fixed timer leak in `WorkspaceDashboard.vue` — `cashSaveTimeout` now cleaned up on `onUnmounted`
+  - H2: Strengthened `validateImport()` in `exportImport.ts` — now validates `patterns` and `importBatches` are arrays when present, and spot-checks first transaction has required fields (id, date, amount)
+  - H3: Fixed `v-for` key in `MetricsGrid.vue` — changed from array index `i` to `m.label` (labels are unique)
+  - H4: Replaced inline duplicate detection in `NewImportWizard.vue` with existing `isDuplicate()` from `matching.ts` (includes `.trim()` that inline version omitted)
+
+  **Medium-Priority Fixes:**
+  - M1: Removed dead `categoryColumn` detection from `ImportStepUpload.vue` — auto-detected and emitted but never consumed by parent
+  - M3: Renamed `useId()` → `generateId()` — pure function with no Vue dependency shouldn't use `use*` composable naming convention
+
+  **Dead Code Removal:**
+  - L1: Removed orphaned `ScrollHint.vue` — zero imports across codebase
+  - L2-L4: Removed unused exports from `models.ts`: `primaryTag()`, `displayAmount()`, `isExpense()`
+  - L5: Removed unused `positiveNumber()` from `useFormValidation.ts`
+  - L6-L7: Removed unused `useTagAutocomplete()` composable and `touchTag()` (singular) from `useTagAutocomplete.ts` — only `touchTags()` (plural) was imported
+
+  **Verification:**
+  - 97 tests pass, build succeeds, type-check clean
+
 ## 2026-03-04 (Session 2)
 
 - **Actuals-First Pivot — Phase 1 (Data Model) + Phase 3 (Forecasting Engine):**
@@ -10,7 +36,7 @@
   - `Transaction` — unified model replacing separate Expense/Actual tables. Signed amounts (positive=income, negative=expense). Fields: date, amount, description, tags, source, classification, recurringGroupId, importBatchId.
   - `RecurringPattern` — detected or user-defined recurring transaction pattern. Fields: expectedAmount (signed), amountStdDev, frequency (incl. new `biweekly`), anchorDay, isActive, autoAccept.
   - `ImportBatch` — tracks CSV/JSON imports for duplicate detection.
-  - Helper functions: `displayAmount()`, `isIncome()`, `isExpense()`.
+  - Helper function: `isIncome()`.
   - Legacy types (`Expense`, `Actual`, `LineType`, `CategoryMapping`) retained for backward compat.
 
   **DB Schema v6 (`db/index.ts`):**
