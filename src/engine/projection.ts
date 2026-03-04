@@ -1,0 +1,297 @@
+/**
+ * Projection calculation engine — pure TypeScript, no UI dependency.
+ *
+ * Requirement: Expand recurring expenses into monthly amounts based on frequency
+ * Approach: For each month in the budget period, calculate each expense's contribution
+ * Alternatives:
+ *   - Generate all future dates then aggregate: Rejected — memory-heavy for daily items
+ *   - Use date-fns for all date math: Deferred — using simple ISO date string math
+ *     for MVP to avoid the dependency until import wizard needs it. Will add date-fns
+ *     if edge cases warrant it.
+ *
+ * Decision: For monthly period type (no custom range), use current month + 11 months
+ *   as the 12-month rolling view per product definition recommendation.
+ */
+
+import type { Workspace, Expense } from '@/types/models'
+import { primaryTag } from '@/types/models'
+
+export interface MonthSlot {
+  /** ISO month string: YYYY-MM */
+  month: string
+  /** Year number */
+  year: number
+  /** Month number (1-12) */
+  monthNum: number
+  /** First day of month: YYYY-MM-01 */
+  firstDay: string
+  /** Last day of month: YYYY-MM-DD */
+  lastDay: string
+  /** Number of days in the month */
+  daysInMonth: number
+}
+
+export interface ProjectedRow {
+  expenseId: string
+  description: string
+  /** All tags on the expense */
+  tags: string[]
+  /** Primary tag (first tag) used for rollups — derived from tags[0] */
+  category: string
+  frequency: string
+  /** Whether this is income (money in) or expense (money out) */
+  type: 'income' | 'expense'
+  /** Amount per month slot (always positive) */
+  amounts: Map<string, number>
+  /** Total across all months (always positive) */
+  total: number
+}
+
+export interface ProjectionResult {
+  months: MonthSlot[]
+  rows: ProjectedRow[]
+  /** Primary tag → month → total (expense amounts only) */
+  categoryRollup: Map<string, Map<string, number>>
+  /** Month → total expense (outflows only, for variance) */
+  monthlyTotals: Map<string, number>
+  /** Grand total expenses (outflows only) */
+  grandTotal: number
+  /** Month → total income */
+  monthlyIncome: Map<string, number>
+  /** Month → net cashflow (income - expenses) */
+  monthlyNet: Map<string, number>
+  /** Grand total income */
+  totalIncome: number
+  /** Grand total net (income - expenses) */
+  totalNet: number
+}
+
+/**
+ * Generate an array of MonthSlots between two dates (inclusive).
+ */
+export function generateMonthSlots(startDate: string, endDate: string): MonthSlot[] {
+  const slots: MonthSlot[] = []
+  const [startY, startM] = startDate.split('-').map(Number) as [number, number]
+  const [endY, endM] = endDate.split('-').map(Number) as [number, number]
+
+  let y = startY
+  let m = startM
+
+  while (y < endY || (y === endY && m <= endM)) {
+    const daysInMonth = new Date(y, m, 0).getDate()
+    const monthStr = `${y}-${String(m).padStart(2, '0')}`
+    slots.push({
+      month: monthStr,
+      year: y,
+      monthNum: m,
+      firstDay: `${monthStr}-01`,
+      lastDay: `${monthStr}-${String(daysInMonth).padStart(2, '0')}`,
+      daysInMonth,
+    })
+
+    m++
+    if (m > 12) {
+      m = 1
+      y++
+    }
+  }
+
+  return slots
+}
+
+/**
+ * Get the default budget period for a monthly-type budget.
+ * Current month + 11 months (12-month rolling view).
+ */
+export function getDefaultPeriod(): { startDate: string; endDate: string } {
+  const now = new Date()
+  const startDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
+
+  const endMonth = now.getMonth() + 12 // 0-indexed, so +12 gives 11 months ahead
+  const endYear = now.getFullYear() + Math.floor(endMonth / 12)
+  const endM = (endMonth % 12) || 12
+  const daysInEndMonth = new Date(endYear, endM, 0).getDate()
+  const endDate = `${endYear}-${String(endM).padStart(2, '0')}-${String(daysInEndMonth).padStart(2, '0')}`
+
+  return { startDate, endDate }
+}
+
+/**
+ * Resolve the effective start/end dates for a workspace.
+ *
+ * Requirement: Monthly workspaces use a 12-month rolling view from current month;
+ *   custom workspaces use their explicit dates with fallback to defaults.
+ * Approach: Single helper to eliminate the 3-file duplication of this logic
+ *   (was in ProjectedTab, CompareTab, and exportImport).
+ */
+export function resolveWorkspacePeriod(workspace: Pick<Workspace, 'startDate' | 'endDate' | 'periodType'>): { startDate: string; endDate: string } {
+  let startDate = workspace.startDate
+  let endDate = workspace.endDate
+
+  if (workspace.periodType === 'monthly' || !endDate) {
+    const defaults = getDefaultPeriod()
+    if (!startDate) startDate = defaults.startDate
+    if (!endDate) endDate = defaults.endDate
+  }
+
+  return { startDate, endDate: endDate! }
+}
+
+/**
+ * Count days between two ISO date strings (inclusive).
+ * Uses Date objects instead of day-of-month arithmetic to correctly
+ * handle month boundaries (e.g. Jan 25 to Feb 4 = 11 days).
+ */
+function daysBetween(startISO: string, endISO: string): number {
+  const MS_PER_DAY = 86_400_000
+  const start = new Date(startISO + 'T00:00:00')
+  const end = new Date(endISO + 'T00:00:00')
+  return Math.round((end.getTime() - start.getTime()) / MS_PER_DAY) + 1
+}
+
+/**
+ * Calculate the amount an expense contributes to a given month.
+ */
+function calculateMonthAmount(expense: Expense, slot: MonthSlot, budgetEnd: string): number {
+  // Determine effective date range for this expense
+  const expStart = expense.startDate
+  const expEnd = expense.endDate || budgetEnd
+
+  // Check if expense overlaps this month at all
+  if (expStart > slot.lastDay || expEnd < slot.firstDay) {
+    return 0
+  }
+
+  // Clamp the expense range to this month
+  const effectiveStart = expStart > slot.firstDay ? expStart : slot.firstDay
+  const effectiveEnd = expEnd < slot.lastDay ? expEnd : slot.lastDay
+
+  switch (expense.frequency) {
+    case 'once-off': {
+      // Once-off appears in the month of its start date
+      const expMonth = expStart.slice(0, 7)
+      return expMonth === slot.month ? expense.amount : 0
+    }
+
+    case 'daily': {
+      // Amount × number of days in this month (within bounds)
+      // Use Date objects to correctly handle month boundaries
+      const days = daysBetween(effectiveStart, effectiveEnd)
+      return expense.amount * days
+    }
+
+    case 'weekly': {
+      // Amount × weeks overlapping this month
+      // Use Date objects to correctly handle month boundaries
+      const days = daysBetween(effectiveStart, effectiveEnd)
+      const weeks = days / 7
+      return expense.amount * weeks
+    }
+
+    case 'monthly': {
+      // Full amount if month falls within start/end
+      return expense.amount
+    }
+
+    case 'quarterly': {
+      // Amount if this month is a quarter boundary from the start date
+      const startMonth = parseInt(expStart.split('-')[1]!, 10)
+      const monthDiff = (slot.year - parseInt(expStart.split('-')[0]!, 10)) * 12 +
+        (slot.monthNum - startMonth)
+      return monthDiff >= 0 && monthDiff % 3 === 0 ? expense.amount : 0
+    }
+
+    case 'annually': {
+      // Amount if this month matches the anniversary month
+      const startMonth = parseInt(expStart.split('-')[1]!, 10)
+      return slot.monthNum === startMonth ? expense.amount : 0
+    }
+
+    default:
+      return 0
+  }
+}
+
+/**
+ * Run the projection engine.
+ *
+ * @param expenses - List of expense records for the budget
+ * @param startDate - Budget period start (ISO date)
+ * @param endDate - Budget period end (ISO date)
+ */
+export function calculateProjection(
+  expenses: Expense[],
+  startDate: string,
+  endDate: string,
+): ProjectionResult {
+  const months = generateMonthSlots(startDate, endDate)
+
+  const rows: ProjectedRow[] = []
+  const categoryRollup = new Map<string, Map<string, number>>()
+  const monthlyTotals = new Map<string, number>()
+  const monthlyIncome = new Map<string, number>()
+  const monthlyNet = new Map<string, number>()
+  let grandTotal = 0
+  let totalIncome = 0
+
+  // Initialize monthly totals
+  for (const slot of months) {
+    monthlyTotals.set(slot.month, 0)
+    monthlyIncome.set(slot.month, 0)
+    monthlyNet.set(slot.month, 0)
+  }
+
+  for (const expense of expenses) {
+    const amounts = new Map<string, number>()
+    let rowTotal = 0
+    const isIncome = expense.type === 'income'
+    const category = primaryTag(expense.tags)
+
+    for (const slot of months) {
+      const amount = calculateMonthAmount(expense, slot, endDate)
+      amounts.set(slot.month, amount)
+      rowTotal += amount
+
+      if (isIncome) {
+        // Track income separately
+        monthlyIncome.set(slot.month, (monthlyIncome.get(slot.month) ?? 0) + amount)
+        monthlyNet.set(slot.month, (monthlyNet.get(slot.month) ?? 0) + amount)
+      } else {
+        // Track expenses (outflows) — these feed into the variance engine
+        monthlyTotals.set(slot.month, (monthlyTotals.get(slot.month) ?? 0) + amount)
+        monthlyNet.set(slot.month, (monthlyNet.get(slot.month) ?? 0) - amount)
+
+        // Category rollup uses primary tag (first tag) — only tracks expenses (not income)
+        if (!categoryRollup.has(category)) {
+          categoryRollup.set(category, new Map())
+        }
+        const catMap = categoryRollup.get(category)!
+        catMap.set(slot.month, (catMap.get(slot.month) ?? 0) + amount)
+      }
+    }
+
+    rows.push({
+      expenseId: expense.id,
+      description: expense.description,
+      tags: expense.tags,
+      category,
+      frequency: expense.frequency,
+      type: isIncome ? 'income' : 'expense',
+      amounts,
+      total: rowTotal,
+    })
+
+    if (isIncome) {
+      totalIncome += rowTotal
+    } else {
+      grandTotal += rowTotal
+    }
+  }
+
+  const totalNet = totalIncome - grandTotal
+
+  return {
+    months, rows, categoryRollup, monthlyTotals, grandTotal,
+    monthlyIncome, monthlyNet, totalIncome, totalNet,
+  }
+}

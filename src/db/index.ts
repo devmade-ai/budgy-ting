@@ -16,6 +16,7 @@
 import Dexie, { type EntityTable } from 'dexie'
 import type {
   Workspace, Transaction, RecurringPattern, ImportBatch, TagCache,
+  Expense, Actual, CategoryMapping,
 } from '@/types/models'
 
 const db = new Dexie('budgy-ting') as Dexie & {
@@ -24,6 +25,11 @@ const db = new Dexie('budgy-ting') as Dexie & {
   patterns: EntityTable<RecurringPattern, 'id'>
   importBatches: EntityTable<ImportBatch, 'id'>
   tagCache: EntityTable<TagCache, 'tag'>
+  // Legacy table types — tables are dropped in v6 migration but typed stubs
+  // remain so existing views/engines compile. Will be removed in Phase 4 (UI migration).
+  expenses: EntityTable<Expense, 'id'>
+  actuals: EntityTable<Actual, 'id'>
+  categoryMappings: EntityTable<CategoryMapping, 'id'>
 }
 
 // Schema v1-v5: Legacy schemas kept for Dexie's sequential upgrade path.

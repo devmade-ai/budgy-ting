@@ -2,55 +2,6 @@
 
 <!-- Changelog and record of completed work. Organized by date. -->
 
-## 2026-03-04 (Session 3)
-
-- **Legacy Code Cleanup — Removed entire budget-first system:**
-
-  **Deleted Engine Files:**
-  - `engine/projection.ts` + test — monthly expense projection (Expense model)
-  - `engine/variance.ts` + test — projected vs actual comparison (Expense/Actual models)
-  - `engine/matching.ts` + test — 3-pass CSV import matching (Expense model)
-  - `engine/exportImport.ts` + test — JSON export/import (Expense/Actual models)
-  - `engine/csvParser.ts` + test — CSV parsing for import wizard
-
-  **Deleted Views & Components:**
-  - `views/ExpensesTab.vue` — expense list (queried dropped db.expenses table)
-  - `views/ProjectedTab.vue` — monthly projection (queried dropped tables)
-  - `views/CompareTab.vue` — plan vs actual comparison (queried dropped tables)
-  - `views/ExpenseCreateView.vue` — expense creation (wrote to dropped table)
-  - `views/ExpenseEditView.vue` — expense editing (wrote to dropped table)
-  - `views/ImportWizardView.vue` — 4-step import wizard orchestrator
-  - `views/import-steps/` — ImportStepUpload, ImportStepMapping, ImportStepReview, ImportStepComplete
-  - `views/compare-views/` — CompareLineItems, CompareCategories, CompareMonthly
-  - `components/ExpenseForm.vue` — shared expense create/edit form
-  - `components/CashflowChart.vue` — ApexCharts daily cashflow line chart
-
-  **Removed Legacy Types (`types/models.ts`):**
-  - `Expense`, `Actual`, `CategoryMapping`, `LineType`, `MatchConfidence` types
-  - Legacy compatibility comment block
-
-  **Removed Legacy Stubs (`engine/forecast.ts`):**
-  - `DailyPoint` interface, `expandActualsToDailyPoints()`, `expandForecastToDailyPoints()` stub functions
-
-  **Removed Legacy DB Stubs (`db/index.ts`):**
-  - Type imports and typed table definitions for dropped expenses/actuals/categoryMappings tables
-
-  **Updated:**
-  - `router/index.ts` — removed routes: expense CRUD, import wizard, workspace detail children (tab routes)
-  - `views/WorkspaceDetailView.vue` — removed tabs, import button, export functionality; fixed cascade delete to use transactions/patterns/importBatches
-  - `views/WorkspaceListView.vue` — removed expense summaries, restore-from-backup, import/export; fixed clear-all to use new tables
-  - `components/TutorialModal.vue` — rewrote tutorial steps for actuals-first paradigm
-  - `composables/useFormValidation.ts` — updated comment (no longer shared with ExpenseForm)
-  - `composables/useFormat.ts` — updated comment
-
-  **Completed TODO items moved here:**
-  - Migrate existing views to use Transaction model instead of legacy Expense/Actual
-  - Remove legacy compatibility types and stubs after UI migration
-  - Code-split ApexCharts into separate chunk (CashflowChart deleted; will be rebuilt in Phase 4)
-
-  **Verification:**
-  - vue-tsc clean, vite build clean, 69 tests pass (4 files: patterns, forecast, accuracy, runway)
-
 ## 2026-03-04 (Session 2)
 
 - **Actuals-First Pivot — Phase 1 (Data Model) + Phase 3 (Forecasting Engine):**

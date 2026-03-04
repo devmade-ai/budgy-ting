@@ -1,10 +1,10 @@
 /**
- * Requirement: Shared form validation logic for WorkspaceForm
+ * Requirement: Shared form validation logic for WorkspaceForm and ExpenseForm
  * Approach: Provides reactive errors map, common validation rules, and a validate() runner.
  *   Each form defines its own rules array; the composable runs them and populates errors.
  * Alternatives:
- *   - Inline validation per-form: Rejected — leads to duplicated required/date/amount checks
- *   - Third-party library (vee-validate, vuelidate): Rejected — overkill for simple rules
+ *   - Inline validation per-form: Previous approach — led to duplicated required/date/amount checks
+ *   - Third-party library (vee-validate, vuelidate): Rejected — overkill for 2 forms with simple rules
  */
 
 import { ref, watch, type Ref } from 'vue'

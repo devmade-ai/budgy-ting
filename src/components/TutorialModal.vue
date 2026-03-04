@@ -27,7 +27,7 @@ const steps: TutorialStep[] = [
   {
     icon: 'i-lucide-hand-heart',
     title: 'Welcome to budgy-ting',
-    description: 'A simple tool to track your spending and forecast where your money is going. Everything stays on your device — no accounts, no cloud.',
+    description: 'A simple tool to plan your spending and see where your money actually goes. Everything stays on your device — no accounts, no cloud.',
   },
   {
     icon: 'i-lucide-wallet',
@@ -36,13 +36,23 @@ const steps: TutorialStep[] = [
   },
   {
     icon: 'i-lucide-list-plus',
-    title: 'Add your transactions',
-    description: 'Record your income and expenses. The app detects recurring patterns automatically — rent, subscriptions, salary, etc.',
+    title: 'Add your expenses',
+    description: 'Add the things you plan to spend on — rent, groceries, subscriptions, whatever. Set how often each one repeats (weekly, monthly, etc.).',
   },
   {
-    icon: 'i-lucide-trending-up',
-    title: 'See your forecast',
-    description: 'View a daily forecast of your cashflow based on your recurring patterns and spending trends. See when money gets tight before it happens.',
+    icon: 'i-lucide-calendar-range',
+    title: 'See your projections',
+    description: 'View a month-by-month breakdown of your planned spending. Spot expensive months before they happen.',
+  },
+  {
+    icon: 'i-lucide-upload',
+    title: 'Import actual spending',
+    description: 'Upload your bank statement (CSV or JSON file) and the app will match transactions to your planned expenses automatically.',
+  },
+  {
+    icon: 'i-lucide-scale',
+    title: 'Compare plan vs reality',
+    description: 'See at a glance where you spent more or less than planned — by item, by category, or by month.',
   },
 ]
 
