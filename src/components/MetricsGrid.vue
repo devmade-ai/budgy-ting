@@ -142,7 +142,7 @@ const metrics = computed(() => {
 <template>
   <div v-if="metrics.length > 0" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mb-6">
     <MetricCard
-      v-for="(m, i) in metrics"
+      v-for="m in metrics"
       :key="m.label"
       :label="m.label"
       :value="m.value"
