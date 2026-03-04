@@ -1,13 +1,13 @@
 <script setup lang="ts">
 /**
- * Requirement: Compare budget vs actuals by line item, category, and month
- * Approach: Load expenses + actuals, run projection + variance engines, delegate to sub-view components
+ * Requirement: Compare budget vs actuals by line item, category, and month.
+ *   Only show variance after actuals are uploaded — don't assume uploads happen at start/end
+ *   of month. Actuals can contain data for any period.
+ * Approach: Load expenses + actuals, run projection + variance engines, delegate to sub-view components.
+ *   Gate all variance display on `hasAnyActuals` flag from variance engine.
  *
  * Refactor: Extracted 3 view modes (line items, categories, monthly) into separate components
  *   to keep this file under the 400-line threshold. See compare-views/ directory.
- *
- * Note: Charts (ApexCharts) deferred — npm can't install. Table views are fully functional.
- * Charts will be added when dependencies are available.
  */
 
 import { ref, computed, onMounted } from 'vue'
@@ -70,7 +70,7 @@ function goToImport() {
     <LoadingSpinner v-if="loading" />
 
     <EmptyState
-      v-else-if="!comparison && !error"
+      v-else-if="(!comparison || !comparison.hasAnyActuals) && !error"
       icon="i-lucide-bar-chart-3"
       title="Nothing to compare yet"
       description="Import your bank statement to see how your actual spending compares to your budget"
@@ -81,8 +81,13 @@ function goToImport() {
       </button>
     </EmptyState>
 
-    <!-- Comparison views -->
-    <template v-else-if="comparison">
+    <!-- Comparison views — only shown when actuals exist -->
+    <template v-else-if="comparison && comparison.hasAnyActuals">
+      <!-- Actuals date range info -->
+      <p v-if="comparison.actualsDateRange" class="text-xs text-gray-400 mb-3">
+        Showing actuals from {{ comparison.actualsDateRange.earliest }} to {{ comparison.actualsDateRange.latest }}
+      </p>
+
       <!-- Summary bar -->
       <div class="card mb-4">
         <div class="grid grid-cols-3 gap-4 text-center">

@@ -63,6 +63,10 @@ export interface ComparisonResult {
   totalBudgeted: number
   totalActual: number
   totalVariance: number
+  /** Whether any actuals data exists at all */
+  hasAnyActuals: boolean
+  /** Date range of actuals data (null if no actuals) */
+  actualsDateRange: { earliest: string; latest: string } | null
 }
 
 // Half-cent rounding tolerance — amounts below this are treated as zero variance.
@@ -207,6 +211,16 @@ export function calculateComparison(
   const totalActual = expenseActuals.reduce((sum, a) => sum + a.amount, 0)
   const totalVariance = totalActual - totalBudgeted
 
+  // ── Actuals presence metadata ──
+  // Requirement: Only show variance/accuracy after actuals are uploaded. Don't assume
+  //   uploads happen at start/end of month — actuals can contain data for any period.
+  const hasAnyActuals = actuals.length > 0
+  let actualsDateRange: { earliest: string; latest: string } | null = null
+  if (hasAnyActuals) {
+    const dates = actuals.map((a) => a.date).sort()
+    actualsDateRange = { earliest: dates[0]!, latest: dates[dates.length - 1]! }
+  }
+
   return {
     lineItems,
     categories,
@@ -215,5 +229,7 @@ export function calculateComparison(
     totalBudgeted,
     totalActual,
     totalVariance,
+    hasAnyActuals,
+    actualsDateRange,
   }
 }

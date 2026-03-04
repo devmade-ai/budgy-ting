@@ -2,6 +2,34 @@
 
 <!-- Changelog and record of completed work. Organized by date. -->
 
+## 2026-03-04
+
+- **Forecasting System Enhancement:**
+
+  **New Engines:**
+  - `engine/forecast.ts` — Statistical forecasting: EMA (alpha=0.3, min 3 months), rolling average fallback, daily expansion for charting. Functions: `calculateEMA()`, `calculateRollingAverage()`, `generateCategoryForecasts()`, `expandActualsToDailyPoints()`, `expandForecastToDailyPoints()`, `buildDailyCashflowData()`
+  - `engine/accuracy.ts` — Daily forecast accuracy: compares projected vs actual at day+category level. Computes MAPE, weighted MAPE, per-category and per-method breakdowns. Not persisted — computed on-the-fly. Hidden from users by default.
+
+  **New Components:**
+  - `components/CashflowChart.vue` — ApexCharts daily cashflow line chart. Cumulative (running balance) or daily net toggle. Optional forecast overlay as dashed line. Zoom/pan enabled.
+
+  **Modified:**
+  - `views/ProjectedTab.vue` — Added Table/Chart view toggle. Loads actuals alongside expenses. Computes daily chart data via forecast engine.
+  - `views/CompareTab.vue` — Variance display gated on `hasAnyActuals`. Shows empty state with import CTA until actuals uploaded. Displays actuals date range info.
+  - `engine/variance.ts` — Added `hasAnyActuals: boolean` and `actualsDateRange` to `ComparisonResult`.
+
+  **Dependencies:**
+  - Added `apexcharts` and `vue3-apexcharts`
+
+  **Tests:**
+  - `forecast.test.ts` — 14 tests: EMA, rolling average, category grouping, daily expansion, income exclusion
+  - `accuracy.test.ts` — 6 tests: empty input, daily accuracy, income exclusion, multi-category, MAPE summary
+  - Total: 96 tests across 7 files, all passing
+
+  **Completed TODO items moved here:**
+  - Forecasting with simple-statistics — variable spend prediction with confidence bands
+  - Add ApexCharts for category bar chart and monthly line chart
+
 ## 2026-03-03
 
 - **Documentation Audit — Full Codebase Review:**

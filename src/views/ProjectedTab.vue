@@ -2,39 +2,50 @@
 /**
  * Requirement: Monthly breakdown table with per-expense amounts, category rollup, totals,
  *   plus an ephemeral "cash on hand" input to see how long cash lasts based on the forecast.
- * Approach: Load expenses, run projection engine, render scrollable table.
+ *   Also: daily cashflow chart with optional forecast overlay (cumulative or daily net toggle).
+ * Approach: Load expenses + actuals, run projection engine, render scrollable table or chart.
  *   Cash input is not persisted — it's a quick "what if I have X right now" tool.
+ *   Chart uses ApexCharts via CashflowChart component.
  * Alternatives:
  *   - Store cash on workspace: Rejected — user wants a lightweight, non-persisted input
  *   - Separate tab for cash runway: Rejected — user chose to consolidate into Forecast tab
+ *   - Separate tab for chart: Rejected — chart is the visual complement to the table
  */
 
 import { ref, computed, onMounted } from 'vue'
 import { db } from '@/db'
 import { calculateProjection, resolveWorkspacePeriod } from '@/engine/projection'
+import { expandActualsToDailyPoints, expandForecastToDailyPoints } from '@/engine/forecast'
 import { formatAmount } from '@/composables/useFormat'
 import ErrorAlert from '@/components/ErrorAlert.vue'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import ScrollHint from '@/components/ScrollHint.vue'
-import type { Workspace, Expense } from '@/types/models'
+import CashflowChart from '@/components/CashflowChart.vue'
+import type { Workspace, Expense, Actual } from '@/types/models'
 import type { ProjectionResult } from '@/engine/projection'
 
 const props = defineProps<{ workspace: Workspace }>()
 
 const expenses = ref<Expense[]>([])
+const actuals = ref<Actual[]>([])
 const loading = ref(true)
 const error = ref('')
+
+/** Top-level view: table (existing) or chart (new daily cashflow graph) */
+const tabView = ref<'table' | 'chart'>('table')
 
 /** Ephemeral cash input — not stored, used for runway calculation */
 const cashInputStr = ref('')
 
 onMounted(async () => {
   try {
-    expenses.value = await db.expenses
-      .where('workspaceId')
-      .equals(props.workspace.id)
-      .toArray()
+    const [exps, acts] = await Promise.all([
+      db.expenses.where('workspaceId').equals(props.workspace.id).toArray(),
+      db.actuals.where('workspaceId').equals(props.workspace.id).toArray(),
+    ])
+    expenses.value = exps
+    actuals.value = acts
   } catch {
     error.value = 'Couldn\'t load projections. Please refresh and try again.'
   } finally {
@@ -52,6 +63,19 @@ const projection = computed<ProjectionResult | null>(() => {
     error.value = 'Something went wrong calculating projections. Please check your expense dates and try again.'
     return null
   }
+})
+
+/** Daily chart data — computed from actuals + projection */
+const chartActualPoints = computed(() => {
+  if (actuals.value.length === 0) return []
+  const { startDate, endDate } = resolveWorkspacePeriod(props.workspace)
+  return expandActualsToDailyPoints(actuals.value, expenses.value, startDate, endDate)
+})
+
+const chartForecastPoints = computed(() => {
+  if (!projection.value) return []
+  const { startDate, endDate } = resolveWorkspacePeriod(props.workspace)
+  return expandForecastToDailyPoints(projection.value, startDate, endDate)
 })
 
 const viewMode = ref<'items' | 'categories'>('items')
@@ -127,8 +151,43 @@ const cashRunway = computed(() => {
 
     <LoadingSpinner v-else-if="loading" />
 
-    <!-- Projection table -->
+    <!-- Projection views -->
     <template v-else-if="projection">
+      <!-- Table / Chart toggle -->
+      <div class="flex gap-1 mb-4">
+        <button
+          class="btn text-xs"
+          :class="tabView === 'table'
+            ? 'bg-brand-50 text-brand-700 border border-brand-300'
+            : 'bg-gray-50 text-gray-600 border border-gray-200'"
+          @click="tabView = 'table'"
+        >
+          <span class="i-lucide-table mr-1" />
+          Table
+        </button>
+        <button
+          class="btn text-xs"
+          :class="tabView === 'chart'
+            ? 'bg-brand-50 text-brand-700 border border-brand-300'
+            : 'bg-gray-50 text-gray-600 border border-gray-200'"
+          @click="tabView = 'chart'"
+        >
+          <span class="i-lucide-line-chart mr-1" />
+          Chart
+        </button>
+      </div>
+
+      <!-- Chart view -->
+      <CashflowChart
+        v-if="tabView === 'chart'"
+        :actual-points="chartActualPoints"
+        :forecast-points="chartForecastPoints"
+        :currency-label="props.workspace.currencyLabel"
+        :has-forecast="chartForecastPoints.length > 0"
+      />
+
+      <!-- Table view (existing) -->
+      <template v-if="tabView === 'table'">
       <!-- Cash runway input — ephemeral, not stored -->
       <div class="card mb-4 border border-gray-200">
         <div class="flex flex-col sm:flex-row sm:items-center gap-3">
@@ -378,6 +437,7 @@ const cashRunway = computed(() => {
           </tfoot>
         </table>
       </ScrollHint>
+      </template>
     </template>
   </div>
 </template>

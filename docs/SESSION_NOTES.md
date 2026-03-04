@@ -4,27 +4,25 @@
 
 ## Worked on
 
-Full codebase audit — reviewed all source files, documentation, and code comments for accuracy and compliance with CLAUDE.md standards.
+Forecasting system enhancement — statistical models, daily cashflow chart, actuals-gated variance, daily accuracy tracking.
 
 ## Accomplished
 
-- **Audited entire codebase** (47 source files, ~8,000 lines) against all documentation
-- **Fixed README.md** — rewrote project structure to list all 16 components, 10 composables, debug system, compare-views and import-steps subdirectories, correct schema version (v5)
-- **Rewrote PRODUCT_DEFINITION.md** — updated all terminology (budget→workspace), tech stack (removed ApexCharts/Fuse.js/date-fns/Papa Parse, added marked), data model (category→tags, v5 schema), all 6 user flows, task breakdown marked as complete, risks/mitigations updated
-- **Fixed CLAUDE.md** — removed broken `docs/EXTRACTION_PLAYBOOK.md` reference, replaced with inline tag list
-- **Fixed USER_GUIDE.md** — updated "Category" field description to "Tags" with multi-tag instructions, fixed grouping description to "primary tag"
-- **Fixed HISTORY.md** — removed stale "Starting balance of R45,000" reference (startingBalance was removed)
-- **Fixed code comment** in ExpensesTab.vue — updated decision doc from "category" / "budget" to "primary tag" / "workspace"
-- **Populated AI_MISTAKES.md** — documented 6 significant past bugs with root causes and prevention strategies
-- **Cleaned up TODO.md** — removed 3 resolved items (EXTRACTION_PLAYBOOK reference, PRODUCT_DEFINITION tech stack, PRODUCT_DEFINITION data model)
+- **Installed ApexCharts** (`apexcharts` + `vue3-apexcharts`) — first charting library in the project
+- **Built forecast engine** (`src/engine/forecast.ts`) — EMA (alpha=0.3, 3+ months), rolling average fallback, daily expansion for charts, category-level statistical forecasting
+- **Built accuracy engine** (`src/engine/accuracy.ts`) — daily forecast vs actual comparison, MAPE/weighted-MAPE, per-category and per-method breakdowns. Computed on-the-fly, not persisted. Hidden from users by default.
+- **Built CashflowChart component** (`src/components/CashflowChart.vue`) — ApexCharts line chart with cumulative/daily-net toggle, optional forecast overlay with dashed line
+- **Wired chart into ProjectedTab** — Table/Chart toggle, loads actuals alongside expenses, computes daily chart data
+- **Gated variance on actuals** — CompareTab now shows empty state until actuals are uploaded. Variance engine exposes `hasAnyActuals` and `actualsDateRange`. No assumptions about upload timing.
+- **14 forecast tests + 6 accuracy tests** — all 96 tests pass, build succeeds
 
 ## Current state
 
-All documentation now accurately reflects the codebase. All features working. Code comments follow CLAUDE.md standards.
+All features working. Build clean. 96 tests passing. The EMA/rolling-average models are built in the engine but not yet surfaced in category forecast UI (tracked in TODO). Accuracy metrics are computed but only available programmatically (could wire into debug pill later).
 
 ## Key context
 
-- PRODUCT_DEFINITION.md was the most stale document — full rewrite was needed
-- Code quality is good: zero console.log, zero dead code, zero TODO-in-code, all timers cleaned up
-- The codebase uses multi-tag (`tags: string[]`) everywhere — "category" is only used in user-facing text for the Compare tab's "Categories" view mode, which groups by `primaryTag()`
-- 76 tests should still pass (no source logic changed, only comments and docs)
+- ApexCharts adds ~518KB to the ProjectedTab chunk — code-splitting TODO added
+- Forecast engine is layered: deterministic projection (existing) + statistical models (new) operate independently
+- Actuals can be uploaded for any date range, any time — variance only shows for periods with data
+- Daily accuracy tracking exists at engine level but is intentionally hidden from users
