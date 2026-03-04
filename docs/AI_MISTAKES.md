@@ -49,3 +49,11 @@
 **Why it happened:** Large cross-cutting renames touch many files. Documentation updates were done for some files but missed others — particularly PRODUCT_DEFINITION.md which is long and wasn't re-read after the rename.
 
 **How to prevent it:** After any rename or migration, grep the entire project for the old term (including docs). Use a checklist: README, PRODUCT_DEFINITION, USER_GUIDE, TESTING_GUIDE, CLAUDE.md, SESSION_NOTES, code comments. Verify the project structure section in README matches actual `ls` output.
+
+## Using AskUserQuestion tool — breaks the session UI (2026-03-04)
+
+**What went wrong:** Repeatedly used the AskUserQuestion tool to present options to the user. The input modal covers the conversation context, gets stuck awaiting input that can't be given, and disrupts the entire session workflow. The user has had to deal with this across multiple sessions.
+
+**Why it happened:** The tool exists so it seemed appropriate. But in practice the UI overlay is broken — it blocks context, hangs, and forces session restarts.
+
+**How to prevent it:** NEVER use the AskUserQuestion tool. This is a hard rule. If you need user input, list options as numbered text in your message and let the user respond with a number or free text. This is documented in CLAUDE.md AI Notes. No exceptions, ever, for any project.
