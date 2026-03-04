@@ -2,7 +2,50 @@
 
 <!-- Changelog and record of completed work. Organized by date. -->
 
-## 2026-03-04
+## 2026-03-04 (Session 2)
+
+- **Actuals-First Pivot — Phase 1 (Data Model) + Phase 3 (Forecasting Engine):**
+
+  **New Data Models (`types/models.ts`):**
+  - `Transaction` — unified model replacing separate Expense/Actual tables. Signed amounts (positive=income, negative=expense). Fields: date, amount, description, tags, source, classification, recurringGroupId, importBatchId.
+  - `RecurringPattern` — detected or user-defined recurring transaction pattern. Fields: expectedAmount (signed), amountStdDev, frequency (incl. new `biweekly`), anchorDay, isActive, autoAccept.
+  - `ImportBatch` — tracks CSV/JSON imports for duplicate detection.
+  - Helper functions: `displayAmount()`, `isIncome()`, `isExpense()`.
+  - Legacy types (`Expense`, `Actual`, `LineType`, `CategoryMapping`) retained for backward compat.
+
+  **DB Schema v6 (`db/index.ts`):**
+  - Clean slate migration: drops expenses, actuals, categoryMappings tables.
+  - New tables: transactions, patterns, importBatches.
+  - Workspace data cleared so demo re-seeds with new model.
+  - `cashOnHand` field added to Workspace (persisted, was ephemeral).
+
+  **New Engines:**
+  - `engine/patterns.ts` — Recurring pattern detection: frequency detection from transaction intervals (maps median interval to daily/weekly/biweekly/monthly/quarterly/annually), anchor day detection (mode of day-of-week or day-of-month), amount variability (CV > 0.3 = "variable recurring"), `projectPattern()` for deterministic forward scheduling with month-end overflow handling.
+  - `engine/forecast.ts` — Hybrid forecasting: Holt's double exponential smoothing (level + trend, alpha=0.2, beta=0.05), day-of-week seasonal multipliers (needs 4+ weeks), parametric confidence bands (80% CI, ±1.28σ√h), bootstrap bands for non-normal distributions, combined forecast (recurring items + variable residual). Falls back to simple average with <14 days of data.
+  - `engine/accuracy.ts` — Prediction accuracy: MAE (primary, in currency units), RMSE, bias (systematic over/under), WMAPE (for aggregates), hit rate (% within threshold). Replaces old MAPE-only approach.
+  - `engine/runway.ts` — Cash runway: daily balance projection from cash-on-hand, depletion detection, minimum balance tracking, `calculateRunwayWithBands()` for optimistic/expected/pessimistic scenarios.
+
+  **Updated:**
+  - `db/demoData.ts` — 2 months of signed transactions (48 total), 10 recurring patterns, cashOnHand R15,000.
+  - `WorkspaceCreateView.vue` — adds `cashOnHand: null` to new workspaces.
+
+  **Dependencies:**
+  - Added `simple-statistics` (~30KB) — mean, median, stddev, linear regression, quantiles.
+
+  **Tests:**
+  - `patterns.test.ts` — 24 tests: frequency detection (all 6 types), anchor day, variable detection, pattern projection, grouping
+  - `forecast.test.ts` — 24 tests: Holt init/update/forecast, runHolt trending, day-of-week factors, prediction bands, buildForecast with patterns/history
+  - `accuracy.test.ts` — 11 tests: daily accuracy, aggregation, MAE, RMSE, bias, WMAPE, hit rate
+  - `runway.test.ts` — 7 tests: depletion, survival, minimum balance, daily progression, band scenarios
+  - Total: 142 tests across 9 files, all passing. Type-check clean.
+
+  **Completed TODO items moved here:**
+  - Pattern detection engine — detect recurring transactions from import history
+  - Wire EMA/rolling-average aggregate forecast into UI (superseded by Holt's method)
+  - Surface forecast accuracy metrics to users (engine built, UI pending Phase 4)
+  - "Promote to recurring" action (superseded by import classification workflow)
+
+## 2026-03-04 (Session 1)
 
 - **Forecasting System Enhancement:**
 

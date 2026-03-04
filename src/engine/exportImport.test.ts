@@ -12,6 +12,7 @@ function makeWorkspace(overrides: Partial<Workspace> = {}): Workspace {
     startDate: '2026-01-01',
     endDate: null,
     isDemo: false,
+    cashOnHand: null,
     createdAt: '2026-01-01T00:00:00Z',
     updatedAt: '2026-01-01T00:00:00Z',
     ...overrides,

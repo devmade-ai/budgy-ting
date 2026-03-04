@@ -1,120 +1,148 @@
 import { describe, it, expect } from 'vitest'
 import { calculateDailyAccuracy, summariseAccuracy } from './accuracy'
-import { calculateProjection } from './projection'
-import type { Expense, Actual } from '@/types/models'
+import type { Transaction } from '@/types/models'
+import type { DailyForecastPoint } from './forecast'
 
-function makeExpense(overrides: Partial<Expense> = {}): Expense {
+function makeForecastPoint(date: string, amount: number): DailyForecastPoint {
   return {
-    id: 'exp-1',
-    workspaceId: 'w-1',
-    description: 'Test expense',
-    tags: ['Groceries'],
-    amount: 310,
-    frequency: 'monthly',
-    type: 'expense',
-    startDate: '2026-01-01',
-    endDate: null,
-    createdAt: '2026-01-01T00:00:00Z',
-    updatedAt: '2026-01-01T00:00:00Z',
-    ...overrides,
+    date,
+    amount,
+    cumulative: 0,
+    band: null,
+    source: 'recurring+variable',
   }
 }
 
-function makeActual(overrides: Partial<Actual> = {}): Actual {
+function makeTxn(date: string, amount: number): Transaction {
   return {
-    id: 'act-1',
+    id: `txn-${date}`,
     workspaceId: 'w-1',
-    expenseId: 'exp-1',
-    date: '2026-01-15',
-    amount: 12,
-    tags: ['Groceries'],
-    description: 'Grocery store',
-    originalRow: {},
-    matchConfidence: 'high',
-    approved: true,
-    createdAt: '2026-01-15T00:00:00Z',
-    updatedAt: '2026-01-15T00:00:00Z',
-    ...overrides,
+    date,
+    amount,
+    description: 'Test',
+    tags: ['Food'],
+    source: 'import',
+    classification: 'once-off',
+    recurringGroupId: null,
+    originalRow: null,
+    importBatchId: null,
+    createdAt: `${date}T00:00:00Z`,
+    updatedAt: `${date}T00:00:00Z`,
   }
 }
 
 describe('calculateDailyAccuracy', () => {
-  it('returns empty array when no actuals', () => {
-    const expenses = [makeExpense()]
-    const projection = calculateProjection(expenses, '2026-01-01', '2026-03-31')
-    const points = calculateDailyAccuracy(projection, [], expenses)
-    expect(points).toHaveLength(0)
+  it('returns empty for no data', () => {
+    expect(calculateDailyAccuracy([], [])).toHaveLength(0)
   })
 
-  it('computes aggregate accuracy for days with both forecast and actual', () => {
-    const expenses = [makeExpense({ amount: 310 })] // 310/31 = 10/day in Jan
-    const actuals = [makeActual({ date: '2026-01-15', amount: 12 })]
-    const projection = calculateProjection(expenses, '2026-01-01', '2026-01-31')
-
-    const points = calculateDailyAccuracy(projection, actuals, expenses)
-
-    expect(points).toHaveLength(1)
-    expect(points[0]!.date).toBe('2026-01-15')
-    expect(points[0]!.forecastAmount).toBeCloseTo(10, 0)
-    expect(points[0]!.actualAmount).toBe(12)
-    expect(points[0]!.absoluteError).toBeCloseTo(2, 0)
-    expect(points[0]!.percentError).not.toBeNull()
-    // No category field — accuracy is aggregate cashflow
-    expect('category' in points[0]!).toBe(false)
+  it('skips dates without both forecast and actual', () => {
+    const forecasts = [makeForecastPoint('2026-01-01', -100)]
+    const actuals = [makeTxn('2026-01-02', -90)]
+    expect(calculateDailyAccuracy(forecasts, actuals)).toHaveLength(0)
   })
 
-  it('skips income actuals', () => {
-    const expenses = [makeExpense({ type: 'income', amount: 3100 })]
-    const actuals = [makeActual({ date: '2026-01-15', amount: 3100 })]
-    const projection = calculateProjection(expenses, '2026-01-01', '2026-01-31')
-
-    const points = calculateDailyAccuracy(projection, actuals, expenses)
-    expect(points).toHaveLength(0)
-  })
-
-  it('aggregates multiple expenses into single daily total', () => {
-    const expenses = [
-      makeExpense({ id: 'e1', tags: ['Groceries'], amount: 310 }),
-      makeExpense({ id: 'e2', tags: ['Transport'], amount: 155 }),
+  it('calculates errors correctly', () => {
+    const forecasts = [
+      makeForecastPoint('2026-01-01', -100),
+      makeForecastPoint('2026-01-02', -50),
     ]
-    // Two actuals on the same day from different categories — should produce ONE point
     const actuals = [
-      makeActual({ id: 'a1', expenseId: 'e1', date: '2026-01-10', amount: 15 }),
-      makeActual({ id: 'a2', expenseId: 'e2', date: '2026-01-10', amount: 8 }),
+      makeTxn('2026-01-01', -90),
+      makeTxn('2026-01-02', -70),
     ]
-    const projection = calculateProjection(expenses, '2026-01-01', '2026-01-31')
-    const points = calculateDailyAccuracy(projection, actuals, expenses)
 
-    // One aggregate point for the day, not two per-category points
+    const points = calculateDailyAccuracy(forecasts, actuals)
+    expect(points).toHaveLength(2)
+
+    expect(points[0]!.signedError).toBeCloseTo(10, 1)
+    expect(points[0]!.absoluteError).toBeCloseTo(10, 1)
+
+    expect(points[1]!.signedError).toBeCloseTo(-20, 1)
+    expect(points[1]!.absoluteError).toBeCloseTo(20, 1)
+  })
+
+  it('aggregates multiple transactions on same date', () => {
+    const forecasts = [makeForecastPoint('2026-01-01', -150)]
+    const actuals = [
+      makeTxn('2026-01-01', -80),
+      { ...makeTxn('2026-01-01', -60), id: 'txn-2' },
+    ]
+
+    const points = calculateDailyAccuracy(forecasts, actuals)
     expect(points).toHaveLength(1)
-    expect(points[0]!.actualAmount).toBe(23) // 15 + 8
-    // Forecast: (310 + 155) / 31 = 15
-    expect(points[0]!.forecastAmount).toBeCloseTo(15, 0)
+    expect(points[0]!.actualAmount).toBeCloseTo(-140, 1)
+  })
+
+  it('sorts results by date', () => {
+    const forecasts = [
+      makeForecastPoint('2026-01-03', -100),
+      makeForecastPoint('2026-01-01', -100),
+    ]
+    const actuals = [
+      makeTxn('2026-01-03', -90),
+      makeTxn('2026-01-01', -110),
+    ]
+
+    const points = calculateDailyAccuracy(forecasts, actuals)
+    expect(points[0]!.date).toBe('2026-01-01')
+    expect(points[1]!.date).toBe('2026-01-03')
   })
 })
 
 describe('summariseAccuracy', () => {
-  it('returns null metrics for empty input', () => {
+  it('returns nulls for empty points', () => {
     const summary = summariseAccuracy([])
-    expect(summary.mape).toBeNull()
-    expect(summary.weightedMape).toBeNull()
+    expect(summary.mae).toBeNull()
+    expect(summary.rmse).toBeNull()
+    expect(summary.bias).toBeNull()
     expect(summary.dataPoints).toBe(0)
-    // No byCategory or byMethod — accuracy is aggregate
-    expect('byCategory' in summary).toBe(false)
   })
 
-  it('computes MAPE from accuracy points', () => {
-    const expenses = [makeExpense({ amount: 310 })]
-    const actuals = [
-      makeActual({ id: 'a1', date: '2026-01-10', amount: 12 }),
-      makeActual({ id: 'a2', date: '2026-01-20', amount: 8 }),
+  it('calculates MAE correctly', () => {
+    const points = [
+      { date: '2026-01-01', forecastAmount: -100, actualAmount: -90, absoluteError: 10, signedError: 10 },
+      { date: '2026-01-02', forecastAmount: -100, actualAmount: -120, absoluteError: 20, signedError: -20 },
     ]
-    const projection = calculateProjection(expenses, '2026-01-01', '2026-01-31')
-    const points = calculateDailyAccuracy(projection, actuals, expenses)
     const summary = summariseAccuracy(points)
+    expect(summary.mae).toBe(15)
+  })
 
-    expect(summary.dataPoints).toBe(2)
-    expect(summary.mape).not.toBeNull()
-    expect(summary.mape).toBeGreaterThan(0)
+  it('calculates RMSE correctly', () => {
+    const points = [
+      { date: '2026-01-01', forecastAmount: -100, actualAmount: -90, absoluteError: 10, signedError: 10 },
+      { date: '2026-01-02', forecastAmount: -100, actualAmount: -120, absoluteError: 20, signedError: -20 },
+    ]
+    const summary = summariseAccuracy(points)
+    expect(summary.rmse).toBeCloseTo(15.81, 1)
+  })
+
+  it('calculates bias correctly', () => {
+    const points = [
+      { date: '2026-01-01', forecastAmount: -100, actualAmount: -90, absoluteError: 10, signedError: 10 },
+      { date: '2026-01-02', forecastAmount: -100, actualAmount: -120, absoluteError: 20, signedError: -20 },
+    ]
+    const summary = summariseAccuracy(points)
+    expect(summary.bias).toBe(-5)
+  })
+
+  it('calculates WMAPE correctly', () => {
+    const points = [
+      { date: '2026-01-01', forecastAmount: -100, actualAmount: -200, absoluteError: 100, signedError: -100 },
+      { date: '2026-01-02', forecastAmount: -100, actualAmount: -100, absoluteError: 0, signedError: 0 },
+    ]
+    const summary = summariseAccuracy(points)
+    expect(summary.wmape).toBeCloseTo(33.33, 0)
+  })
+
+  it('calculates hit rate with custom threshold', () => {
+    const points = [
+      { date: '2026-01-01', forecastAmount: -100, actualAmount: -95, absoluteError: 5, signedError: 5 },
+      { date: '2026-01-02', forecastAmount: -100, actualAmount: -80, absoluteError: 20, signedError: 20 },
+      { date: '2026-01-03', forecastAmount: -100, actualAmount: -110, absoluteError: 10, signedError: -10 },
+    ]
+    const summary = summariseAccuracy(points, 10)
+    expect(summary.hitRate).toBeCloseTo(66.67, 0)
+    expect(summary.hitRateThreshold).toBe(10)
   })
 })

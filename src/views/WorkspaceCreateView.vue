@@ -32,6 +32,7 @@ async function handleSubmit(data: {
       startDate: data.periodType === 'monthly' ? todayISO() : data.startDate,
       endDate: data.endDate,
       isDemo: false,
+      cashOnHand: null,
       createdAt: now,
       updatedAt: now,
     })
