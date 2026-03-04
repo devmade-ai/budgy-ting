@@ -1,15 +1,17 @@
 <script setup lang="ts">
 /**
- * Requirement: Monthly breakdown table with per-expense amounts, category rollup, totals,
+ * Requirement: Monthly breakdown table showing per-item cashflow projections,
  *   plus an ephemeral "cash on hand" input to see how long cash lasts based on the forecast.
  *   Also: daily cashflow chart with optional forecast overlay (cumulative or daily net toggle).
  * Approach: Load expenses + actuals, run projection engine, render scrollable table or chart.
+ *   Forecast tab focuses on aggregate cashflow, not per-category breakdowns.
  *   Cash input is not persisted — it's a quick "what if I have X right now" tool.
  *   Chart uses ApexCharts via CashflowChart component.
  * Alternatives:
  *   - Store cash on workspace: Rejected — user wants a lightweight, non-persisted input
- *   - Separate tab for cash runway: Rejected — user chose to consolidate into Forecast tab
  *   - Separate tab for chart: Rejected — chart is the visual complement to the table
+ *   - Category view toggle: Removed — categories are for interest/stats (in Compare tab),
+ *     not the focus of cashflow forecasting
  */
 
 import { ref, computed, onMounted } from 'vue'
@@ -78,19 +80,11 @@ const chartForecastPoints = computed(() => {
   return expandForecastToDailyPoints(projection.value, startDate, endDate)
 })
 
-const viewMode = ref<'items' | 'categories'>('items')
-
 function formatMonth(monthStr: string): string {
   const [y, m] = monthStr.split('-')
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
   return `${months[parseInt(m!, 10) - 1]} ${y!.slice(2)}`
 }
-
-const sortedCategories = computed(() => {
-  if (!projection.value) return []
-  return [...projection.value.categoryRollup.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
-})
 
 /** Separate income and expense rows for the items view */
 const incomeRows = computed(() => projection.value?.rows.filter((r) => r.type === 'income') ?? [])
@@ -233,38 +227,16 @@ const cashRunway = computed(() => {
         </p>
       </div>
 
-      <!-- View toggle -->
-      <div class="flex items-center justify-between mb-4">
-        <div class="text-sm text-gray-500">
-          <span v-if="projection.totalIncome > 0">
-            Income: <span class="text-green-600">{{ props.workspace.currencyLabel }}{{ formatAmount(projection.totalIncome) }}</span>
-            &middot;
-          </span>
-          Expenses: <span class="text-red-600">{{ props.workspace.currencyLabel }}{{ formatAmount(projection.grandTotal) }}</span>
-          <span v-if="projection.totalIncome > 0">
-            &middot; Net: <span :class="projection.totalNet >= 0 ? 'text-green-600' : 'text-red-600'">{{ projection.totalNet > 0 ? '+' : '' }}{{ props.workspace.currencyLabel }}{{ formatAmount(projection.totalNet) }}</span>
-          </span>
-        </div>
-        <div class="flex gap-1">
-          <button
-            class="btn text-xs"
-            :class="viewMode === 'items'
-              ? 'bg-brand-50 text-brand-700 border border-brand-300'
-              : 'bg-gray-50 text-gray-600 border border-gray-200'"
-            @click="viewMode = 'items'"
-          >
-            Each item
-          </button>
-          <button
-            class="btn text-xs"
-            :class="viewMode === 'categories'
-              ? 'bg-brand-50 text-brand-700 border border-brand-300'
-              : 'bg-gray-50 text-gray-600 border border-gray-200'"
-            @click="viewMode = 'categories'"
-          >
-            Group by tag
-          </button>
-        </div>
+      <!-- Summary -->
+      <div class="text-sm text-gray-500 mb-4">
+        <span v-if="projection.totalIncome > 0">
+          Income: <span class="text-green-600">{{ props.workspace.currencyLabel }}{{ formatAmount(projection.totalIncome) }}</span>
+          &middot;
+        </span>
+        Expenses: <span class="text-red-600">{{ props.workspace.currencyLabel }}{{ formatAmount(projection.grandTotal) }}</span>
+        <span v-if="projection.totalIncome > 0">
+          &middot; Net: <span :class="projection.totalNet >= 0 ? 'text-green-600' : 'text-red-600'">{{ projection.totalNet > 0 ? '+' : '' }}{{ props.workspace.currencyLabel }}{{ formatAmount(projection.totalNet) }}</span>
+        </span>
       </div>
 
       <!-- Scrollable table with fade hint for hidden content -->
@@ -273,7 +245,7 @@ const cashRunway = computed(() => {
           <thead>
             <tr class="border-b border-gray-200">
               <th class="text-left py-2 pr-4 font-medium text-gray-700 sticky left-0 bg-gray-50 min-w-[140px]">
-                {{ viewMode === 'items' ? 'Expense' : 'Category' }}
+                Item
               </th>
               <th
                 v-for="month in projection.months"
@@ -288,8 +260,6 @@ const cashRunway = computed(() => {
             </tr>
           </thead>
           <tbody>
-            <!-- Item rows -->
-            <template v-if="viewMode === 'items'">
               <!-- Income rows (if any) -->
               <template v-if="incomeRows.length > 0">
                 <tr class="bg-green-50/50">
@@ -350,35 +320,6 @@ const cashRunway = computed(() => {
                   {{ formatAmount(row.total) }}
                 </td>
               </tr>
-            </template>
-
-            <!-- Category rows -->
-            <template v-else>
-              <tr
-                v-for="[category, monthMap] in sortedCategories"
-                :key="category"
-                class="border-b border-gray-100 hover:bg-gray-50"
-              >
-                <td class="py-2 pr-4 font-medium text-gray-900 sticky left-0 bg-white">
-                  {{ category }}
-                </td>
-                <td
-                  v-for="month in projection.months"
-                  :key="month.month"
-                  class="text-right py-2 px-2 tabular-nums"
-                  :class="monthMap.get(month.month) ? 'text-gray-700' : 'text-gray-300'"
-                >
-                  {{ monthMap.get(month.month)
-                    ? formatAmount(monthMap.get(month.month)!)
-                    : '—' }}
-                </td>
-                <td class="text-right py-2 pl-2 font-semibold text-gray-900 tabular-nums">
-                  {{ formatAmount(
-                    [...monthMap.values()].reduce((s, v) => s + v, 0)
-                  ) }}
-                </td>
-              </tr>
-            </template>
           </tbody>
           <tfoot>
             <!-- Income total row (only when income lines exist) -->

@@ -1,22 +1,22 @@
 /**
  * Statistical forecasting engine — layered on top of the deterministic projection engine.
  *
- * Requirement: Variable-spend prediction using EMA and rolling averages, plus daily
+ * Requirement: Aggregate cashflow forecasting using EMA and rolling averages, plus daily
  *   granularity expansion for cashflow graphing. Deterministic projection remains the
- *   source of truth for fixed/recurring items.
- * Approach: EMA (alpha=0.3) for categories with 3+ months of actuals history,
+ *   source of truth for fixed/recurring items. Forecasting operates on total cashflow,
+ *   not per-category — categories/tags are for interest stats only.
+ * Approach: EMA (alpha=0.3) for aggregate spend with 3+ months of actuals history,
  *   rolling average fallback for fewer data points. Daily expansion distributes monthly
  *   amounts across days for chart consumption.
  * Alternatives:
  *   - ML classifier (Prophet, ARIMA): Rejected — overkill for personal finance with small datasets
  *   - simple-statistics library: Deferred — manual EMA/rolling avg is ~30 lines, avoids dependency
- *   - Only deterministic: Rejected — can't handle variable-spend categories (groceries, dining)
+ *   - Per-category forecasting: Rejected — forecasting is about total cashflow, categories are
+ *     for interesting breakdowns in Compare tab
  */
 
 import type { Actual, Expense } from '@/types/models'
-import { primaryTag } from '@/types/models'
-import type { MonthSlot, ProjectionResult } from './projection'
-import { generateMonthSlots } from './projection'
+import type { ProjectionResult } from './projection'
 
 /** EMA smoothing factor — 0.3 weights recent months more heavily */
 const EMA_ALPHA = 0.3
@@ -26,14 +26,13 @@ const EMA_MIN_MONTHS = 3
 
 export type ForecastMethod = 'deterministic' | 'ema' | 'rolling-average'
 
-export interface CategoryForecast {
-  category: string
+export interface CashflowForecast {
   method: ForecastMethod
-  /** Predicted monthly amount */
+  /** Predicted monthly net cashflow */
   predicted: number
-  /** Upper/lower confidence band (null for deterministic) */
+  /** Upper/lower confidence band (null for deterministic or insufficient data) */
   confidenceBand: { upper: number; lower: number } | null
-  /** Number of actuals data points used */
+  /** Number of actuals months used */
   dataPoints: number
 }
 
@@ -53,33 +52,26 @@ export interface DailyCashflowData {
 }
 
 /**
- * Compute monthly totals from actuals grouped by category and month.
- * Returns Map<category, Map<YYYY-MM, total>>.
+ * Compute aggregate monthly expense totals from actuals (income excluded).
+ * Returns Map<YYYY-MM, totalExpense>.
  */
-export function groupActualsByCategoryMonth(
+export function groupActualsByMonth(
   actuals: Actual[],
   expenses: Expense[],
-): Map<string, Map<string, number>> {
+): Map<string, number> {
   const expenseById = new Map<string, Expense>()
   for (const exp of expenses) expenseById.set(exp.id, exp)
 
-  const result = new Map<string, Map<string, number>>()
+  const result = new Map<string, number>()
 
   for (const actual of actuals) {
-    // Determine category: from matched expense, or from actual's own tags
-    let category: string
+    // Skip income actuals
     if (actual.expenseId && expenseById.has(actual.expenseId)) {
-      const exp = expenseById.get(actual.expenseId)!
-      if (exp.type === 'income') continue // skip income actuals
-      category = primaryTag(exp.tags)
-    } else {
-      category = primaryTag(actual.tags)
+      if (expenseById.get(actual.expenseId)!.type === 'income') continue
     }
 
     const month = actual.date.slice(0, 7)
-    if (!result.has(category)) result.set(category, new Map())
-    const monthMap = result.get(category)!
-    monthMap.set(month, (monthMap.get(month) ?? 0) + actual.amount)
+    result.set(month, (result.get(month) ?? 0) + actual.amount)
   }
 
   return result
@@ -118,52 +110,37 @@ function standardDeviation(values: number[], mean: number): number {
 }
 
 /**
- * Generate statistical forecasts per category.
- * Layers on top of deterministic projection — only used for categories with actuals history.
+ * Generate aggregate cashflow forecast from actuals history.
+ * Uses EMA with 3+ months, rolling average otherwise.
  */
-export function generateCategoryForecasts(
+export function generateCashflowForecast(
   actuals: Actual[],
   expenses: Expense[],
-  months: MonthSlot[],
-): CategoryForecast[] {
-  const categoryMonthly = groupActualsByCategoryMonth(actuals, expenses)
-  const results: CategoryForecast[] = []
+): CashflowForecast | null {
+  const monthlyTotals = groupActualsByMonth(actuals, expenses)
+  if (monthlyTotals.size === 0) return null
 
-  // Get sorted month keys from the actuals data
-  for (const [category, monthMap] of categoryMonthly) {
-    const sortedMonths = [...monthMap.keys()].sort()
-    const values = sortedMonths.map((m) => monthMap.get(m) ?? 0)
+  const sortedMonths = [...monthlyTotals.keys()].sort()
+  const values = sortedMonths.map((m) => monthlyTotals.get(m) ?? 0)
 
-    if (values.length === 0) continue
+  let predicted: number
+  let method: ForecastMethod
+  let confidenceBand: { upper: number; lower: number } | null = null
 
-    let predicted: number
-    let method: ForecastMethod
-    let confidenceBand: { upper: number; lower: number } | null = null
-
-    if (values.length >= EMA_MIN_MONTHS) {
-      method = 'ema'
-      predicted = calculateEMA(values)
-      const stdDev = standardDeviation(values, predicted)
-      confidenceBand = {
-        upper: predicted + stdDev,
-        lower: Math.max(0, predicted - stdDev),
-      }
-    } else {
-      method = 'rolling-average'
-      predicted = calculateRollingAverage(values)
-      // No confidence band with too few data points
+  if (values.length >= EMA_MIN_MONTHS) {
+    method = 'ema'
+    predicted = calculateEMA(values)
+    const stdDev = standardDeviation(values, predicted)
+    confidenceBand = {
+      upper: predicted + stdDev,
+      lower: Math.max(0, predicted - stdDev),
     }
-
-    results.push({
-      category,
-      method,
-      predicted,
-      confidenceBand,
-      dataPoints: values.length,
-    })
+  } else {
+    method = 'rolling-average'
+    predicted = calculateRollingAverage(values)
   }
 
-  return results
+  return { method, predicted, confidenceBand, dataPoints: values.length }
 }
 
 /**
@@ -176,7 +153,6 @@ export function expandActualsToDailyPoints(
   startDate: string,
   endDate: string,
 ): DailyPoint[] {
-  // Build type lookup to determine sign (income = positive, expense = negative for net)
   const expenseById = new Map<string, Expense>()
   for (const exp of expenses) expenseById.set(exp.id, exp)
 
@@ -209,15 +185,8 @@ export function expandActualsToDailyPoints(
 }
 
 /**
- * Count days in a month from a MonthSlot or YYYY-MM string.
- */
-function daysInMonth(year: number, month: number): number {
-  return new Date(year, month, 0).getDate()
-}
-
-/**
  * Expand forecast (projection) into daily data points for charting.
- * Distributes monthly projected amounts evenly across days.
+ * Distributes monthly projected net amounts evenly across days.
  */
 export function expandForecastToDailyPoints(
   projection: ProjectionResult,
@@ -231,7 +200,6 @@ export function expandForecastToDailyPoints(
     const monthNet = projection.monthlyNet.get(slot.month) ?? 0
     const dailyAmount = monthNet / slot.daysInMonth
 
-    // Generate a point for each day in this month, clamped to start/end
     for (let d = 1; d <= slot.daysInMonth; d++) {
       const dateStr = `${slot.month}-${String(d).padStart(2, '0')}`
       if (dateStr < startDate || dateStr > endDate) continue
@@ -262,11 +230,9 @@ export function buildDailyCashflowData(
   const actualPoints = expandActualsToDailyPoints(actuals, expenses, startDate, endDate)
   const forecastPoints = expandForecastToDailyPoints(projection, startDate, endDate)
 
-  // Build combined: use actuals where dates overlap, forecast elsewhere
   const actualsMap = new Map<string, DailyPoint>()
   for (const p of actualPoints) actualsMap.set(p.date, p)
 
-  // Get all unique dates from both series
   const allDates = new Set<string>()
   for (const p of actualPoints) allDates.add(p.date)
   for (const p of forecastPoints) allDates.add(p.date)
@@ -277,7 +243,6 @@ export function buildDailyCashflowData(
 
   for (const date of sortedDates) {
     const actualPoint = actualsMap.get(date)
-    // Prefer actual data where available
     const amount = actualPoint ? actualPoint.amount : (
       forecastPoints.find((p) => p.date === date)?.amount ?? 0
     )

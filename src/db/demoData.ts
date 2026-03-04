@@ -11,7 +11,7 @@
 
 import { db } from './index'
 import { debugLog } from '@/debug/debugLog'
-import type { Workspace, Expense } from '@/types/models'
+import type { Workspace, Expense, Actual } from '@/types/models'
 
 const DEMO_WORKSPACE_ID = 'demo-household'
 
@@ -42,6 +42,78 @@ function makeExpense(
     createdAt: now,
     updatedAt: now,
   }
+}
+
+function makeActual(
+  id: string,
+  expenseId: string | null,
+  date: string,
+  amount: number,
+  tags: string[],
+  description: string,
+): Actual {
+  const now = new Date().toISOString()
+  return {
+    id: makeId(`act-${id}`),
+    workspaceId: DEMO_WORKSPACE_ID,
+    expenseId: expenseId ? makeId(expenseId) : null,
+    date,
+    amount,
+    tags,
+    description,
+    originalRow: {},
+    matchConfidence: 'high' as const,
+    approved: true,
+    createdAt: now,
+    updatedAt: now,
+  }
+}
+
+/**
+ * Generate realistic demo actuals for the previous month.
+ * Amounts vary slightly from budgeted amounts to show realistic variance.
+ */
+function generateDemoActuals(baseDate: Date): Actual[] {
+  // Generate actuals for the previous month
+  const prevMonth = new Date(baseDate.getFullYear(), baseDate.getMonth() - 1, 1)
+  const y = prevMonth.getFullYear()
+  const m = String(prevMonth.getMonth() + 1).padStart(2, '0')
+
+  return [
+    // Income — received on typical pay dates
+    makeActual('salary-1', 'salary', `${y}-${m}-25`, 25000, ['Income', 'FNB Cheque'], 'Salary'),
+    makeActual('freelance-1', 'freelance', `${y}-${m}-15`, 4200, ['Income', 'Capitec'], 'Freelance payment'),
+
+    // Fixed expenses — close to budgeted
+    makeActual('rent-1', 'rent', `${y}-${m}-01`, 12000, ['Housing'], 'Rent transfer'),
+    makeActual('utilities-1', 'utilities', `${y}-${m}-07`, 2150, ['Housing'], 'City of Cape Town utilities'),
+    makeActual('internet-1', 'internet', `${y}-${m}-03`, 1000, ['Housing'], 'Vumatel fibre'),
+    makeActual('insurance-1', 'insurance', `${y}-${m}-01`, 2500, ['Insurance'], 'MiWay car insurance'),
+    makeActual('medical-1', 'medical', `${y}-${m}-01`, 3500, ['Medical'], 'Discovery medical aid'),
+
+    // Variable expenses — spread across the month with realistic variation
+    makeActual('groc-1', 'groceries', `${y}-${m}-03`, 1250, ['Food'], 'Checkers Groceries'),
+    makeActual('groc-2', 'groceries', `${y}-${m}-10`, 980, ['Food'], 'Pick n Pay'),
+    makeActual('groc-3', 'groceries', `${y}-${m}-17`, 1450, ['Food'], 'Woolworths Food'),
+    makeActual('groc-4', 'groceries', `${y}-${m}-24`, 1100, ['Food'], 'Checkers Groceries'),
+
+    makeActual('eat-1', 'eating-out', `${y}-${m}-05`, 350, ['Food', 'Discretionary'], 'Nandos'),
+    makeActual('eat-2', 'eating-out', `${y}-${m}-12`, 520, ['Food', 'Discretionary'], 'Spur'),
+    makeActual('eat-3', 'eating-out', `${y}-${m}-19`, 280, ['Food', 'Discretionary'], 'Steers'),
+    makeActual('eat-4', 'eating-out', `${y}-${m}-26`, 680, ['Food', 'Discretionary'], 'Ocean Basket'),
+
+    makeActual('fuel-1', 'transport', `${y}-${m}-04`, 850, ['Transport'], 'Engen fuel'),
+    makeActual('fuel-2', 'transport', `${y}-${m}-14`, 920, ['Transport'], 'Shell fuel'),
+    makeActual('fuel-3', 'transport', `${y}-${m}-22`, 780, ['Transport'], 'BP fuel'),
+
+    makeActual('gym-1', 'gym', `${y}-${m}-01`, 699, ['Health'], 'Virgin Active debit order'),
+    makeActual('netflix-1', 'netflix', `${y}-${m}-02`, 199, ['Entertainment'], 'Netflix subscription'),
+    makeActual('spotify-1', 'spotify', `${y}-${m}-02`, 80, ['Entertainment'], 'Spotify subscription'),
+
+    // Unbudgeted actuals — things that happen in real life but aren't in the budget
+    makeActual('unbudget-1', null, `${y}-${m}-08`, 350, ['Shopping'], 'Takealot order'),
+    makeActual('unbudget-2', null, `${y}-${m}-20`, 180, ['Transport'], 'Uber rides'),
+  ]
 }
 
 /**
@@ -94,12 +166,15 @@ export async function seedDemoWorkspace(): Promise<boolean> {
     makeExpense('vet', 'Vet Checkup', ['Pets'], 800, 'annually', 'expense', startDate),
   ]
 
+  const actuals = generateDemoActuals(now)
+
   try {
-    await db.transaction('rw', [db.workspaces, db.expenses], async () => {
+    await db.transaction('rw', [db.workspaces, db.expenses, db.actuals], async () => {
       await db.workspaces.add(workspace)
       await db.expenses.bulkAdd(expenses)
+      await db.actuals.bulkAdd(actuals)
     })
-    debugLog('db', 'success', `Seeded demo workspace with ${expenses.length} items`)
+    debugLog('db', 'success', `Seeded demo workspace with ${expenses.length} items and ${actuals.length} actuals`)
     return true
   } catch (err) {
     debugLog('db', 'error', `Failed to seed demo workspace: ${err}`)

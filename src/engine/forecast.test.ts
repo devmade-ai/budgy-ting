@@ -2,10 +2,10 @@ import { describe, it, expect } from 'vitest'
 import {
   calculateEMA,
   calculateRollingAverage,
-  generateCategoryForecasts,
+  generateCashflowForecast,
   expandActualsToDailyPoints,
   expandForecastToDailyPoints,
-  groupActualsByCategoryMonth,
+  groupActualsByMonth,
 } from './forecast'
 import { calculateProjection } from './projection'
 import type { Expense, Actual } from '@/types/models'
@@ -79,8 +79,8 @@ describe('calculateRollingAverage', () => {
   })
 })
 
-describe('groupActualsByCategoryMonth', () => {
-  it('groups actuals by category and month', () => {
+describe('groupActualsByMonth', () => {
+  it('groups actuals by month (aggregate, not per-category)', () => {
     const expenses = [makeExpense()]
     const actuals = [
       makeActual({ id: 'a1', date: '2026-01-10', amount: 50 }),
@@ -88,21 +88,41 @@ describe('groupActualsByCategoryMonth', () => {
       makeActual({ id: 'a3', date: '2026-02-05', amount: 80 }),
     ]
 
-    const result = groupActualsByCategoryMonth(actuals, expenses)
-    expect(result.get('Groceries')?.get('2026-01')).toBe(95)
-    expect(result.get('Groceries')?.get('2026-02')).toBe(80)
+    const result = groupActualsByMonth(actuals, expenses)
+    expect(result.get('2026-01')).toBe(95)
+    expect(result.get('2026-02')).toBe(80)
   })
 
   it('skips income actuals', () => {
     const expenses = [makeExpense({ type: 'income' })]
     const actuals = [makeActual({ amount: 1000 })]
 
-    const result = groupActualsByCategoryMonth(actuals, expenses)
+    const result = groupActualsByMonth(actuals, expenses)
     expect(result.size).toBe(0)
+  })
+
+  it('aggregates multiple categories into one monthly total', () => {
+    const expenses = [
+      makeExpense({ id: 'e1', tags: ['Groceries'] }),
+      makeExpense({ id: 'e2', tags: ['Transport'] }),
+    ]
+    const actuals = [
+      makeActual({ id: 'a1', expenseId: 'e1', date: '2026-01-10', amount: 50 }),
+      makeActual({ id: 'a2', expenseId: 'e2', date: '2026-01-15', amount: 30 }),
+    ]
+
+    const result = groupActualsByMonth(actuals, expenses)
+    // Both categories summed into one monthly total
+    expect(result.get('2026-01')).toBe(80)
   })
 })
 
-describe('generateCategoryForecasts', () => {
+describe('generateCashflowForecast', () => {
+  it('returns null with no actuals', () => {
+    const forecast = generateCashflowForecast([], [])
+    expect(forecast).toBeNull()
+  })
+
   it('uses rolling average with fewer than 3 months of data', () => {
     const expenses = [makeExpense()]
     const actuals = [
@@ -110,13 +130,12 @@ describe('generateCategoryForecasts', () => {
       makeActual({ id: 'a2', date: '2026-02-15', amount: 120 }),
     ]
 
-    const projection = calculateProjection(expenses, '2026-01-01', '2026-12-31')
-    const forecasts = generateCategoryForecasts(actuals, expenses, projection.months)
+    const forecast = generateCashflowForecast(actuals, expenses)
 
-    expect(forecasts).toHaveLength(1)
-    expect(forecasts[0]!.method).toBe('rolling-average')
-    expect(forecasts[0]!.predicted).toBeCloseTo(110, 0)
-    expect(forecasts[0]!.confidenceBand).toBeNull()
+    expect(forecast).not.toBeNull()
+    expect(forecast!.method).toBe('rolling-average')
+    expect(forecast!.predicted).toBeCloseTo(110, 0)
+    expect(forecast!.confidenceBand).toBeNull()
   })
 
   it('uses EMA with 3+ months of data', () => {
@@ -127,13 +146,12 @@ describe('generateCategoryForecasts', () => {
       makeActual({ id: 'a3', date: '2026-03-15', amount: 140 }),
     ]
 
-    const projection = calculateProjection(expenses, '2026-01-01', '2026-12-31')
-    const forecasts = generateCategoryForecasts(actuals, expenses, projection.months)
+    const forecast = generateCashflowForecast(actuals, expenses)
 
-    expect(forecasts).toHaveLength(1)
-    expect(forecasts[0]!.method).toBe('ema')
-    expect(forecasts[0]!.confidenceBand).not.toBeNull()
-    expect(forecasts[0]!.dataPoints).toBe(3)
+    expect(forecast).not.toBeNull()
+    expect(forecast!.method).toBe('ema')
+    expect(forecast!.confidenceBand).not.toBeNull()
+    expect(forecast!.dataPoints).toBe(3)
   })
 })
 

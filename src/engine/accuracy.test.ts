@@ -46,7 +46,7 @@ describe('calculateDailyAccuracy', () => {
     expect(points).toHaveLength(0)
   })
 
-  it('computes accuracy for days with both forecast and actual', () => {
+  it('computes aggregate accuracy for days with both forecast and actual', () => {
     const expenses = [makeExpense({ amount: 310 })] // 310/31 = 10/day in Jan
     const actuals = [makeActual({ date: '2026-01-15', amount: 12 })]
     const projection = calculateProjection(expenses, '2026-01-01', '2026-01-31')
@@ -59,6 +59,8 @@ describe('calculateDailyAccuracy', () => {
     expect(points[0]!.actualAmount).toBe(12)
     expect(points[0]!.absoluteError).toBeCloseTo(2, 0)
     expect(points[0]!.percentError).not.toBeNull()
+    // No category field — accuracy is aggregate cashflow
+    expect('category' in points[0]!).toBe(false)
   })
 
   it('skips income actuals', () => {
@@ -70,11 +72,12 @@ describe('calculateDailyAccuracy', () => {
     expect(points).toHaveLength(0)
   })
 
-  it('handles multiple categories', () => {
+  it('aggregates multiple expenses into single daily total', () => {
     const expenses = [
       makeExpense({ id: 'e1', tags: ['Groceries'], amount: 310 }),
       makeExpense({ id: 'e2', tags: ['Transport'], amount: 155 }),
     ]
+    // Two actuals on the same day from different categories — should produce ONE point
     const actuals = [
       makeActual({ id: 'a1', expenseId: 'e1', date: '2026-01-10', amount: 15 }),
       makeActual({ id: 'a2', expenseId: 'e2', date: '2026-01-10', amount: 8 }),
@@ -82,9 +85,11 @@ describe('calculateDailyAccuracy', () => {
     const projection = calculateProjection(expenses, '2026-01-01', '2026-01-31')
     const points = calculateDailyAccuracy(projection, actuals, expenses)
 
-    expect(points).toHaveLength(2)
-    const categories = points.map((p) => p.category).sort()
-    expect(categories).toEqual(['Groceries', 'Transport'])
+    // One aggregate point for the day, not two per-category points
+    expect(points).toHaveLength(1)
+    expect(points[0]!.actualAmount).toBe(23) // 15 + 8
+    // Forecast: (310 + 155) / 31 = 15
+    expect(points[0]!.forecastAmount).toBeCloseTo(15, 0)
   })
 })
 
@@ -94,6 +99,8 @@ describe('summariseAccuracy', () => {
     expect(summary.mape).toBeNull()
     expect(summary.weightedMape).toBeNull()
     expect(summary.dataPoints).toBe(0)
+    // No byCategory or byMethod — accuracy is aggregate
+    expect('byCategory' in summary).toBe(false)
   })
 
   it('computes MAPE from accuracy points', () => {
@@ -109,7 +116,5 @@ describe('summariseAccuracy', () => {
     expect(summary.dataPoints).toBe(2)
     expect(summary.mape).not.toBeNull()
     expect(summary.mape).toBeGreaterThan(0)
-    expect(summary.byCategory.has('Groceries')).toBe(true)
-    expect(summary.byMethod.has('deterministic')).toBe(true)
   })
 })
