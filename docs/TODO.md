@@ -6,7 +6,7 @@
 
 - [ ] Pattern detection engine — detect recurring transactions from import history, suggest "promote to recurring"
 - [ ] "Promote to recurring" action on imported actuals — creates expense from actual pattern
-- [ ] Wire EMA/rolling-average forecasts into category forecast display (engine built, needs UI)
+- [ ] Wire EMA/rolling-average aggregate forecast into UI (engine built, needs display)
 - [ ] Add Papa Parse for robust CSV parsing (multi-line quoted fields, custom delimiters)
 - [ ] Storage usage indicator on workspace list page
 - [ ] Generate dedicated maskable icon with proper safe-zone padding
