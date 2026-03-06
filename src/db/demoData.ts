@@ -54,6 +54,8 @@ function makePattern(
   anchorDay: number,
   tags: string[],
   lastSeenDate: string,
+  variability: RecurringPattern['variability'] = 'fixed',
+  amountStdDev: number = 0,
 ): RecurringPattern {
   const now = new Date().toISOString()
   return {
@@ -61,10 +63,11 @@ function makePattern(
     workspaceId: DEMO_WORKSPACE_ID,
     description,
     expectedAmount,
-    amountStdDev: 0,
+    amountStdDev,
     frequency,
     anchorDay,
     tags,
+    variability,
     isActive: true,
     autoAccept: true,
     lastSeenDate,
@@ -100,6 +103,14 @@ function generateDemoTransactions(baseDate: Date): Transaction[] {
     txns.push(makeTransaction(`gym-${suffix}`, `${y}-${m}-01`, -699, 'Virgin Active debit order', ['Health'], 'recurring', 'pat-gym'))
     txns.push(makeTransaction(`netflix-${suffix}`, `${y}-${m}-02`, -199, 'Netflix subscription', ['Entertainment'], 'recurring', 'pat-netflix'))
     txns.push(makeTransaction(`spotify-${suffix}`, `${y}-${m}-02`, -80, 'Spotify subscription', ['Entertainment'], 'recurring', 'pat-spotify'))
+
+    // Variable recurring — regular timing, variable amount (utility bill)
+    txns.push(makeTransaction(`water-${suffix}`, `${y}-${m}-10`, -(450 + monthOffset * 120), 'City of CT water', ['Housing'], 'recurring', 'pat-water'))
+
+    // Irregular recurring — no schedule, bought when needed (prepaid)
+    txns.push(makeTransaction(`prepaid-elec-${suffix}-a`, `${y}-${m}-${String(5 + monthOffset * 3).padStart(2, '0')}`, -(350 + monthOffset * 50), 'Prepaid electricity', ['Housing'], 'recurring', 'pat-prepaid-elec'))
+    txns.push(makeTransaction(`prepaid-elec-${suffix}-b`, `${y}-${m}-${String(18 - monthOffset * 2).padStart(2, '0')}`, -(280 + monthOffset * 30), 'Prepaid electricity', ['Housing'], 'recurring', 'pat-prepaid-elec'))
+    txns.push(makeTransaction(`data-${suffix}`, `${y}-${m}-${String(12 + monthOffset * 5).padStart(2, '0')}`, -(150 + monthOffset * 20), 'Vodacom data bundle', ['Connectivity'], 'recurring', 'pat-data'))
 
     // Variable expenses — once-off (amounts vary month to month)
     txns.push(makeTransaction(`groc-${suffix}-a`, `${y}-${m}-03`, -(1250 + monthOffset * 80), 'Checkers Groceries', ['Food'], 'once-off', null))
@@ -143,6 +154,11 @@ function generateDemoPatterns(baseDate: Date): RecurringPattern[] {
     makePattern('pat-gym', 'Virgin Active debit order', -699, 'monthly', 1, ['Health'], `${y}-${m}-01`),
     makePattern('pat-netflix', 'Netflix subscription', -199, 'monthly', 2, ['Entertainment'], `${y}-${m}-02`),
     makePattern('pat-spotify', 'Spotify subscription', -80, 'monthly', 2, ['Entertainment'], `${y}-${m}-02`),
+    // Variable recurring — regular timing, variable amount
+    makePattern('pat-water', 'City of CT water', -570, 'monthly', 10, ['Housing'], `${y}-${m}-10`, 'variable', 120),
+    // Irregular recurring — no fixed schedule, bought when needed
+    makePattern('pat-prepaid-elec', 'Prepaid electricity', -350, 'irregular', 0, ['Housing'], `${y}-${m}-16`, 'irregular'),
+    makePattern('pat-data', 'Vodacom data bundle', -170, 'irregular', 0, ['Connectivity'], `${y}-${m}-17`, 'irregular'),
   ]
 }
 

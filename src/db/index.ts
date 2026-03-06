@@ -90,4 +90,26 @@ db.version(6).stores({
   return tx.table('workspaces').clear()
 })
 
+// Schema v7: Variable recurring expenses — adds variability field to patterns
+// Requirement: Support variable-amount and irregular-timing recurring expenses
+// Approach: Add variability field to patterns table, default existing patterns to 'fixed'.
+//   Also index on variability for potential future filtering.
+// Alternatives:
+//   - Separate table for variable patterns: Rejected — same entity, just a type field
+db.version(7).stores({
+  workspaces: 'id, name, createdAt',
+  transactions: 'id, workspaceId, date, *tags, recurringGroupId, source, classification, importBatchId',
+  patterns: 'id, workspaceId, description, frequency, isActive, variability',
+  importBatches: 'id, workspaceId, importedAt',
+  tagCache: 'tag, lastUsed',
+}).upgrade(async (tx) => {
+  // Backfill existing patterns with variability: 'fixed'
+  const patterns = tx.table('patterns')
+  await patterns.toCollection().modify((pattern: Record<string, unknown>) => {
+    if (!pattern['variability']) {
+      pattern['variability'] = 'fixed'
+    }
+  })
+})
+
 export { db }

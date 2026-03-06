@@ -2,6 +2,35 @@
 
 <!-- Changelog and record of completed work. Organized by date. -->
 
+## 2026-03-06
+
+- **Variable Recurring Expenses — Support for usage-based and on-demand costs:**
+
+  **New Types (`types/models.ts`):**
+  - `RecurringVariability` — `'fixed' | 'variable' | 'irregular'`
+  - `'irregular'` added to `Frequency` type
+  - `variability` field added to `RecurringPattern`
+
+  **DB Schema v7 (`db/index.ts`):**
+  - Adds `variability` index to patterns table
+  - Backfills existing patterns with `variability: 'fixed'`
+
+  **Engine Updates:**
+  - `patterns.ts`: `projectPattern()` handles `'irregular'` frequency — computes daily rate from total historical spend / observation days, spreads evenly across forecast window. Added `firstSeenDate` to `DetectedPattern`.
+  - `forecast.ts`: For irregular patterns, computes `totalHistoricalAmount` and `historicalDaySpan` from linked transactions before passing to `projectPattern`.
+  - `exportImport.ts`: Backfills missing `variability` field on imported patterns.
+
+  **UI Changes:**
+  - `ImportStepClassify.vue`: Sub-type selector when classified as "recurring": "Fixed amount" / "Varies each time" / "Buy when needed"
+  - `NewImportWizard.vue`: Passes `variability` through to `RecurringPattern`. Sets `frequency: 'irregular'` for irregular patterns.
+
+  **Demo Data:**
+  - Added variable recurring: City of CT water (monthly, variable amount)
+  - Added irregular recurring: Prepaid electricity, Vodacom data bundle
+
+  **Verification:**
+  - 109 tests pass, build succeeds, type-check clean
+
 ## 2026-03-04 (Session 3)
 
 - **Full Codebase Audit — Bug Fixes and Dead Code Removal:**

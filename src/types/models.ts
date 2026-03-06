@@ -24,6 +24,18 @@ export type Frequency =
   | 'monthly'
   | 'quarterly'
   | 'annually'
+  | 'irregular'
+
+/**
+ * Recurring variability — how predictable the amount and timing are.
+ * Requirement: Support variable recurring expenses (usage-based bills, prepaid top-ups)
+ * Approach: User picks sub-type when classifying as recurring during import
+ * Alternatives:
+ *   - Auto-detect from CV/interval consistency: Rejected — user knows their expenses better
+ *   - Single "variable" flag: Rejected — variable-amount-regular-timing and irregular-timing
+ *     need fundamentally different projection strategies
+ */
+export type RecurringVariability = 'fixed' | 'variable' | 'irregular'
 
 export type TransactionSource = 'import' | 'manual'
 
@@ -95,6 +107,14 @@ export interface RecurringPattern {
    */
   anchorDay: number
   tags: string[]
+  /**
+   * How predictable this recurring item is:
+   * - 'fixed': Same amount, regular schedule (rent, subscriptions)
+   * - 'variable': Different amount each time, regular schedule (electricity bill, water)
+   * - 'irregular': Variable amount AND timing, bought when needed (prepaid electricity, data)
+   * Defaults to 'fixed' for backwards compatibility with existing patterns.
+   */
+  variability: RecurringVariability
   /** Still expected to recur? */
   isActive: boolean
   /** Auto-approve matching transactions in future imports */

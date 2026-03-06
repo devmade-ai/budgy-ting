@@ -49,6 +49,8 @@ export interface DetectedPattern {
   lastSeenDate: string
   /** Transaction IDs that belong to this pattern */
   transactionIds: string[]
+  /** Earliest occurrence date — used for daily rate calculation on irregular patterns */
+  firstSeenDate: string
 }
 
 /**
@@ -191,6 +193,7 @@ export function detectPattern(
     confidence: Math.round(detected.confidence * 100) / 100,
     tags: [...tagSet],
     lastSeenDate: sorted[sorted.length - 1]!.date,
+    firstSeenDate: sorted[0]!.date,
     transactionIds: sorted.map((t) => t.id),
   }
 }
@@ -244,15 +247,25 @@ export function detectAllPatterns(
  * Project future occurrences of a recurring pattern within a date range.
  * Returns an array of { date, amount } for each expected occurrence.
  *
- * Requirement: Deterministic scheduling of known recurring items
+ * Requirement: Deterministic scheduling of known recurring items, plus daily-rate
+ *   spreading for irregular patterns (prepaid/on-demand purchases).
  * Approach: Walk forward from anchor date by frequency intervals,
- *   handle month-end overflow (anchor day 31 → last day of short months)
+ *   handle month-end overflow (anchor day 31 → last day of short months).
+ *   For irregular patterns: compute average daily spend from history and spread
+ *   evenly across every day in the forecast window.
  * Alternatives:
  *   - Calculate from last seen date only: Rejected — misses if last occurrence was late
  *   - cron-like expressions: Rejected — overkill for these frequency types
+ *   - Monthly lump sum for irregular: Rejected — daily rate integrates better with
+ *     the forecast engine's daily aggregation
  */
 export function projectPattern(
-  pattern: Pick<RecurringPattern, 'frequency' | 'anchorDay' | 'expectedAmount' | 'lastSeenDate'>,
+  pattern: Pick<RecurringPattern, 'frequency' | 'anchorDay' | 'expectedAmount' | 'lastSeenDate'> & {
+    /** Total historical spend for daily rate calculation (irregular patterns) */
+    totalHistoricalAmount?: number
+    /** Number of days in the historical observation window (irregular patterns) */
+    historicalDaySpan?: number
+  },
   startDate: string,
   endDate: string,
 ): Array<{ date: string; amount: number }> {
@@ -404,6 +417,31 @@ export function projectPattern(
             date: formatDate(d),
             amount: pattern.expectedAmount,
           })
+        }
+      }
+      break
+    }
+
+    case 'irregular': {
+      // Requirement: Project irregular/on-demand expenses as a daily rate
+      // Approach: Compute average daily spend from total historical amount / observation days,
+      //   then spread that rate across every forecast day. This gives smooth, predictable
+      //   cashflow impact rather than unpredictable spikes.
+      // Alternatives:
+      //   - Random placement: Rejected — not useful for cashflow planning
+      //   - Monthly lump on 1st: Rejected — distorts daily runway calculations
+      const totalSpend = pattern.totalHistoricalAmount ?? pattern.expectedAmount
+      const daySpan = pattern.historicalDaySpan ?? 30
+      const dailyRate = daySpan > 0 ? totalSpend / daySpan : 0
+
+      if (Math.abs(dailyRate) > 0.001) {
+        const cursor = new Date(start)
+        while (cursor <= end) {
+          points.push({
+            date: formatDate(cursor),
+            amount: Math.round(dailyRate * 100) / 100,
+          })
+          cursor.setDate(cursor.getDate() + 1)
         }
       }
       break

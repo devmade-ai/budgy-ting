@@ -285,13 +285,45 @@ export function buildForecast(
   endDate: string,
 ): ForecastResult {
   // ── Step 1: Project recurring items ──
+  // Requirement: Handle three pattern variability types differently:
+  //   - fixed: project at expectedAmount on schedule (existing behavior)
+  //   - variable: project on schedule but amount comes from expectedAmount (median),
+  //     wider prediction bands handled downstream via amountStdDev
+  //   - irregular: compute daily rate from historical spend, spread evenly
+  // Approach: For irregular patterns, compute total historical amount and observation
+  //   window from linked transactions, then pass to projectPattern for daily rate spreading.
   const activePatterns = patterns.filter((p) => p.isActive)
   const recurringDaily = new Map<string, number>()
 
   for (const pattern of activePatterns) {
-    const projected = projectPattern(pattern, startDate, endDate)
-    for (const point of projected) {
-      recurringDaily.set(point.date, (recurringDaily.get(point.date) ?? 0) + point.amount)
+    if (pattern.frequency === 'irregular') {
+      // Compute historical totals for daily rate calculation
+      const linkedTxns = transactions.filter(
+        (t) => t.recurringGroupId === pattern.id && t.date < startDate,
+      )
+      let totalHistoricalAmount = 0
+      let historicalDaySpan = 30 // fallback
+      if (linkedTxns.length > 0) {
+        totalHistoricalAmount = linkedTxns.reduce((sum, t) => sum + t.amount, 0)
+        const dates = linkedTxns.map((t) => t.date).sort()
+        const first = new Date(dates[0]! + 'T00:00:00')
+        const last = new Date(dates[dates.length - 1]! + 'T00:00:00')
+        historicalDaySpan = Math.max(1, Math.round((last.getTime() - first.getTime()) / 86_400_000))
+      }
+
+      const projected = projectPattern(
+        { ...pattern, totalHistoricalAmount, historicalDaySpan },
+        startDate,
+        endDate,
+      )
+      for (const point of projected) {
+        recurringDaily.set(point.date, (recurringDaily.get(point.date) ?? 0) + point.amount)
+      }
+    } else {
+      const projected = projectPattern(pattern, startDate, endDate)
+      for (const point of projected) {
+        recurringDaily.set(point.date, (recurringDaily.get(point.date) ?? 0) + point.amount)
+      }
     }
   }
 
