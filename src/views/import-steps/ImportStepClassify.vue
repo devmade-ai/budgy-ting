@@ -12,7 +12,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { formatAmount } from '@/composables/useFormat'
 import { isIncome } from '@/types/models'
-import type { RecurringPattern } from '@/types/models'
+import type { RecurringPattern, RecurringVariability } from '@/types/models'
 
 export interface ParsedTransaction {
   date: string
@@ -28,6 +28,13 @@ export interface TransactionGroup {
   avgAmount: number
   /** User classification: recurring, once-off, or ignore (not stored) */
   classification: 'recurring' | 'once-off' | 'ignore'
+  /**
+   * Sub-type for recurring items:
+   * - 'fixed': Same amount, regular schedule (rent, subscriptions)
+   * - 'variable': Different amount each time, regular schedule (electricity bill)
+   * - 'irregular': Variable amount AND timing, bought when needed (prepaid, data)
+   */
+  variability: RecurringVariability
   /** Auto-matched pattern (if any) */
   matchedPatternId: string | null
   /** Tags from matched pattern or user input */
@@ -63,6 +70,7 @@ onMounted(() => {
 
     // Auto-classify from existing patterns
     let classification: 'recurring' | 'once-off' | 'ignore' = 'once-off'
+    let variability: RecurringVariability = 'fixed'
     let matchedPatternId: string | null = null
     let tags: string[] = []
 
@@ -74,6 +82,7 @@ onMounted(() => {
       if (descMatch || amountClose) {
         classification = 'recurring'
         matchedPatternId = pattern.id
+        variability = pattern.variability ?? 'fixed'
         tags = [...pattern.tags]
         break
       }
@@ -90,6 +99,7 @@ onMounted(() => {
       totalAmount,
       avgAmount,
       classification,
+      variability,
       matchedPatternId,
       tags,
     }
@@ -118,6 +128,13 @@ const summary = computed(() => {
 
 function setClassification(index: number, cls: 'recurring' | 'once-off' | 'ignore') {
   groups.value[index]!.classification = cls
+}
+
+function setVariability(index: number, v: RecurringVariability) {
+  const group = groups.value[index]!
+  group.variability = v
+  // Irregular patterns use 'irregular' frequency — override any auto-detected frequency
+  // Fixed and variable patterns keep their detected frequency
 }
 
 function markRemainingOnceOff() {
@@ -219,6 +236,48 @@ function handleContinue() {
               @click="setClassification(i, 'ignore')"
             >
               Ignore
+            </button>
+          </div>
+        </div>
+        <!-- Variability sub-type selector — shown when classified as recurring
+             Requirement: Let user specify how predictable this recurring expense is
+             Approach: Inline pill selector below the classification buttons, only
+               visible when 'recurring' is selected. Plain language labels. -->
+        <div
+          v-if="group.classification === 'recurring'"
+          class="mt-2 pt-2 border-t border-blue-100"
+        >
+          <p class="text-xs text-gray-500 mb-1.5">How does the amount work?</p>
+          <div class="flex gap-1">
+            <button
+              class="text-xs px-2 py-1 rounded border transition-colors"
+              :class="group.variability === 'fixed'
+                ? 'bg-blue-100 text-blue-700 border-blue-300'
+                : 'bg-white text-gray-500 border-gray-200 hover:border-blue-200'"
+              @click="setVariability(i, 'fixed')"
+              title="Same amount every time (e.g. rent, subscriptions)"
+            >
+              Fixed amount
+            </button>
+            <button
+              class="text-xs px-2 py-1 rounded border transition-colors"
+              :class="group.variability === 'variable'
+                ? 'bg-blue-100 text-blue-700 border-blue-300'
+                : 'bg-white text-gray-500 border-gray-200 hover:border-blue-200'"
+              @click="setVariability(i, 'variable')"
+              title="Comes at regular times but the amount changes (e.g. electricity bill, water)"
+            >
+              Varies each time
+            </button>
+            <button
+              class="text-xs px-2 py-1 rounded border transition-colors"
+              :class="group.variability === 'irregular'
+                ? 'bg-blue-100 text-blue-700 border-blue-300'
+                : 'bg-white text-gray-500 border-gray-200 hover:border-blue-200'"
+              @click="setVariability(i, 'irregular')"
+              title="Buy when you need it, no fixed schedule (e.g. prepaid electricity, data)"
+            >
+              Buy when needed
             </button>
           </div>
         </div>

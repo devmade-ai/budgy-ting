@@ -40,6 +40,7 @@ function makePattern(overrides: Partial<RecurringPattern> = {}): RecurringPatter
     frequency: 'monthly',
     anchorDay: 1,
     tags: ['Housing'],
+    variability: 'fixed',
     isActive: true,
     autoAccept: true,
     lastSeenDate: '2026-01-01',

@@ -25,7 +25,7 @@ import ErrorAlert from '@/components/ErrorAlert.vue'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import ImportStepUpload from './import-steps/ImportStepUpload.vue'
 import ImportStepClassify from './import-steps/ImportStepClassify.vue'
-import type { Workspace, Transaction, RecurringPattern, Frequency } from '@/types/models'
+import type { Workspace, Transaction, RecurringPattern, Frequency, RecurringVariability } from '@/types/models'
 import type { ParsedCSV } from '@/engine/csvParser'
 import type { ParsedTransaction, TransactionGroup } from './import-steps/ImportStepClassify.vue'
 
@@ -170,19 +170,25 @@ async function handleConfirmImport() {
           // Create new pattern from the group
           // Requirement: detectFrequency expects number[] of day-intervals, not string[] of dates.
           // Compute intervals between consecutive sorted dates, then detect frequency.
+          // For irregular variability, override frequency to 'irregular' regardless of detection.
           const dates = group.rows.map((r) => r.date).sort()
-          let frequency: Frequency = 'monthly'
-          if (dates.length > 1) {
-            const intervals: number[] = []
-            for (let i = 1; i < dates.length; i++) {
-              const dA = new Date(dates[i - 1]! + 'T00:00:00')
-              const dB = new Date(dates[i]! + 'T00:00:00')
-              intervals.push(Math.round(Math.abs(dB.getTime() - dA.getTime()) / 86_400_000))
+          const variability: RecurringVariability = group.variability ?? 'fixed'
+          let frequency: Frequency = variability === 'irregular' ? 'irregular' : 'monthly'
+          let anchorDay = 0
+
+          if (variability !== 'irregular') {
+            if (dates.length > 1) {
+              const intervals: number[] = []
+              for (let i = 1; i < dates.length; i++) {
+                const dA = new Date(dates[i - 1]! + 'T00:00:00')
+                const dB = new Date(dates[i]! + 'T00:00:00')
+                intervals.push(Math.round(Math.abs(dB.getTime() - dA.getTime()) / 86_400_000))
+              }
+              const detected = detectFrequency(intervals)
+              frequency = detected?.frequency ?? 'monthly'
             }
-            const detected = detectFrequency(intervals)
-            frequency = detected?.frequency ?? 'monthly'
+            anchorDay = detectAnchorDay(dates, frequency)
           }
-          const anchorDay = detectAnchorDay(dates, frequency)
 
           const newPattern: RecurringPattern = {
             id: generateId(),
@@ -192,6 +198,7 @@ async function handleConfirmImport() {
             amountStdDev: 0,
             frequency,
             anchorDay,
+            variability,
             tags: group.tags,
             isActive: true,
             autoAccept: true,

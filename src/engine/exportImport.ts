@@ -142,6 +142,15 @@ export function validateImport(data: unknown): { valid: boolean; error?: string;
     return { valid: false, error: 'Workspace data is incomplete (missing currencyLabel)' }
   }
 
+  // Backfill patterns missing the variability field (pre-v7 exports)
+  if (Array.isArray(pats)) {
+    for (const p of pats) {
+      if (!p['variability']) {
+        p['variability'] = 'fixed'
+      }
+    }
+  }
+
   return { valid: true, data: obj as unknown as ExportSchema }
 }
 
