@@ -255,7 +255,9 @@ function handleContinue() {
                 ? 'bg-blue-100 text-blue-700 border-blue-300'
                 : 'bg-white text-gray-500 border-gray-200 hover:border-blue-200'"
               @click="setVariability(i, 'fixed')"
-              title="Same amount every time (e.g. rent, subscriptions)"
+              :title="isIncome(group.avgAmount)
+                ? 'Same amount every time (e.g. salary, fixed retainer)'
+                : 'Same amount every time (e.g. rent, subscriptions)'"
             >
               Fixed amount
             </button>
@@ -265,7 +267,9 @@ function handleContinue() {
                 ? 'bg-blue-100 text-blue-700 border-blue-300'
                 : 'bg-white text-gray-500 border-gray-200 hover:border-blue-200'"
               @click="setVariability(i, 'variable')"
-              title="Comes at regular times but the amount changes (e.g. electricity bill, water)"
+              :title="isIncome(group.avgAmount)
+                ? 'Comes at regular times but the amount changes (e.g. commission, hourly pay)'
+                : 'Comes at regular times but the amount changes (e.g. electricity bill, water)'"
             >
               Varies each time
             </button>
@@ -275,9 +279,11 @@ function handleContinue() {
                 ? 'bg-blue-100 text-blue-700 border-blue-300'
                 : 'bg-white text-gray-500 border-gray-200 hover:border-blue-200'"
               @click="setVariability(i, 'irregular')"
-              title="Buy when you need it, no fixed schedule (e.g. prepaid electricity, data)"
+              :title="isIncome(group.avgAmount)
+                ? 'No fixed schedule, comes when it comes (e.g. freelance gigs, ad-hoc sales)'
+                : 'No fixed schedule, bought when needed (e.g. prepaid electricity, data)'"
             >
-              Buy when needed
+              No set schedule
             </button>
           </div>
         </div>
