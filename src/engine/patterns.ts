@@ -12,7 +12,7 @@
  */
 
 import { median, standardDeviation, mean } from 'simple-statistics'
-import type { Transaction, Frequency, RecurringPattern, RecurringVariability } from '@/types/models'
+import type { Transaction, Frequency, RecurringPattern } from '@/types/models'
 import { formatDate } from './dateUtils'
 
 /** Coefficient of variation threshold above which a recurring item is "variable" */
