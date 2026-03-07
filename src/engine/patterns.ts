@@ -159,10 +159,7 @@ export function detectPattern(
   const sorted = [...transactions].sort((a, b) => a.date.localeCompare(b.date))
 
   // Calculate intervals between consecutive occurrences
-  const intervals: number[] = []
-  for (let i = 1; i < sorted.length; i++) {
-    intervals.push(daysBetween(sorted[i - 1]!.date, sorted[i]!.date))
-  }
+  const intervals = calculateIntervals(sorted.map((t) => t.date))
 
   // Detect frequency from intervals
   const detected = detectFrequency(intervals)
@@ -274,9 +271,7 @@ function projectWeeklyInterval(
     cursor.setDate(cursor.getDate() + 1)
   }
   while (cursor <= end) {
-    if (cursor >= start) {
-      points.push({ date: formatDate(cursor), amount })
-    }
+    points.push({ date: formatDate(cursor), amount })
     cursor.setDate(cursor.getDate() + intervalDays)
   }
   return points

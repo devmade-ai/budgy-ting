@@ -78,7 +78,14 @@ interface AnalyticsEntry {
 
 function trackEvent(event: InstallAnalyticsEvent, browser: BrowserType) {
   const raw = safeGetItem(ANALYTICS_KEY)
-  const entries: AnalyticsEntry[] = raw ? JSON.parse(raw) : []
+  let entries: AnalyticsEntry[] = []
+  if (raw) {
+    try {
+      entries = JSON.parse(raw)
+    } catch {
+      // Malformed JSON in storage — reset analytics
+    }
+  }
   entries.push({ event, timestamp: new Date().toISOString(), browser })
   const trimmed = entries.slice(-MAX_EVENTS)
   safeSetItem(ANALYTICS_KEY, JSON.stringify(trimmed))
