@@ -33,5 +33,5 @@ export function estimateMonthlySpend(transactions: Transaction[]): number {
   const daySpan = Math.max(1, (lastDate.getTime() - firstDate.getTime()) / 86_400_000)
   const total = expenses.reduce((sum, t) => sum + Math.abs(t.amount), 0)
 
-  return daySpan > 0 ? (total / daySpan) * 30 : total
+  return (total / daySpan) * 30
 }
