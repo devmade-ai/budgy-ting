@@ -97,7 +97,7 @@ export function calculateDailyAccuracy(
  * @param points - Daily accuracy comparison points
  * @param hitRateThreshold - Currency amount threshold for "close enough" (default: auto-calculated)
  */
-export function summariseAccuracy(
+export function summarizeAccuracy(
   points: DailyAccuracyPoint[],
   hitRateThreshold?: number,
 ): AccuracySummary {

@@ -13,7 +13,7 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { db } from '@/db'
 import { buildForecast } from '@/engine/forecast'
 import { calculateRunway } from '@/engine/runway'
-import { calculateDailyAccuracy, summariseAccuracy } from '@/engine/accuracy'
+import { calculateDailyAccuracy, summarizeAccuracy } from '@/engine/accuracy'
 import { formatDate } from '@/engine/dateUtils'
 import { formatAmount } from '@/composables/useFormat'
 import CashflowGraph from '@/components/CashflowGraph.vue'
@@ -72,7 +72,7 @@ const accuracy = computed<AccuracySummary | null>(() => {
   const backtestForecast = buildForecast(transactions.value, patterns.value, firstDate, lastDate)
 
   const dailyAccuracy = calculateDailyAccuracy(backtestForecast.daily, transactions.value)
-  return summariseAccuracy(dailyAccuracy)
+  return summarizeAccuracy(dailyAccuracy)
 })
 
 // Compute runway
