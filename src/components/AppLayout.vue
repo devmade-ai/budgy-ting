@@ -29,7 +29,7 @@ import sampleCsvRaw from '../../docs/sample-import.csv?raw'
 const sampleCsvMd = 'Copy this sample data to test the import wizard, or use it as a template for formatting your own data.\n\n```csv\n' + sampleCsvRaw.trim() + '\n```'
 
 const router = useRouter()
-const { hasUpdate, offlineReady, updateApp } = usePWAUpdate()
+const { hasUpdate, offlineReady, checking, updateApp, checkForUpdate } = usePWAUpdate()
 const { showTutorial, showIfFirstVisit, openTutorial, dismissTutorial } = useTutorial()
 
 const showInstructions = ref(false)
@@ -75,6 +75,11 @@ function openDrawer(content: DrawerContent) {
 
 function closeDrawer() {
   activeDrawer.value = null
+}
+
+function handleCheckForUpdate() {
+  menuOpen.value = false
+  checkForUpdate()
 }
 </script>
 
@@ -174,6 +179,16 @@ function closeDrawer() {
             >
               <span class="i-lucide-file-spreadsheet text-base text-gray-400" aria-hidden="true" />
               Sample CSV
+            </button>
+            <div class="border-t border-gray-100 my-1" role="separator" />
+            <button
+              class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+              role="menuitem"
+              :disabled="checking"
+              @click="handleCheckForUpdate"
+            >
+              <span class="i-lucide-refresh-cw text-base text-gray-400" :class="{ 'animate-spin': checking }" aria-hidden="true" />
+              {{ checking ? 'Checking...' : 'Check for updates' }}
             </button>
           </div>
         </div>

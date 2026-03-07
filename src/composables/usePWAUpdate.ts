@@ -19,6 +19,10 @@ const CHECK_INTERVAL_MS = 60 * 60 * 1000 // 60 minutes
 const OFFLINE_DISMISS_MS = 3000
 
 const offlineReady = ref(false)
+const checking = ref(false)
+
+// Stored at module level so checkForUpdate() can access it outside the callback
+let swRegistration: ServiceWorkerRegistration | undefined
 
 const {
   needRefresh: hasUpdate,
@@ -27,6 +31,7 @@ const {
   immediate: true,
   onRegisteredSW(swUrl, registration) {
     debugLog('pwa', 'info', 'Service worker registered', { swUrl })
+    swRegistration = registration
 
     // Periodic update checks — intentionally app-lifetime, no cleanup needed.
     // The interval runs as long as the app is open (single-page app, never unmounts).
@@ -61,10 +66,32 @@ function updateApp() {
   updateServiceWorker(true)
 }
 
+/**
+ * Requirement: Manual "Check for updates" action in burger menu
+ * Approach: Call registration.update() on demand, show brief checking state
+ * Alternatives:
+ *   - Reuse periodic timer: Rejected — user expects immediate feedback
+ */
+async function checkForUpdate() {
+  if (!swRegistration) {
+    debugLog('pwa', 'warn', 'No service worker registration — cannot check for updates')
+    return
+  }
+  debugLog('pwa', 'info', 'User triggered manual update check')
+  checking.value = true
+  try {
+    await swRegistration.update()
+  } finally {
+    checking.value = false
+  }
+}
+
 export function usePWAUpdate() {
   return {
     hasUpdate,
     offlineReady,
+    checking,
     updateApp,
+    checkForUpdate,
   }
 }

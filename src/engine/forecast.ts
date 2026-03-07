@@ -15,7 +15,7 @@
  *   - Holt-Winters triple: Deferred — needs 2+ full seasonal cycles (14+ weeks) to initialise weekly seasonality
  */
 
-import { standardDeviation, mean, quantileSorted } from 'simple-statistics'
+import { standardDeviation, mean } from 'simple-statistics'
 import type { Transaction, RecurringPattern } from '@/types/models'
 import { projectPattern } from './patterns'
 import { formatDate } from './dateUtils'
@@ -33,14 +33,29 @@ export interface HoltState {
   beta: number
 }
 
-/** Default parameters for daily personal finance data */
+/**
+ * Level smoothing factor for Holt's method.
+ * 0.2 balances responsiveness to recent changes vs stability — standard choice
+ * for daily financial data (see Hyndman & Athanasopoulos "Forecasting: Principles and Practice").
+ */
 const DEFAULT_ALPHA = 0.2
+
+/**
+ * Trend smoothing factor for Holt's method.
+ * 0.05 dampens trend updates to avoid overfitting daily noise in personal spending.
+ */
 const DEFAULT_BETA = 0.05
 
-/** Minimum weeks of data for day-of-week seasonality */
+/**
+ * Minimum weeks of data required to compute day-of-week seasonality factors.
+ * 4 weeks ensures each weekday has at least 4 data points for a stable average.
+ */
 const MIN_WEEKS_FOR_SEASONALITY = 4
 
-/** Minimum days of data for Holt's method (below this, use simple average) */
+/**
+ * Minimum days of history needed for Holt's method. Below this, the trend estimate
+ * is too noisy to be useful, so we fall back to a simple average.
+ */
 const MIN_DAYS_FOR_HOLT = 14
 
 /**
@@ -203,40 +218,6 @@ export function calculatePredictionBands(
   }
 }
 
-/**
- * Bootstrap prediction bands — more robust for non-normal error distributions.
- * Resamples from historical errors to build empirical prediction intervals.
- */
-export function bootstrapPredictionBands(
-  historicalErrors: number[],
-  forecast: number,
-  stepsAhead: number,
-  nSamples: number = 1000,
-): PredictionBand {
-  if (historicalErrors.length < 5) {
-    return calculatePredictionBands(historicalErrors, forecast, stepsAhead)
-  }
-
-  // Resample paths and compute cumulative error
-  const outcomes: number[] = []
-  for (let s = 0; s < nSamples; s++) {
-    let cumError = 0
-    for (let h = 0; h < stepsAhead; h++) {
-      const idx = Math.floor(Math.random() * historicalErrors.length)
-      cumError += historicalErrors[idx]!
-    }
-    outcomes.push(forecast + cumError)
-  }
-
-  outcomes.sort((a, b) => a - b)
-
-  return {
-    point: forecast,
-    lower: quantileSorted(outcomes, 0.1),   // 10th percentile → 80% band lower
-    upper: quantileSorted(outcomes, 0.9),   // 90th percentile → 80% band upper
-  }
-}
-
 // ── Combined Forecast ──
 
 export interface DailyForecastPoint {
@@ -265,44 +246,27 @@ export interface ForecastResult {
 }
 
 /**
- * Build the combined daily forecast.
- *
- * 1. Compute recurring item schedule from patterns
- * 2. Calculate variable spending residual from historical transactions
- * 3. Apply Holt's method to the residual for trend-aware forecasting
- * 4. Add day-of-week seasonal factors where data permits
- * 5. Produce confidence bands that widen over the forecast horizon
- *
- * @param transactions - All historical transactions for the workspace
- * @param patterns - Active recurring patterns
- * @param startDate - Forecast period start (YYYY-MM-DD)
- * @param endDate - Forecast period end (YYYY-MM-DD)
+ * Project all active recurring patterns into a daily amount map.
+ * Handles irregular patterns by computing daily rate from historical transactions.
  */
-export function buildForecast(
-  transactions: Transaction[],
+function projectRecurringItems(
   patterns: RecurringPattern[],
+  transactions: Transaction[],
   startDate: string,
   endDate: string,
-): ForecastResult {
-  // ── Step 1: Project recurring items ──
-  // Requirement: Handle three pattern variability types differently:
-  //   - fixed: project at expectedAmount on schedule (existing behavior)
-  //   - variable: project on schedule but amount comes from expectedAmount (median),
-  //     wider prediction bands handled downstream via amountStdDev
-  //   - irregular: compute daily rate from historical spend, spread evenly
-  // Approach: For irregular patterns, compute total historical amount and observation
-  //   window from linked transactions, then pass to projectPattern for daily rate spreading.
+): Map<string, number> {
   const activePatterns = patterns.filter((p) => p.isActive)
   const recurringDaily = new Map<string, number>()
 
   for (const pattern of activePatterns) {
+    let projected: Array<{ date: string; amount: number }>
+
     if (pattern.frequency === 'irregular') {
-      // Compute historical totals for daily rate calculation
       const linkedTxns = transactions.filter(
         (t) => t.recurringGroupId === pattern.id && t.date < startDate,
       )
       let totalHistoricalAmount = 0
-      let historicalDaySpan = 30 // fallback
+      let historicalDaySpan = 30
       if (linkedTxns.length > 0) {
         totalHistoricalAmount = linkedTxns.reduce((sum, t) => sum + t.amount, 0)
         const dates = linkedTxns.map((t) => t.date).sort()
@@ -310,32 +274,36 @@ export function buildForecast(
         const last = new Date(dates[dates.length - 1]! + 'T00:00:00')
         historicalDaySpan = Math.max(1, Math.round((last.getTime() - first.getTime()) / 86_400_000))
       }
-
-      const projected = projectPattern(
-        { ...pattern, totalHistoricalAmount, historicalDaySpan },
-        startDate,
-        endDate,
-      )
-      for (const point of projected) {
-        recurringDaily.set(point.date, (recurringDaily.get(point.date) ?? 0) + point.amount)
-      }
+      projected = projectPattern({ ...pattern, totalHistoricalAmount, historicalDaySpan }, startDate, endDate)
     } else {
-      const projected = projectPattern(pattern, startDate, endDate)
-      for (const point of projected) {
-        recurringDaily.set(point.date, (recurringDaily.get(point.date) ?? 0) + point.amount)
-      }
+      projected = projectPattern(pattern, startDate, endDate)
+    }
+
+    for (const point of projected) {
+      recurringDaily.set(point.date, (recurringDaily.get(point.date) ?? 0) + point.amount)
     }
   }
 
-  // ── Step 2: Build historical daily totals and residuals ──
-  // Historical = before forecast startDate
+  return recurringDaily
+}
+
+/**
+ * Compute historical daily residuals: total daily amount minus recurring component.
+ * Used to isolate the variable spending signal for Holt's method.
+ */
+function computeHistoricalResiduals(
+  transactions: Transaction[],
+  patterns: RecurringPattern[],
+  startDate: string,
+): Map<string, number> {
+  const activePatterns = patterns.filter((p) => p.isActive)
   const historicalTxns = transactions.filter((t) => t.date < startDate)
+
   const historicalByDate = new Map<string, number>()
   for (const t of historicalTxns) {
     historicalByDate.set(t.date, (historicalByDate.get(t.date) ?? 0) + t.amount)
   }
 
-  // Also compute historical recurring amounts to subtract for residual
   const historicalRecurring = new Map<string, number>()
   const recurringGroupIds = new Set(activePatterns.map((p) => p.id))
   for (const t of historicalTxns) {
@@ -344,44 +312,62 @@ export function buildForecast(
     }
   }
 
-  // Residual = total daily - recurring component
   const residualByDate = new Map<string, number>()
   for (const [date, total] of historicalByDate) {
     const recurring = historicalRecurring.get(date) ?? 0
     residualByDate.set(date, total - recurring)
   }
 
-  // ── Step 3: Holt's method on the residual ──
-  const sortedDates = [...residualByDate.keys()].sort()
-  const residualSeries = sortedDates.map((d) => residualByDate.get(d)!)
+  return residualByDate
+}
 
-  let variableState: HoltState | null = null
-  let predictionErrors: number[] = []
-  let variableMethod: 'holt' | 'average' | 'none' = 'none'
-  let variableDailyForecast = 0
-
+/**
+ * Fit variable spending model (Holt's or simple average) to residual series.
+ */
+function fitVariableModel(residualSeries: number[]): {
+  variableState: HoltState | null
+  predictionErrors: number[]
+  variableMethod: 'holt' | 'average' | 'none'
+  variableDailyForecast: number
+} {
   if (residualSeries.length >= MIN_DAYS_FOR_HOLT) {
     const result = runHolt(residualSeries)
-    variableState = result.finalState
-    predictionErrors = result.errors
-    variableMethod = 'holt'
-    variableDailyForecast = holtForecast(variableState, 1)
-  } else if (residualSeries.length > 0) {
-    variableMethod = 'average'
-    variableDailyForecast = mean(residualSeries)
-    // Requirement: Generate meaningful prediction bands even with sparse data
-    // Approach: Compute residual errors from the simple average so bands aren't flat.
-    //   Without this, users see confidently narrow bands despite data scarcity.
-    // Alternatives:
-    //   - Flat bands (no errors): Rejected — misleadingly confident with sparse data
-    //   - Fixed multiplier: Rejected — actual variance is more informative
-    predictionErrors = residualSeries.map((v) => v - variableDailyForecast)
+    return {
+      variableState: result.finalState,
+      predictionErrors: result.errors,
+      variableMethod: 'holt',
+      variableDailyForecast: holtForecast(result.finalState, 1),
+    }
   }
 
-  // ── Step 4: Day-of-week factors ──
-  const dowFactors = calculateDayOfWeekFactors(residualByDate)
+  if (residualSeries.length > 0) {
+    const avg = mean(residualSeries)
+    // Requirement: Generate meaningful prediction bands even with sparse data
+    // Approach: Compute residual errors from the simple average so bands aren't flat.
+    return {
+      variableState: null,
+      predictionErrors: residualSeries.map((v) => v - avg),
+      variableMethod: 'average',
+      variableDailyForecast: avg,
+    }
+  }
 
-  // ── Step 5: Build daily forecast points ──
+  return { variableState: null, predictionErrors: [], variableMethod: 'none', variableDailyForecast: 0 }
+}
+
+/**
+ * Assemble the daily forecast point series from recurring + variable components.
+ */
+function assembleDailyForecast(
+  recurringDaily: Map<string, number>,
+  variableState: HoltState | null,
+  variableMethod: 'holt' | 'average' | 'none',
+  variableDailyForecast: number,
+  predictionErrors: number[],
+  dowFactors: number[] | null,
+  startDate: string,
+  endDate: string,
+): DailyForecastPoint[] {
   const daily: DailyForecastPoint[] = []
   let cumulative = 0
   const cursor = new Date(startDate + 'T00:00:00')
@@ -394,14 +380,12 @@ export function buildForecast(
 
     const recurring = recurringDaily.get(dateStr) ?? 0
 
-    // Variable component with optional day-of-week adjustment
     let variable = 0
     if (variableMethod !== 'none') {
       variable = variableMethod === 'holt'
         ? holtForecast(variableState!, dayIndex)
         : variableDailyForecast
 
-      // Apply day-of-week seasonal factor
       if (dowFactors) {
         const dow = cursor.getDay()
         const adjusted = dow === 0 ? 6 : dow - 1
@@ -412,7 +396,6 @@ export function buildForecast(
     const amount = recurring + variable
     cumulative += amount
 
-    // Prediction band (only for the variable component, recurring is deterministic)
     let band: PredictionBand | null = null
     if (predictionErrors.length >= 2) {
       band = calculatePredictionBands(predictionErrors, amount, dayIndex)
@@ -435,12 +418,40 @@ export function buildForecast(
     cursor.setDate(cursor.getDate() + 1)
   }
 
-  return {
-    daily,
-    variableState,
-    dowFactors,
-    predictionErrors,
-    variableMethod,
-  }
+  return daily
+}
+
+/**
+ * Build the combined daily forecast.
+ *
+ * 1. Compute recurring item schedule from patterns
+ * 2. Calculate variable spending residual from historical transactions
+ * 3. Apply Holt's method to the residual for trend-aware forecasting
+ * 4. Add day-of-week seasonal factors where data permits
+ * 5. Produce confidence bands that widen over the forecast horizon
+ */
+export function buildForecast(
+  transactions: Transaction[],
+  patterns: RecurringPattern[],
+  startDate: string,
+  endDate: string,
+): ForecastResult {
+  const recurringDaily = projectRecurringItems(patterns, transactions, startDate, endDate)
+  const residualByDate = computeHistoricalResiduals(transactions, patterns, startDate)
+
+  const sortedDates = [...residualByDate.keys()].sort()
+  const residualSeries = sortedDates.map((d) => residualByDate.get(d)!)
+
+  const { variableState, predictionErrors, variableMethod, variableDailyForecast } =
+    fitVariableModel(residualSeries)
+
+  const dowFactors = calculateDayOfWeekFactors(residualByDate)
+
+  const daily = assembleDailyForecast(
+    recurringDaily, variableState, variableMethod, variableDailyForecast,
+    predictionErrors, dowFactors, startDate, endDate,
+  )
+
+  return { daily, variableState, dowFactors, predictionErrors, variableMethod }
 }
 

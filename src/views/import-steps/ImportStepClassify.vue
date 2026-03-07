@@ -76,9 +76,12 @@ onMounted(() => {
 
     for (const pattern of props.existingPatterns) {
       if (!pattern.isActive || !pattern.autoAccept) continue
+      if (!pattern.description?.trim()) continue
       // Match by description similarity + amount proximity
       const descMatch = pattern.description.toLowerCase() === description.toLowerCase()
-      const amountClose = Math.abs(avgAmount - pattern.expectedAmount) / Math.max(1, Math.abs(pattern.expectedAmount)) < 0.15
+      // Skip amount comparison if expectedAmount is zero (threshold would be meaningless)
+      const amountClose = pattern.expectedAmount !== 0
+        && Math.abs(avgAmount - pattern.expectedAmount) / Math.abs(pattern.expectedAmount) < 0.15
       if (descMatch || amountClose) {
         classification = 'recurring'
         matchedPatternId = pattern.id

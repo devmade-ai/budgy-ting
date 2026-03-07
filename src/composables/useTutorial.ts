@@ -7,6 +7,7 @@
  */
 
 import { ref } from 'vue'
+import { safeGetItem, safeSetItem } from './useSafeStorage'
 
 // Namespace all localStorage keys with 'budgy-ting:' prefix (colon separator)
 const STORAGE_KEY = 'budgy-ting:tutorial-dismissed'
@@ -15,19 +16,11 @@ const STORAGE_KEY = 'budgy-ting:tutorial-dismissed'
 const showTutorial = ref(false)
 
 function hasBeenDismissed(): boolean {
-  try {
-    return localStorage.getItem(STORAGE_KEY) === '1'
-  } catch {
-    return false
-  }
+  return safeGetItem(STORAGE_KEY) === '1'
 }
 
 function markDismissed() {
-  try {
-    localStorage.setItem(STORAGE_KEY, '1')
-  } catch {
-    // localStorage unavailable (private browsing, storage full) — degrade silently
-  }
+  safeSetItem(STORAGE_KEY, '1')
 }
 
 export function useTutorial() {

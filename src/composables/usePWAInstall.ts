@@ -13,6 +13,7 @@
 
 import { ref, computed } from 'vue'
 import { debugLog } from '@/debug/debugLog'
+import { safeGetItem, safeSetItem } from './useSafeStorage'
 
 // ── Browser detection ──
 
@@ -76,17 +77,19 @@ interface AnalyticsEntry {
 }
 
 function trackEvent(event: InstallAnalyticsEvent, browser: BrowserType) {
-  try {
-    const raw = localStorage.getItem(ANALYTICS_KEY)
-    const entries: AnalyticsEntry[] = raw ? JSON.parse(raw) : []
-    entries.push({ event, timestamp: new Date().toISOString(), browser })
-    // Keep only the last MAX_EVENTS entries
-    const trimmed = entries.slice(-MAX_EVENTS)
-    localStorage.setItem(ANALYTICS_KEY, JSON.stringify(trimmed))
-    debugLog('pwa', 'info', `Install analytics: ${event}`, { browser })
-  } catch {
-    // localStorage unavailable — silently skip
+  const raw = safeGetItem(ANALYTICS_KEY)
+  let entries: AnalyticsEntry[] = []
+  if (raw) {
+    try {
+      entries = JSON.parse(raw)
+    } catch {
+      // Malformed JSON in storage — reset analytics
+    }
   }
+  entries.push({ event, timestamp: new Date().toISOString(), browser })
+  const trimmed = entries.slice(-MAX_EVENTS)
+  safeSetItem(ANALYTICS_KEY, JSON.stringify(trimmed))
+  debugLog('pwa', 'info', `Install analytics: ${event}`, { browser })
 }
 
 // ── Dismiss persistence ──
@@ -94,19 +97,11 @@ function trackEvent(event: InstallAnalyticsEvent, browser: BrowserType) {
 const DISMISS_KEY = 'budgy-ting:install-dismissed'
 
 function isDismissed(): boolean {
-  try {
-    return localStorage.getItem(DISMISS_KEY) === 'true'
-  } catch {
-    return false
-  }
+  return safeGetItem(DISMISS_KEY) === 'true'
 }
 
 function persistDismiss() {
-  try {
-    localStorage.setItem(DISMISS_KEY, 'true')
-  } catch {
-    // localStorage unavailable — dismiss is session-only
-  }
+  safeSetItem(DISMISS_KEY, 'true')
 }
 
 // ── Composable ──

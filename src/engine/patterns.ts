@@ -15,7 +15,12 @@ import { median, standardDeviation, mean } from 'simple-statistics'
 import type { Transaction, Frequency, RecurringPattern } from '@/types/models'
 import { formatDate } from './dateUtils'
 
-/** Coefficient of variation threshold above which a recurring item is "variable" */
+/**
+ * Coefficient of variation (stddev / mean) threshold above which a recurring item
+ * is classified as "variable" rather than "fixed". 0.3 (30% variance) was chosen
+ * from analysis of typical household expenses — rent/subscriptions are <10% CV,
+ * while utility bills commonly range 20-40%.
+ */
 const VARIABLE_CV_THRESHOLD = 0.3
 
 /** Interval-to-frequency mapping ranges (in days) */
@@ -154,10 +159,7 @@ export function detectPattern(
   const sorted = [...transactions].sort((a, b) => a.date.localeCompare(b.date))
 
   // Calculate intervals between consecutive occurrences
-  const intervals: number[] = []
-  for (let i = 1; i < sorted.length; i++) {
-    intervals.push(daysBetween(sorted[i - 1]!.date, sorted[i]!.date))
-  }
+  const intervals = calculateIntervals(sorted.map((t) => t.date))
 
   // Detect frequency from intervals
   const detected = detectFrequency(intervals)
@@ -243,6 +245,163 @@ export function detectAllPatterns(
   return patterns.sort((a, b) => b.confidence - a.confidence)
 }
 
+/** Shared input type for projection functions */
+type ProjectionPattern = Pick<RecurringPattern, 'frequency' | 'anchorDay' | 'expectedAmount' | 'lastSeenDate'> & {
+  totalHistoricalAmount?: number
+  historicalDaySpan?: number
+}
+type ProjectionPoint = { date: string; amount: number }
+
+function projectDaily(amount: number, start: Date, end: Date): ProjectionPoint[] {
+  const points: ProjectionPoint[] = []
+  const cursor = new Date(start)
+  while (cursor <= end) {
+    points.push({ date: formatDate(cursor), amount })
+    cursor.setDate(cursor.getDate() + 1)
+  }
+  return points
+}
+
+function projectWeeklyInterval(
+  anchorDay: number, amount: number, intervalDays: number, start: Date, end: Date,
+): ProjectionPoint[] {
+  const points: ProjectionPoint[] = []
+  const cursor = new Date(start)
+  while (cursor.getDay() !== anchorDay) {
+    cursor.setDate(cursor.getDate() + 1)
+  }
+  while (cursor <= end) {
+    points.push({ date: formatDate(cursor), amount })
+    cursor.setDate(cursor.getDate() + intervalDays)
+  }
+  return points
+}
+
+function projectMonthly(anchorDay: number, amount: number, start: Date, end: Date): ProjectionPoint[] {
+  const points: ProjectionPoint[] = []
+  let y = start.getFullYear()
+  let m = start.getMonth()
+  const endYear = end.getFullYear()
+  const endMonth = end.getMonth()
+
+  while (y < endYear || (y === endYear && m <= endMonth)) {
+    // Handle anchor day overflow (e.g., anchor=31 but month has 30 days)
+    const daysInMonth = new Date(y, m + 1, 0).getDate()
+    const day = Math.min(anchorDay, daysInMonth)
+    const d = new Date(y, m, day)
+    if (d >= start && d <= end) {
+      points.push({ date: formatDate(d), amount })
+    }
+    m++
+    if (m > 11) { m = 0; y++ }
+  }
+  return points
+}
+
+/**
+ * Phase quarterly projections from lastSeenDate, handling gaps > 6 months.
+ * Steps forward from lastSeenDate by 3-month increments until entering the window.
+ */
+function projectQuarterly(
+  pattern: ProjectionPattern, start: Date, end: Date,
+): ProjectionPoint[] {
+  const points: ProjectionPoint[] = []
+  const startYear = start.getFullYear()
+  const startMonth = start.getMonth()
+  const endYear = end.getFullYear()
+  const endMonth = end.getMonth()
+
+  const lastSeen = new Date(pattern.lastSeenDate + 'T00:00:00')
+  let nextM = lastSeen.getMonth()
+  let nextY = lastSeen.getFullYear()
+
+  // Step forward by quarters from lastSeen until we reach or pass the start
+  while (new Date(nextY, nextM, 1) < new Date(startYear, startMonth, 1)) {
+    nextM += 3
+    if (nextM > 11) { nextM -= 12; nextY++ }
+  }
+
+  // Check if we need to step back one quarter (lastSeen's quarter may overlap start)
+  const prevM = nextM - 3 < 0 ? nextM + 9 : nextM - 3
+  const prevY = nextM - 3 < 0 ? nextY - 1 : nextY
+  const prevDaysInMonth = new Date(prevY, prevM + 1, 0).getDate()
+  const prevDay = Math.min(pattern.anchorDay, prevDaysInMonth)
+  const prevD = new Date(prevY, prevM, prevDay)
+  if (prevD >= start && prevD <= end) {
+    points.push({ date: formatDate(prevD), amount: pattern.expectedAmount })
+  }
+
+  let y = nextY
+  let m = nextM
+  while (y < endYear || (y === endYear && m <= endMonth)) {
+    const daysInMonth = new Date(y, m + 1, 0).getDate()
+    const day = Math.min(pattern.anchorDay, daysInMonth)
+    const d = new Date(y, m, day)
+    if (d >= start && d <= end) {
+      points.push({ date: formatDate(d), amount: pattern.expectedAmount })
+    }
+    m += 3
+    if (m > 11) { m -= 12; y++ }
+  }
+  return points
+}
+
+function projectAnnually(
+  pattern: ProjectionPattern, start: Date, end: Date,
+): ProjectionPoint[] {
+  const points: ProjectionPoint[] = []
+  const lastSeen = new Date(pattern.lastSeenDate + 'T00:00:00')
+  const annualMonth = lastSeen.getMonth()
+
+  for (let y = start.getFullYear(); y <= end.getFullYear(); y++) {
+    const daysInMonth = new Date(y, annualMonth + 1, 0).getDate()
+    const day = Math.min(pattern.anchorDay, daysInMonth)
+    const d = new Date(y, annualMonth, day)
+    if (d >= start && d <= end) {
+      points.push({ date: formatDate(d), amount: pattern.expectedAmount })
+    }
+  }
+  return points
+}
+
+/**
+ * Project irregular/on-demand expenses as a daily rate.
+ * Computes average daily spend from total historical amount / observation days,
+ * then spreads that rate across every forecast day.
+ */
+function projectIrregular(
+  pattern: ProjectionPattern, start: Date, end: Date,
+): ProjectionPoint[] {
+  const totalSpend = pattern.totalHistoricalAmount ?? pattern.expectedAmount
+  const daySpan = pattern.historicalDaySpan ?? 30
+  const dailyRate = daySpan > 0 ? totalSpend / daySpan : 0
+
+  if (Math.abs(dailyRate) <= 0.001) return []
+
+  const points: ProjectionPoint[] = []
+  const cursor = new Date(start)
+  while (cursor <= end) {
+    points.push({
+      date: formatDate(cursor),
+      amount: Math.round(dailyRate * 100) / 100,
+    })
+    cursor.setDate(cursor.getDate() + 1)
+  }
+  return points
+}
+
+/**
+ * Calculate intervals (in days) between consecutive sorted ISO date strings.
+ * Reused by both pattern detection and import wizard frequency detection.
+ */
+export function calculateIntervals(dates: string[]): number[] {
+  const intervals: number[] = []
+  for (let i = 1; i < dates.length; i++) {
+    intervals.push(daysBetween(dates[i - 1]!, dates[i]!))
+  }
+  return intervals
+}
+
 /**
  * Project future occurrences of a recurring pattern within a date range.
  * Returns an array of { date, amount } for each expected occurrence.
@@ -260,194 +419,30 @@ export function detectAllPatterns(
  *     the forecast engine's daily aggregation
  */
 export function projectPattern(
-  pattern: Pick<RecurringPattern, 'frequency' | 'anchorDay' | 'expectedAmount' | 'lastSeenDate'> & {
-    /** Total historical spend for daily rate calculation (irregular patterns) */
-    totalHistoricalAmount?: number
-    /** Number of days in the historical observation window (irregular patterns) */
-    historicalDaySpan?: number
-  },
+  pattern: ProjectionPattern,
   startDate: string,
   endDate: string,
 ): Array<{ date: string; amount: number }> {
-  const points: Array<{ date: string; amount: number }> = []
   const start = new Date(startDate + 'T00:00:00')
   const end = new Date(endDate + 'T00:00:00')
 
   switch (pattern.frequency) {
     case 'once-off':
-      // Once-off patterns don't recur — return empty
-      return points
-
-    case 'daily': {
-      const cursor = new Date(start)
-      while (cursor <= end) {
-        points.push({
-          date: formatDate(cursor),
-          amount: pattern.expectedAmount,
-        })
-        cursor.setDate(cursor.getDate() + 1)
-      }
-      break
-    }
-
-    case 'weekly': {
-      // Start from the next occurrence of the anchor day-of-week
-      const cursor = new Date(start)
-      // Advance to the first occurrence of the anchor day
-      const targetDow = pattern.anchorDay
-      while (cursor.getDay() !== targetDow) {
-        cursor.setDate(cursor.getDate() + 1)
-      }
-      while (cursor <= end) {
-        if (cursor >= start) {
-          points.push({
-            date: formatDate(cursor),
-            amount: pattern.expectedAmount,
-          })
-        }
-        cursor.setDate(cursor.getDate() + 7)
-      }
-      break
-    }
-
-    case 'biweekly': {
-      const cursor = new Date(start)
-      const targetDow = pattern.anchorDay
-      while (cursor.getDay() !== targetDow) {
-        cursor.setDate(cursor.getDate() + 1)
-      }
-      while (cursor <= end) {
-        if (cursor >= start) {
-          points.push({
-            date: formatDate(cursor),
-            amount: pattern.expectedAmount,
-          })
-        }
-        cursor.setDate(cursor.getDate() + 14)
-      }
-      break
-    }
-
-    case 'monthly': {
-      const startYear = start.getFullYear()
-      const startMonth = start.getMonth()
-      const endYear = end.getFullYear()
-      const endMonth = end.getMonth()
-
-      let y = startYear
-      let m = startMonth
-      while (y < endYear || (y === endYear && m <= endMonth)) {
-        // Handle anchor day overflow (e.g., anchor=31 but month has 30 days)
-        const daysInMonth = new Date(y, m + 1, 0).getDate()
-        const day = Math.min(pattern.anchorDay, daysInMonth)
-        const d = new Date(y, m, day)
-        if (d >= start && d <= end) {
-          points.push({
-            date: formatDate(d),
-            amount: pattern.expectedAmount,
-          })
-        }
-        m++
-        if (m > 11) { m = 0; y++ }
-      }
-      break
-    }
-
-    case 'quarterly': {
-      const startYear = start.getFullYear()
-      const startMonth = start.getMonth()
-      const endYear = end.getFullYear()
-      const endMonth = end.getMonth()
-
-      // Requirement: Phase quarterly projections from lastSeenDate, handling gaps > 6 months
-      // Approach: Step forward from lastSeenDate by 3-month increments until we enter the
-      //   projection window. This ensures correct phasing even if the last occurrence was
-      //   multiple quarters ago (e.g., skipped a quarter).
-      // Alternatives:
-      //   - Simple modulo on startMonth: Rejected — misaligns if gap > 1 quarter
-      //   - Only project from lastSeen forward: Rejected — may miss occurrences before start
-      const lastSeen = new Date(pattern.lastSeenDate + 'T00:00:00')
-      let nextM = lastSeen.getMonth()
-      let nextY = lastSeen.getFullYear()
-
-      // Step forward by quarters from lastSeen until we reach or pass the start
-      while (new Date(nextY, nextM, 1) < new Date(startYear, startMonth, 1)) {
-        nextM += 3
-        if (nextM > 11) { nextM -= 12; nextY++ }
-      }
-
-      // Also check if we need to step back one quarter (lastSeen's quarter may overlap start)
-      const prevM = nextM - 3 < 0 ? nextM + 9 : nextM - 3
-      const prevY = nextM - 3 < 0 ? nextY - 1 : nextY
-      const prevDaysInMonth = new Date(prevY, prevM + 1, 0).getDate()
-      const prevDay = Math.min(pattern.anchorDay, prevDaysInMonth)
-      const prevD = new Date(prevY, prevM, prevDay)
-      if (prevD >= start && prevD <= end) {
-        points.push({ date: formatDate(prevD), amount: pattern.expectedAmount })
-      }
-
-      let y = nextY
-      let m = nextM
-      while (y < endYear || (y === endYear && m <= endMonth)) {
-        const daysInMonth = new Date(y, m + 1, 0).getDate()
-        const day = Math.min(pattern.anchorDay, daysInMonth)
-        const d = new Date(y, m, day)
-        if (d >= start && d <= end) {
-          points.push({
-            date: formatDate(d),
-            amount: pattern.expectedAmount,
-          })
-        }
-        m += 3
-        if (m > 11) { m -= 12; y++ }
-      }
-      break
-    }
-
-    case 'annually': {
-      const lastSeen = new Date(pattern.lastSeenDate + 'T00:00:00')
-      const annualMonth = lastSeen.getMonth()
-
-      for (let y = start.getFullYear(); y <= end.getFullYear(); y++) {
-        const daysInMonth = new Date(y, annualMonth + 1, 0).getDate()
-        const day = Math.min(pattern.anchorDay, daysInMonth)
-        const d = new Date(y, annualMonth, day)
-        if (d >= start && d <= end) {
-          points.push({
-            date: formatDate(d),
-            amount: pattern.expectedAmount,
-          })
-        }
-      }
-      break
-    }
-
-    case 'irregular': {
-      // Requirement: Project irregular/on-demand expenses as a daily rate
-      // Approach: Compute average daily spend from total historical amount / observation days,
-      //   then spread that rate across every forecast day. This gives smooth, predictable
-      //   cashflow impact rather than unpredictable spikes.
-      // Alternatives:
-      //   - Random placement: Rejected — not useful for cashflow planning
-      //   - Monthly lump on 1st: Rejected — distorts daily runway calculations
-      const totalSpend = pattern.totalHistoricalAmount ?? pattern.expectedAmount
-      const daySpan = pattern.historicalDaySpan ?? 30
-      const dailyRate = daySpan > 0 ? totalSpend / daySpan : 0
-
-      if (Math.abs(dailyRate) > 0.001) {
-        const cursor = new Date(start)
-        while (cursor <= end) {
-          points.push({
-            date: formatDate(cursor),
-            amount: Math.round(dailyRate * 100) / 100,
-          })
-          cursor.setDate(cursor.getDate() + 1)
-        }
-      }
-      break
-    }
+      return []
+    case 'daily':
+      return projectDaily(pattern.expectedAmount, start, end)
+    case 'weekly':
+      return projectWeeklyInterval(pattern.anchorDay, pattern.expectedAmount, 7, start, end)
+    case 'biweekly':
+      return projectWeeklyInterval(pattern.anchorDay, pattern.expectedAmount, 14, start, end)
+    case 'monthly':
+      return projectMonthly(pattern.anchorDay, pattern.expectedAmount, start, end)
+    case 'quarterly':
+      return projectQuarterly(pattern, start, end)
+    case 'annually':
+      return projectAnnually(pattern, start, end)
+    case 'irregular':
+      return projectIrregular(pattern, start, end)
   }
-
-  return points
 }
 

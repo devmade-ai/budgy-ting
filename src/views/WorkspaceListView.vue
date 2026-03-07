@@ -18,6 +18,8 @@ import ErrorAlert from '@/components/ErrorAlert.vue'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import { formatAmount } from '@/composables/useFormat'
+import { useInstallReminder } from '@/composables/useInstallReminder'
+import { estimateMonthlySpend } from '@/engine/transactionMath'
 import type { Workspace } from '@/types/models'
 import type { ExportSchema } from '@/engine/exportImport'
 
@@ -37,19 +39,10 @@ async function loadSummaries(wsList: Workspace[]) {
   for (const ws of wsList) {
     try {
       const transactions = await db.transactions.where('workspaceId').equals(ws.id).toArray()
-      // Estimate monthly spend from negative transactions (expenses)
-      const expenses = transactions.filter((t) => t.amount < 0)
-      if (expenses.length === 0) {
-        summaries[ws.id] = { count: transactions.length, monthlyTotal: 0 }
-        continue
+      summaries[ws.id] = {
+        count: transactions.length,
+        monthlyTotal: estimateMonthlySpend(transactions),
       }
-      const dates = expenses.map((t) => t.date).sort()
-      const firstDate = new Date(dates[0]!)
-      const lastDate = new Date(dates[dates.length - 1]!)
-      const daySpan = Math.max(1, (lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24))
-      const totalSpend = expenses.reduce((sum, t) => sum + Math.abs(t.amount), 0)
-      const monthlyTotal = daySpan > 0 ? (totalSpend / daySpan) * 30 : totalSpend
-      summaries[ws.id] = { count: transactions.length, monthlyTotal }
     } catch {
       summaries[ws.id] = { count: 0, monthlyTotal: 0 }
     }
@@ -174,33 +167,7 @@ async function handleClearAll() {
 
 const showClearConfirm = ref(false)
 
-// Requirement: Gentle install reminder for repeat users who haven't installed the PWA
-// Approach: After 3+ visits, show a subtle reminder banner if not already installed or dismissed.
-//   Uses a separate localStorage counter from the main install prompt.
-const VISIT_COUNT_KEY = 'budgy-ting:visit-count'
-const REMINDER_DISMISSED_KEY = 'budgy-ting:install-reminder-dismissed'
-const showInstallReminder = ref(false)
-
-function checkInstallReminder() {
-  try {
-    // Don't show if already installed as PWA
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches
-    if (isStandalone) return
-    if (localStorage.getItem(REMINDER_DISMISSED_KEY) === 'true') return
-
-    const count = parseInt(localStorage.getItem(VISIT_COUNT_KEY) ?? '0', 10) + 1
-    localStorage.setItem(VISIT_COUNT_KEY, String(count))
-
-    if (count >= 3) {
-      showInstallReminder.value = true
-    }
-  } catch { /* ignore localStorage errors */ }
-}
-
-function dismissInstallReminder() {
-  showInstallReminder.value = false
-  try { localStorage.setItem(REMINDER_DISMISSED_KEY, 'true') } catch { /* ignore */ }
-}
+const { showInstallReminder, checkInstallReminder, dismissInstallReminder } = useInstallReminder()
 </script>
 
 <template>

@@ -20,7 +20,7 @@ import { touchTags } from '@/composables/useTagAutocomplete'
 import { hapticSuccess } from '@/composables/useHaptic'
 import { useToast } from '@/composables/useToast'
 import { parseDate, parseAmount, isDuplicate } from '@/engine/matching'
-import { detectFrequency, detectAnchorDay } from '@/engine/patterns'
+import { detectFrequency, detectAnchorDay, calculateIntervals } from '@/engine/patterns'
 import ErrorAlert from '@/components/ErrorAlert.vue'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import ImportStepUpload from './import-steps/ImportStepUpload.vue'
@@ -178,12 +178,7 @@ async function handleConfirmImport() {
 
           if (variability !== 'irregular') {
             if (dates.length > 1) {
-              const intervals: number[] = []
-              for (let i = 1; i < dates.length; i++) {
-                const dA = new Date(dates[i - 1]! + 'T00:00:00')
-                const dB = new Date(dates[i]! + 'T00:00:00')
-                intervals.push(Math.round(Math.abs(dB.getTime() - dA.getTime()) / 86_400_000))
-              }
+              const intervals = calculateIntervals(dates)
               const detected = detectFrequency(intervals)
               frequency = detected?.frequency ?? 'monthly'
             }

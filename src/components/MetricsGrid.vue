@@ -9,6 +9,7 @@
 import { computed } from 'vue'
 import MetricCard from './MetricCard.vue'
 import { formatAmount } from '@/composables/useFormat'
+import { totalIncome as calcTotalIncome, totalExpenses as calcTotalExpenses } from '@/engine/transactionMath'
 import type { Transaction, RecurringPattern } from '@/types/models'
 import type { ForecastResult } from '@/engine/forecast'
 import type { RunwayResult } from '@/engine/runway'
@@ -36,13 +37,13 @@ const metrics = computed(() => {
   const daySpan = Math.max(1, Math.ceil((new Date(lastDate).getTime() - new Date(firstDate).getTime()) / 86400000) + 1)
 
   // Totals
-  const totalIncome = txns.filter((t) => t.amount > 0).reduce((s, t) => s + t.amount, 0)
-  const totalExpenses = txns.filter((t) => t.amount < 0).reduce((s, t) => s + Math.abs(t.amount), 0)
-  const netCashflow = totalIncome - totalExpenses
+  const income = calcTotalIncome(txns)
+  const expenses = calcTotalExpenses(txns)
+  const netCashflow = income - expenses
 
   // Daily averages
-  const dailyIncome = totalIncome / daySpan
-  const dailyExpenses = totalExpenses / daySpan
+  const dailyIncome = income / daySpan
+  const dailyExpenses = expenses / daySpan
   const dailyNet = netCashflow / daySpan
 
   cards.push({
