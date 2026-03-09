@@ -11,9 +11,10 @@
  *   - Modal instead of page: Rejected — too much content for a modal
  */
 
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { db } from '@/db'
+import { useTagSuggestions } from '@/ml/useTagSuggestions'
 import { generateId } from '@/composables/useId'
 import { nowISO } from '@/composables/useTimestamp'
 import { touchTags } from '@/composables/useTagAutocomplete'
@@ -32,6 +33,7 @@ import type { ParsedTransaction, TransactionGroup } from './import-steps/ImportS
 const props = defineProps<{ id: string }>()
 const router = useRouter()
 const { show: showToast } = useToast()
+const { preloadModel, dispose } = useTagSuggestions()
 
 /** Step labels for indicator text */
 const stepLabels = ['Upload', 'Classify', 'Confirm'] as const
@@ -43,6 +45,9 @@ const loading = ref(true)
 const error = ref('')
 
 onMounted(async () => {
+  // Start ML model download early — it loads in a Web Worker while user maps columns in Step 1
+  preloadModel()
+
   try {
     const [ws, patterns, txns] = await Promise.all([
       db.workspaces.get(props.id),
@@ -61,6 +66,11 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
+})
+
+// Free ML worker memory when leaving the import wizard
+onUnmounted(() => {
+  dispose()
 })
 
 // ── Wizard state ──

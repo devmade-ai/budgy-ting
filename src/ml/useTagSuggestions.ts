@@ -4,8 +4,8 @@
  * Requirement: Suggest tags for transaction descriptions using ML, off the main thread
  * Approach: Singleton composable (module-level state) that lazily creates a Web Worker
  *   running Transformers.js. Reads candidate labels from tagCache — the user's existing
- *   tag vocabulary. Only activates when tags exist (cold start: first import has no
- *   suggestions, second import onward uses established tags).
+ *   tag vocabulary. Falls back to default finance categories for new users.
+ *   Merges tags from tagCache + patterns; uses hardcoded defaults if both are empty.
  * Alternatives:
  *   - Per-component worker: Rejected — wastes memory loading model multiple times
  *   - Main-thread inference: Rejected — blocks UI during model load (~13MB download)
@@ -28,8 +28,14 @@ const inferring = ref(false)
 /** Default confidence threshold — suggestions below this are filtered out */
 const confidenceThreshold = ref(0.5)
 
+/** Model load timeout — give up if download takes too long (slow network) */
+const MODEL_LOAD_TIMEOUT_MS = 30_000
+/** Per-batch inference timeout — resolve with empty results rather than hanging */
+const INFERENCE_TIMEOUT_MS = 10_000
+
 let worker: Worker | null = null
 let requestId = 0
+const timeouts: ReturnType<typeof setTimeout>[] = []
 
 // Pending request callbacks keyed by request id
 const pending = new Map<string, {
@@ -122,17 +128,43 @@ function handleWorkerMessage(event: MessageEvent<WorkerResponse>) {
   }
 }
 
+// Fallback labels for new users who have no tags yet (first import).
+// Common personal finance categories — enough for zero-shot to score against.
+const DEFAULT_LABELS = [
+  'groceries', 'rent', 'utilities', 'transport', 'insurance',
+  'salary', 'subscriptions', 'dining', 'entertainment', 'medical',
+  'savings', 'transfer', 'fuel', 'clothing', 'education',
+]
+
 /**
- * Read all tags from the user's tag cache to use as candidate labels.
- * Returns empty array if no tags exist (first-time user).
+ * Gather candidate labels from three sources (priority order):
+ * 1. TagCache — user's existing tags (primary)
+ * 2. Pattern tags — tags from RecurringPattern entries (supplementary)
+ * 3. Default labels — hardcoded common categories (fallback for new users)
  */
 async function getCandidateLabels(): Promise<string[]> {
+  const labels = new Set<string>()
+
   try {
-    const tags = await db.tagCache.toArray()
-    return tags.map((t) => t.tag)
+    // Source 1: User's tag cache
+    const cachedTags = await db.tagCache.toArray()
+    for (const t of cachedTags) labels.add(t.tag)
+
+    // Source 2: Tags from existing patterns
+    const patterns = await db.patterns.toArray()
+    for (const p of patterns) {
+      for (const tag of p.tags) labels.add(tag)
+    }
   } catch {
-    return []
+    // DB read failed — fall through to defaults
   }
+
+  // Source 3: Defaults when user has no tags yet
+  if (labels.size === 0) {
+    for (const label of DEFAULT_LABELS) labels.add(label)
+  }
+
+  return [...labels]
 }
 
 // ── Public API ──
@@ -140,10 +172,20 @@ async function getCandidateLabels(): Promise<string[]> {
 /**
  * Preload the model so it's ready when suggestions are needed.
  * Safe to call multiple times — only loads once.
+ * Times out after 30s — on slow networks, silently gives up rather than hanging.
  */
 function preloadModel() {
   if (modelReady.value || modelLoading.value) return
   postToWorker({ type: 'load-model' })
+
+  const timeout = setTimeout(() => {
+    if (modelLoading.value && !modelReady.value) {
+      modelLoading.value = false
+      modelError.value = 'Model load timed out'
+      debugLog('ml', 'warn', 'Model load timed out after 30s')
+    }
+  }, MODEL_LOAD_TIMEOUT_MS)
+  timeouts.push(timeout)
 }
 
 /**
@@ -159,7 +201,21 @@ async function suggestTags(description: string): Promise<TagSuggestion[]> {
   inferring.value = true
 
   return new Promise<TagSuggestion[]>((resolve, reject) => {
-    pending.set(id, { resolve: resolve as (v: TagSuggestion[] | TagSuggestion[][]) => void, reject, batch: false })
+    const timeout = setTimeout(() => {
+      if (pending.has(id)) {
+        pending.delete(id)
+        if (pending.size === 0) inferring.value = false
+        debugLog('ml', 'warn', 'Single inference timed out', { description })
+        resolve([])
+      }
+    }, INFERENCE_TIMEOUT_MS)
+    timeouts.push(timeout)
+
+    pending.set(id, {
+      resolve: (v) => { clearTimeout(timeout); (resolve as (v: TagSuggestion[] | TagSuggestion[][]) => void)(v) },
+      reject: (e) => { clearTimeout(timeout); reject(e) },
+      batch: false,
+    })
     postToWorker({ type: 'suggest', id, description, candidateLabels })
   }).then((suggestions) =>
     (suggestions as TagSuggestion[])
@@ -181,7 +237,21 @@ async function suggestTagsBatch(descriptions: string[]): Promise<TagSuggestion[]
   inferring.value = true
 
   return new Promise<TagSuggestion[][]>((resolve, reject) => {
-    pending.set(id, { resolve: resolve as (v: TagSuggestion[] | TagSuggestion[][]) => void, reject, batch: true })
+    const timeout = setTimeout(() => {
+      if (pending.has(id)) {
+        pending.delete(id)
+        if (pending.size === 0) inferring.value = false
+        debugLog('ml', 'warn', 'Batch inference timed out', { count: descriptions.length })
+        resolve(descriptions.map(() => []))
+      }
+    }, INFERENCE_TIMEOUT_MS)
+    timeouts.push(timeout)
+
+    pending.set(id, {
+      resolve: (v) => { clearTimeout(timeout); (resolve as (v: TagSuggestion[] | TagSuggestion[][]) => void)(v) },
+      reject: (e) => { clearTimeout(timeout); reject(e) },
+      batch: true,
+    })
     postToWorker({ type: 'suggest-batch', id, descriptions, candidateLabels })
   }).then((results) =>
     (results as TagSuggestion[][]).map((suggestions) =>
@@ -190,6 +260,33 @@ async function suggestTagsBatch(descriptions: string[]): Promise<TagSuggestion[]
         .slice(0, 5),
     ),
   )
+}
+
+/**
+ * Terminate the worker and free memory.
+ * Call when the import wizard unmounts — the model is not needed outside imports.
+ */
+function dispose() {
+  timeouts.forEach(clearTimeout)
+  timeouts.length = 0
+
+  // Reject any pending requests
+  for (const [, p] of pending) {
+    p.reject(new Error('Disposed'))
+  }
+  pending.clear()
+
+  if (worker) {
+    worker.terminate()
+    worker = null
+  }
+
+  modelLoading.value = false
+  modelReady.value = false
+  modelError.value = null
+  inferring.value = false
+
+  debugLog('ml', 'info', 'Tag suggestion worker disposed')
 }
 
 export function useTagSuggestions() {
@@ -202,5 +299,6 @@ export function useTagSuggestions() {
     preloadModel,
     suggestTags,
     suggestTagsBatch,
+    dispose,
   }
 }

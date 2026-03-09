@@ -62,7 +62,7 @@ const groups = ref<TransactionGroup[]>([])
 // Approach: Preload model on mount, batch-request suggestions for groups without tags.
 //   Candidate labels are the user's existing tags from tagCache. If no tags exist
 //   (first import), no suggestions are shown — graceful degradation.
-const { modelReady, modelLoading, preloadModel, suggestTagsBatch } = useTagSuggestions()
+const { modelReady, modelLoading, suggestTagsBatch } = useTagSuggestions()
 const groupSuggestions = reactive(new Map<string, TagSuggestion[]>())
 
 async function requestSuggestions() {
@@ -179,10 +179,8 @@ onMounted(() => {
     return b.rows.length - a.rows.length
   })
 
-  // Warm up ML model while user reviews groups
-  preloadModel()
-
-  // If model is already cached, request suggestions immediately
+  // Model preload happens in NewImportWizard.vue (Step 1) for earlier warmup.
+  // If model is already loaded (cached from prior import), request suggestions now.
   if (modelReady.value) {
     requestSuggestions()
   }

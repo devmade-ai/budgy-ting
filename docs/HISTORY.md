@@ -2,6 +2,29 @@
 
 <!-- Changelog and record of completed work. Organized by date. -->
 
+## 2026-03-09
+
+- **ML Auto-Tagging — Robustness & Candidate Labels:**
+
+  **Composable Improvements (`ml/useTagSuggestions.ts`):**
+  - Model load timeout (30s) — silently gives up on slow networks instead of hanging
+  - Inference timeout (10s) — per-request timeout, resolves with empty results
+  - `dispose()` method — terminates worker, clears pending requests, resets all state
+  - All timeouts tracked and cleaned up in dispose
+
+  **Candidate Labels Strategy:**
+  - Three sources merged: tagCache (primary) → pattern tags (supplementary) → defaults (fallback)
+  - 15 default finance categories for new users: groceries, rent, utilities, transport, insurance, salary, subscriptions, dining, entertainment, medical, savings, transfer, fuel, clothing, education
+  - Pattern tags from `RecurringPattern` entries added as supplementary source
+
+  **Earlier Model Warmup:**
+  - `preloadModel()` moved from ImportStepClassify (Step 2) to NewImportWizard (Step 1)
+  - Model starts downloading while user maps CSV columns
+  - Worker disposed in NewImportWizard's `onUnmounted` to free ~50-100MB WASM heap
+
+  **Verification:**
+  - Build succeeds, type-check clean
+
 ## 2026-03-06
 
 - **Variable Recurring Expenses — Support for usage-based and on-demand costs:**
