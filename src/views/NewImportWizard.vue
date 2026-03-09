@@ -1,14 +1,13 @@
 <script setup lang="ts">
 /**
- * Requirement: Redesigned import wizard — 3 steps instead of 4.
- *   Step 1: Upload & map columns (reuse existing ImportStepUpload)
- *   Step 2: Classify transactions (recurring / once-off / ignore)
- *   Step 3: Confirm & import (save to transactions + create/update patterns)
+ * Requirement: Import wizard — 2 steps: Upload → Review & Import.
+ *   Replaces previous 3-step group-based flow with per-transaction review.
  * Approach: Parent orchestrator. Parses CSV rows into ParsedTransaction[] after step 1,
- *   groups them in step 2, then saves to DB in step 3.
+ *   user reviews/enriches each transaction in step 2, then saves directly from step 2.
  * Alternatives:
- *   - Keep old 4-step wizard: Rejected — old wizard writes to dropped tables
- *   - Modal instead of page: Rejected — too much content for a modal
+ *   - 3-step group-based flow: Rejected — tags/classification applied at group level,
+ *     misclassified transactions couldn't be moved between groups
+ *   - Separate confirm step: Rejected — review step IS the confirm, extra step adds no value
  */
 
 import { ref, onMounted, onUnmounted } from 'vue'
@@ -27,10 +26,10 @@ import { debugLog } from '@/debug/debugLog'
 import ErrorAlert from '@/components/ErrorAlert.vue'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import ImportStepUpload from './import-steps/ImportStepUpload.vue'
-import ImportStepClassify from './import-steps/ImportStepClassify.vue'
+import ImportStepReview from './import-steps/ImportStepReview.vue'
 import type { Workspace, Transaction, RecurringPattern, Frequency, RecurringVariability } from '@/types/models'
 import type { ParsedCSV } from '@/engine/csvParser'
-import type { ParsedTransaction, TransactionGroup } from './import-steps/ImportStepClassify.vue'
+import type { ParsedTransaction, ReviewTransaction } from './import-steps/ImportStepReview.vue'
 
 const props = defineProps<{ id: string }>()
 const router = useRouter()
@@ -39,7 +38,7 @@ const { preloadModel, dispose } = useTagSuggestions()
 const { preloadModel: preloadEmbeddings, dispose: disposeEmbeddings } = useEmbeddings()
 
 /** Step labels for indicator text */
-const stepLabels = ['Upload', 'Classify', 'Confirm'] as const
+const stepLabels = ['Upload', 'Review'] as const
 
 const workspace = ref<Workspace | null>(null)
 const existingPatterns = ref<RecurringPattern[]>([])
@@ -48,10 +47,9 @@ const loading = ref(true)
 const error = ref('')
 
 onMounted(async () => {
-  // Reset wizard state in case component is remounted (e.g. user navigates away and back)
+  // Reset wizard state in case component is remounted
   step.value = 1
   parsedRows.value = []
-  classifiedGroups.value = []
   error.value = ''
 
   // Start ML model downloads early — they load in Web Workers while user maps columns in Step 1
@@ -85,9 +83,8 @@ onUnmounted(() => {
 })
 
 // ── Wizard state ──
-const step = ref<1 | 2 | 3>(1)
+const step = ref<1 | 2>(1)
 const parsedRows = ref<ParsedTransaction[]>([])
-const classifiedGroups = ref<TransactionGroup[]>([])
 const saving = ref(false)
 
 // ── Step 1 → Step 2: Parse CSV rows into ParsedTransaction[] ──
@@ -112,7 +109,6 @@ function handleUploadComplete(data: {
     }
 
     // Duplicate detection against existing transactions
-    // Requirement: Reuse existing isDuplicate() from matching.ts (includes .trim())
     if (isDuplicate({ date: dateStr, amount, description }, existingTransactions.value)) {
       skipped++
       continue
@@ -150,15 +146,11 @@ function handleUploadComplete(data: {
   step.value = 2
 }
 
-// ── Step 2 → Step 3: Classify groups ──
-function handleClassifyComplete(groups: TransactionGroup[]) {
-  classifiedGroups.value = groups
-  error.value = ''
-  step.value = 3
-}
-
-// ── Step 3: Save to DB ──
-async function handleConfirmImport() {
+// ── Step 2: Review complete → Save to DB ──
+// Requirement: Per-transaction save. Recurring patterns detected at save time by grouping
+//   transactions marked "recurring" with same description (case-insensitive).
+// Approach: Build patterns from recurring transactions, then save all in one DB transaction.
+async function handleReviewComplete(reviewedTransactions: ReviewTransaction[]) {
   if (!workspace.value) return
   saving.value = true
 
@@ -169,97 +161,128 @@ async function handleConfirmImport() {
     const patternUpdates: Array<{ pattern: RecurringPattern; isNew: boolean }> = []
     const allTags = new Set<string>()
 
+    // Group recurring transactions by description to create/update patterns
+    const recurringByDesc = new Map<string, ReviewTransaction[]>()
+    for (const tx of reviewedTransactions) {
+      if (tx.classification === 'recurring') {
+        const key = tx.description.toLowerCase()
+        if (!recurringByDesc.has(key)) recurringByDesc.set(key, [])
+        recurringByDesc.get(key)!.push(tx)
+      }
+    }
+
+    // Build pattern updates from recurring groups
+    // Map: description key → patternId (for linking transactions to patterns)
+    const descToPatternId = new Map<string, string>()
+
+    for (const [descKey, txs] of recurringByDesc) {
+      // Check if any transaction already matched an existing pattern
+      const matchedTx = txs.find((tx) => tx.matchedPatternId)
+      const patternId = matchedTx?.matchedPatternId ?? null
+
+      if (patternId) {
+        // Update existing pattern's lastSeenDate
+        const existing = existingPatterns.value.find((p) => p.id === patternId)
+        if (existing) {
+          const lastDate = txs
+            .map((tx) => tx.date)
+            .sort((a, b) => b.localeCompare(a))[0] ?? existing.lastSeenDate
+          patternUpdates.push({
+            pattern: { ...existing, lastSeenDate: lastDate, updatedAt: now },
+            isNew: false,
+          })
+          descToPatternId.set(descKey, patternId)
+        }
+      } else {
+        // Create new pattern from these recurring transactions
+        const dates = txs.map((tx) => tx.date).sort()
+        // Use variability from first transaction (all same description should have same setting)
+        const variability: RecurringVariability = txs[0]?.variability ?? 'fixed'
+        let frequency: Frequency = variability === 'irregular' ? 'irregular' : 'monthly'
+        let anchorDay = 0
+
+        if (variability !== 'irregular' && dates.length > 1) {
+          const intervals = calculateIntervals(dates)
+          const detected = detectFrequency(intervals)
+          frequency = detected?.frequency ?? 'monthly'
+          anchorDay = detectAnchorDay(dates, frequency)
+        } else if (variability !== 'irregular') {
+          anchorDay = detectAnchorDay(dates, frequency)
+        }
+
+        // Collect tags from all transactions in this recurring group
+        const patternTags = new Set<string>()
+        for (const tx of txs) {
+          for (const tag of tx.tags) patternTags.add(tag)
+        }
+
+        const amounts = txs.map((tx) => tx.amount)
+        const avgAmount = amounts.reduce((s, a) => s + a, 0) / amounts.length
+
+        const newPattern: RecurringPattern = {
+          id: generateId(),
+          workspaceId: workspace.value!.id,
+          description: txs[0]!.description,
+          expectedAmount: avgAmount,
+          amountStdDev: 0,
+          frequency,
+          anchorDay,
+          variability,
+          tags: [...patternTags],
+          isActive: true,
+          autoAccept: true,
+          lastSeenDate: dates[dates.length - 1] ?? now.slice(0, 10),
+          createdAt: now,
+          updatedAt: now,
+        }
+        descToPatternId.set(descKey, newPattern.id)
+        patternUpdates.push({ pattern: newPattern, isNew: true })
+      }
+    }
+
     // Create import batch
-    const allDates = classifiedGroups.value.flatMap((g) => g.rows.map((r) => r.date)).sort()
+    const allDates = reviewedTransactions.map((tx) => tx.date).sort()
     const importBatch = {
       id: batchId,
       workspaceId: workspace.value.id,
       fileName: 'import',
-      dateRange: { start: allDates[0] ?? now.slice(0, 10), end: allDates[allDates.length - 1] ?? now.slice(0, 10) },
+      dateRange: {
+        start: allDates[0] ?? now.slice(0, 10),
+        end: allDates[allDates.length - 1] ?? now.slice(0, 10),
+      },
       transactionCount: 0,
       importedAt: now,
     }
 
-    for (const group of classifiedGroups.value) {
-      // Create or update recurring pattern
-      let patternId: string | null = group.matchedPatternId
+    // Create transaction records — tags come from each transaction, not a group
+    for (const tx of reviewedTransactions) {
+      const descKey = tx.description.toLowerCase()
+      const patternId = tx.classification === 'recurring'
+        ? (descToPatternId.get(descKey) ?? null)
+        : null
 
-      if (group.classification === 'recurring') {
-        if (patternId) {
-          // Update existing pattern's lastSeenDate
-          const existing = existingPatterns.value.find((p) => p.id === patternId)
-          if (existing) {
-            const lastDate = [...group.rows].sort((a, b) => b.date.localeCompare(a.date))[0]?.date ?? existing.lastSeenDate
-            patternUpdates.push({
-              pattern: { ...existing, lastSeenDate: lastDate, updatedAt: now },
-              isNew: false,
-            })
-          }
-        } else {
-          // Create new pattern from the group
-          // Requirement: detectFrequency expects number[] of day-intervals, not string[] of dates.
-          // Compute intervals between consecutive sorted dates, then detect frequency.
-          // For irregular variability, override frequency to 'irregular' regardless of detection.
-          const dates = group.rows.map((r) => r.date).sort()
-          const variability: RecurringVariability = group.variability ?? 'fixed'
-          let frequency: Frequency = variability === 'irregular' ? 'irregular' : 'monthly'
-          let anchorDay = 0
+      newTransactions.push({
+        id: generateId(),
+        workspaceId: workspace.value!.id,
+        date: tx.date,
+        amount: tx.amount,
+        description: tx.description,
+        tags: tx.tags,
+        source: 'import',
+        classification: tx.classification,
+        recurringGroupId: patternId,
+        originalRow: tx.originalRow,
+        importBatchId: batchId,
+        createdAt: now,
+        updatedAt: now,
+      })
 
-          if (variability !== 'irregular') {
-            if (dates.length > 1) {
-              const intervals = calculateIntervals(dates)
-              const detected = detectFrequency(intervals)
-              frequency = detected?.frequency ?? 'monthly'
-            }
-            anchorDay = detectAnchorDay(dates, frequency)
-          }
-
-          const newPattern: RecurringPattern = {
-            id: generateId(),
-            workspaceId: workspace.value!.id,
-            description: group.description,
-            expectedAmount: group.avgAmount,
-            amountStdDev: 0,
-            frequency,
-            anchorDay,
-            variability,
-            tags: group.tags,
-            isActive: true,
-            autoAccept: true,
-            lastSeenDate: dates[dates.length - 1] ?? now.slice(0, 10),
-            createdAt: now,
-            updatedAt: now,
-          }
-          patternId = newPattern.id
-          patternUpdates.push({ pattern: newPattern, isNew: true })
-        }
-      }
-
-      // Create transactions
-      for (const row of group.rows) {
-        newTransactions.push({
-          id: generateId(),
-          workspaceId: workspace.value!.id,
-          date: row.date,
-          amount: row.amount,
-          description: row.description,
-          tags: group.tags,
-          source: 'import',
-          classification: group.classification === 'recurring' ? 'recurring' : 'once-off',
-          recurringGroupId: group.classification === 'recurring' ? patternId : null,
-          originalRow: row.originalRow,
-          importBatchId: batchId,
-          createdAt: now,
-          updatedAt: now,
-        })
-
-        for (const tag of group.tags) allTags.add(tag)
-      }
+      for (const tag of tx.tags) allTags.add(tag)
     }
 
     importBatch.transactionCount = newTransactions.length
 
-    // Save everything in a single transaction
+    // Save everything in a single IndexedDB transaction
     await db.transaction('rw', [db.transactions, db.patterns, db.importBatches], async () => {
       await db.importBatches.add(importBatch)
       await db.transactions.bulkAdd(newTransactions)
@@ -291,8 +314,6 @@ async function handleConfirmImport() {
       batchId,
     })
 
-    // Requirement: Success feedback before navigating away
-    // Approach: Toast + haptic pulse, then navigate. Brief visual confirmation.
     hapticSuccess()
     showToast(`Imported ${newTransactions.length} transaction${newTransactions.length === 1 ? '' : 's'}`)
     router.push({ name: 'workspace-detail', params: { id: props.id } })
@@ -305,7 +326,7 @@ async function handleConfirmImport() {
 
 function goBack() {
   if (step.value > 1) {
-    step.value = (step.value - 1) as 1 | 2
+    step.value = 1
     error.value = ''
   } else {
     router.push({ name: 'workspace-detail', params: { id: props.id } })
@@ -328,11 +349,11 @@ function goBack() {
     <LoadingSpinner v-if="loading" />
 
     <template v-else-if="workspace">
-      <!-- Step indicator with text labels
+      <!-- Step indicator — 2 steps: Upload → Review
            Requirement: Step numbers + text labels for non-technical users
-           Approach: Circle + label below each step, connected by lines -->
+           Approach: Circle + label below each step, connected by line -->
       <div class="flex items-start gap-2 mb-6">
-        <template v-for="s in [1, 2, 3]" :key="s">
+        <template v-for="s in [1, 2]" :key="s">
           <div class="flex flex-col items-center min-w-0">
             <div
               class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium"
@@ -352,13 +373,13 @@ function goBack() {
             </span>
           </div>
           <div
-            v-if="s < 3"
+            v-if="s < 2"
             class="flex-1 h-0.5 mt-4"
             :class="s < step ? 'bg-brand-300' : 'bg-gray-200'"
           />
         </template>
       </div>
-      <p class="text-xs text-gray-400 mb-4">Step {{ step }} of 3</p>
+      <p class="text-xs text-gray-400 mb-4">Step {{ step }} of 2</p>
 
       <!-- Step 1: Upload & Map -->
       <ImportStepUpload
@@ -366,48 +387,15 @@ function goBack() {
         @complete="handleUploadComplete"
       />
 
-      <!-- Step 2: Classify -->
-      <ImportStepClassify
+      <!-- Step 2: Review & Import -->
+      <ImportStepReview
         v-else-if="step === 2"
         :parsed-rows="parsedRows"
         :existing-patterns="existingPatterns"
         :currency-label="workspace.currencyLabel"
-        @complete="handleClassifyComplete"
+        @complete="handleReviewComplete"
         @back="step = 1"
       />
-
-      <!-- Step 3: Confirm -->
-      <div v-else-if="step === 3">
-        <h2 class="text-lg font-semibold mb-4">Confirm import</h2>
-
-        <div class="card p-4 mb-6">
-          <div class="space-y-2 text-sm">
-            <div class="flex justify-between">
-              <span class="text-gray-500">Recurring groups</span>
-              <span class="font-medium">{{ classifiedGroups.filter(g => g.classification === 'recurring').length }}</span>
-            </div>
-            <div class="flex justify-between">
-              <span class="text-gray-500">Once-off transactions</span>
-              <span class="font-medium">{{ classifiedGroups.filter(g => g.classification === 'once-off').reduce((s, g) => s + g.rows.length, 0) }}</span>
-            </div>
-            <div class="flex justify-between border-t border-gray-100 pt-2">
-              <span class="text-gray-700 font-medium">Total transactions</span>
-              <span class="font-semibold">{{ classifiedGroups.reduce((s, g) => s + g.rows.length, 0) }}</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="flex justify-between">
-          <button class="btn-secondary" @click="step = 2">Back</button>
-          <button
-            class="btn-primary"
-            :disabled="saving"
-            @click="handleConfirmImport"
-          >
-            {{ saving ? 'Importing...' : 'Import transactions' }}
-          </button>
-        </div>
-      </div>
     </template>
   </div>
 </template>

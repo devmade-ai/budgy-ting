@@ -4,6 +4,49 @@
 
 ## 2026-03-09
 
+- **Import Flow Refactor — Per-Transaction Review:**
+
+  **Architecture Change:**
+  - Replaced group-based ImportStepClassify with per-transaction ImportStepReview
+  - Wizard simplified from 3 steps (Upload → Classify → Confirm) to 2 steps (Upload → Review)
+  - Tags and classification now per-transaction, not per-group
+  - Separate Confirm step removed — Import button integrated into Review step
+
+  **New Component (`ImportStepReview.vue`):**
+  - Paginated list (25/page) with search filter
+  - Each transaction: classification toggle (recurring/once-off), tag input with autocomplete, ML tag suggestions, ignore toggle
+  - Variability selector (fixed/variable/irregular) shown for recurring transactions
+  - Exact pattern matching + embedding-based fuzzy matching (cosine ≥ 0.75)
+  - Fuzzy matches show "similar to [pattern]" hint
+  - Bulk action: "Mark all unmatched as once-off"
+
+  **ML Integration:**
+  - Embeddings: fuzzy-match unmatched transactions against existing patterns (replaces group clustering)
+  - Tag suggestions: batch zero-shot classification per unique description, displayed inline
+  - Both models still preload during Step 1 (Upload)
+
+  **Save Logic (`NewImportWizard.vue`):**
+  - Recurring patterns created at save time by grouping transactions with same description
+  - Per-transaction tags preserved (not inherited from group)
+  - Pattern frequency/anchor detection same as before, applied to per-description groups
+
+  **Cleanup:**
+  - Deleted `ImportStepClassify.vue` (group-based flow)
+  - `TransactionGroup` type no longer used — replaced by `ReviewTransaction`
+
+- **Transaction Edit Modal — Read-Only View Mode:**
+  - Added `editing` ref toggle — modal opens in read-only mode showing description, date, type, amount, tags
+  - Edit button switches to form mode with inputs and Save/Cancel
+  - Added `knownTags` prop for autocomplete fallback when tagCache is empty
+
+- **Cashflow Chart — Fixed Forecast Gap:**
+  - Forecast series now prepends last actual data point when there's a date gap between actuals and forecast
+
+- **ML Tag Suggestions — Threshold Fix:**
+  - Lowered confidence threshold from 0.5 to 0.15 (zero-shot on short descriptions scores 0.2–0.4)
+  - Added debug logging when all suggestions filtered out
+  - Added `knownTags` prop to TransactionEditModal for autocomplete fallback
+
 - **ML Auto-Tagging — Robustness & Candidate Labels:**
 
   **Composable Improvements (`ml/useTagSuggestions.ts`):**
