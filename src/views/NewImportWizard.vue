@@ -47,6 +47,12 @@ const loading = ref(true)
 const error = ref('')
 
 onMounted(async () => {
+  // Reset wizard state in case component is remounted (e.g. user navigates away and back)
+  step.value = 1
+  parsedRows.value = []
+  classifiedGroups.value = []
+  error.value = ''
+
   // Start ML model downloads early — they load in Web Workers while user maps columns in Step 1
   preloadModel()
   preloadEmbeddings()

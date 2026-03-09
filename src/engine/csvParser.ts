@@ -77,6 +77,8 @@ function splitCSVLines(content: string): string[] {
     }
   }
 
+  // If still inQuotes at EOF, the last field had an unclosed quote.
+  // Push what we have rather than silently discarding the line.
   if (current.trim()) lines.push(current)
   return lines
 }
@@ -112,6 +114,8 @@ function parseCSVRow(row: string): string[] {
     }
   }
 
+  // If inQuotes is still true, the field had an unclosed quote.
+  // Treat remaining content as the field value rather than corrupting parsing.
   fields.push(current.trim())
   return fields
 }

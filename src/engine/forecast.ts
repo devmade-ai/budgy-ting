@@ -207,8 +207,10 @@ export function calculatePredictionBands(
 
   const errorStdDev = standardDeviation(historicalErrors)
 
-  // Prediction uncertainty grows with forecast horizon (random walk assumption)
-  const horizonFactor = Math.sqrt(Math.max(1, stepsAhead))
+  // Prediction uncertainty grows with forecast horizon (random walk assumption).
+  // Cap at 90 days — beyond that, bands grow so wide they're not actionable.
+  const cappedSteps = Math.min(stepsAhead, 90)
+  const horizonFactor = Math.sqrt(Math.max(1, cappedSteps))
   const adjustedStdDev = errorStdDev * horizonFactor
 
   return {

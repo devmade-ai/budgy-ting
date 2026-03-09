@@ -69,8 +69,10 @@ function disambiguateSlashFormat(samples: string[]): typeof DATE_FORMATS[number]
 
   for (const s of samples) {
     const parts = s.trim().split('/')
+    if (parts.length < 2) continue // malformed — skip rather than crash
     const a = parseInt(parts[0]!, 10)
     const b = parseInt(parts[1]!, 10)
+    if (isNaN(a) || isNaN(b)) continue
     if (a > 12) firstOver12 = true
     if (b > 12) secondOver12 = true
   }

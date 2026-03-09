@@ -166,13 +166,17 @@ async function mergeSimilarGroups() {
 
   const mergedGroups: TransactionGroup[] = []
   for (const cluster of clusters) {
-    if (cluster.memberIndices.length === 1) {
-      mergedGroups.push(groups.value[cluster.memberIndices[0]!]!)
+    // Validate all indices are within bounds before accessing
+    const validIndices = cluster.memberIndices.filter((idx) => idx >= 0 && idx < groups.value.length)
+    if (validIndices.length === 0) continue
+
+    if (validIndices.length === 1) {
+      mergedGroups.push(groups.value[validIndices[0]!]!)
     } else {
       // Merge multiple groups into one — primary group absorbs the rest
-      const primary = groups.value[cluster.memberIndices[0]!]!
-      for (let i = 1; i < cluster.memberIndices.length; i++) {
-        const other = groups.value[cluster.memberIndices[i]!]!
+      const primary = groups.value[validIndices[0]!]!
+      for (let i = 1; i < validIndices.length; i++) {
+        const other = groups.value[validIndices[i]!]!
         primary.rows.push(...other.rows)
         for (const tag of other.tags) {
           if (!primary.tags.includes(tag)) primary.tags.push(tag)
