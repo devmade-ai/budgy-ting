@@ -11,6 +11,7 @@
 
 import { db } from './index'
 import { debugLog } from '@/debug/debugLog'
+import { touchTags } from '@/composables/useTagAutocomplete'
 import type { Workspace, Transaction, RecurringPattern } from '@/types/models'
 
 const DEMO_WORKSPACE_ID = 'demo-household'
@@ -196,6 +197,12 @@ export async function seedDemoWorkspace(): Promise<boolean> {
       await db.transactions.bulkAdd(transactions)
       await db.patterns.bulkAdd(patterns)
     })
+    // Seed tagCache so ML suggestions have candidate labels from the start
+    const allTags = new Set<string>()
+    for (const t of transactions) for (const tag of t.tags) allTags.add(tag)
+    for (const p of patterns) for (const tag of p.tags) allTags.add(tag)
+    await touchTags([...allTags])
+
     debugLog('db', 'success', `Seeded demo workspace with ${transactions.length} transactions and ${patterns.length} patterns`)
     return true
   } catch (err) {

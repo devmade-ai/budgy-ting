@@ -4,6 +4,7 @@
  *   Replaces the old 3-tab structure (Expenses/Forecast/Compare).
  * Approach: Load transactions + patterns from DB, compute forecast/accuracy/runway,
  *   pass to child components. Cash-on-hand input persisted to workspace.
+ *   ML model preloaded for tag suggestions when editing transactions inline.
  * Alternatives:
  *   - Keep 3 tabs: Rejected — single screen per FORECASTING_RESEARCH.md spec
  *   - Lazy-load engines: Considered — data is small enough to compute eagerly
@@ -16,6 +17,8 @@ import { calculateRunway } from '@/engine/runway'
 import { calculateDailyAccuracy, summarizeAccuracy } from '@/engine/accuracy'
 import { formatDate } from '@/engine/dateUtils'
 import { formatAmount } from '@/composables/useFormat'
+import { touchTags } from '@/composables/useTagAutocomplete'
+import { useTagSuggestions } from '@/ml/useTagSuggestions'
 import CashflowGraph from '@/components/CashflowGraph.vue'
 import MetricsGrid from '@/components/MetricsGrid.vue'
 import TransactionTable from '@/components/TransactionTable.vue'
@@ -24,6 +27,7 @@ import type { Workspace, Transaction, RecurringPattern } from '@/types/models'
 import type { ForecastResult } from '@/engine/forecast'
 import type { RunwayResult } from '@/engine/runway'
 import type { AccuracySummary } from '@/engine/accuracy'
+import type { TagSuggestion } from '@/ml/types'
 
 const props = defineProps<{
   workspace: Workspace
@@ -33,6 +37,10 @@ const transactions = ref<Transaction[]>([])
 const patterns = ref<RecurringPattern[]>([])
 const error = ref('')
 const cashOnHand = ref<number | null>(props.workspace.cashOnHand)
+
+// ML tag suggestions
+const { preloadModel, suggestTags, inferring, dispose } = useTagSuggestions()
+const tagSuggestions = ref(new Map<string, TagSuggestion[]>())
 
 // Load data
 onMounted(async () => {
@@ -46,6 +54,14 @@ onMounted(async () => {
   } catch {
     error.value = 'Couldn\'t load workspace data. Please try again.'
   }
+
+  // Preload ML model for tag suggestions
+  preloadModel()
+})
+
+onUnmounted(() => {
+  if (cashSaveTimeout) clearTimeout(cashSaveTimeout)
+  dispose()
 })
 
 // Compute forecast (90 days ahead from today)
@@ -95,9 +111,39 @@ watch(cashOnHand, (val) => {
   }, 500)
 })
 
-onUnmounted(() => {
-  if (cashSaveTimeout) clearTimeout(cashSaveTimeout)
-})
+// Handle tag updates from TransactionTable
+async function handleUpdateTags(id: string, tags: string[]) {
+  try {
+    await db.transactions.update(id, { tags, updatedAt: new Date().toISOString() })
+
+    // Update local ref for immediate UI feedback
+    const idx = transactions.value.findIndex((t) => t.id === id)
+    if (idx !== -1) {
+      transactions.value[idx] = { ...transactions.value[idx], tags }
+    }
+
+    // Update tagCache with any new tags
+    if (tags.length > 0) {
+      await touchTags(tags)
+    }
+  } catch {
+    error.value = 'Couldn\'t save tag changes. Please try again.'
+  }
+}
+
+// Request ML suggestions for a specific transaction
+async function handleRequestSuggestions(id: string, description: string) {
+  if (tagSuggestions.value.has(id)) return
+
+  try {
+    const suggestions = await suggestTags(description)
+    const updated = new Map(tagSuggestions.value)
+    updated.set(id, suggestions)
+    tagSuggestions.value = updated
+  } catch {
+    // Silent — ML suggestions are non-critical
+  }
+}
 </script>
 
 <template>
@@ -155,6 +201,10 @@ onUnmounted(() => {
       <TransactionTable
         :transactions="transactions"
         :currency-label="workspace.currencyLabel"
+        :tag-suggestions="tagSuggestions"
+        :suggestions-loading="inferring"
+        @update-tags="handleUpdateTags"
+        @request-suggestions="handleRequestSuggestions"
       />
     </div>
   </div>
