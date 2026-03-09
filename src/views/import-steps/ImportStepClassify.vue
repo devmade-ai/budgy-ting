@@ -9,10 +9,13 @@
  *   - Per-row classification: Rejected — too tedious with 100+ rows
  */
 
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch, reactive } from 'vue'
 import { formatAmount } from '@/composables/useFormat'
 import { isIncome } from '@/types/models'
 import type { RecurringPattern, RecurringVariability } from '@/types/models'
+import { useTagSuggestions } from '@/ml/useTagSuggestions'
+import TagSuggestions from '@/components/TagSuggestions.vue'
+import type { TagSuggestion } from '@/ml/types'
 
 export interface ParsedTransaction {
   date: string
@@ -53,6 +56,67 @@ const emit = defineEmits<{
 }>()
 
 const groups = ref<TransactionGroup[]>([])
+
+// ── ML tag suggestions ──
+// Requirement: Suggest tags for unmatched groups using zero-shot classification
+// Approach: Preload model on mount, batch-request suggestions for groups without tags.
+//   Candidate labels are the user's existing tags from tagCache. If no tags exist
+//   (first import), no suggestions are shown — graceful degradation.
+const { modelReady, modelLoading, preloadModel, suggestTagsBatch } = useTagSuggestions()
+const groupSuggestions = reactive(new Map<string, TagSuggestion[]>())
+
+async function requestSuggestions() {
+  const unmatched = groups.value.filter((g) => !g.matchedPatternId && g.tags.length === 0)
+  if (unmatched.length === 0) return
+
+  try {
+    const descriptions = unmatched.map((g) => g.description)
+    const results = await suggestTagsBatch(descriptions)
+    for (let i = 0; i < unmatched.length; i++) {
+      const key = unmatched[i]!.description.toLowerCase()
+      if (results[i] && results[i]!.length > 0) {
+        groupSuggestions.set(key, results[i]!)
+      }
+    }
+  } catch {
+    // Non-critical — suggestions are a nice-to-have
+  }
+}
+
+function acceptSuggestion(group: TransactionGroup, tag: string) {
+  if (!group.tags.includes(tag)) {
+    group.tags.push(tag)
+  }
+  // Remove from suggestions
+  const key = group.description.toLowerCase()
+  const remaining = groupSuggestions.get(key)?.filter((s) => s.tag !== tag)
+  if (remaining && remaining.length > 0) {
+    groupSuggestions.set(key, remaining)
+  } else {
+    groupSuggestions.delete(key)
+  }
+}
+
+function dismissSuggestion(group: TransactionGroup, tag: string) {
+  const key = group.description.toLowerCase()
+  const remaining = groupSuggestions.get(key)?.filter((s) => s.tag !== tag)
+  if (remaining && remaining.length > 0) {
+    groupSuggestions.set(key, remaining)
+  } else {
+    groupSuggestions.delete(key)
+  }
+}
+
+function acceptAllSuggestions(group: TransactionGroup) {
+  const key = group.description.toLowerCase()
+  const suggestions = groupSuggestions.get(key) ?? []
+  for (const s of suggestions) {
+    if (!group.tags.includes(s.tag)) {
+      group.tags.push(s.tag)
+    }
+  }
+  groupSuggestions.delete(key)
+}
 
 onMounted(() => {
   // Group by description (case-insensitive)
@@ -114,6 +178,21 @@ onMounted(() => {
     if (!a.matchedPatternId && b.matchedPatternId) return 1
     return b.rows.length - a.rows.length
   })
+
+  // Warm up ML model while user reviews groups
+  preloadModel()
+
+  // If model is already cached, request suggestions immediately
+  if (modelReady.value) {
+    requestSuggestions()
+  }
+})
+
+// If model loads after mount (first download), request suggestions when ready
+watch(modelReady, (ready) => {
+  if (ready && groupSuggestions.size === 0) {
+    requestSuggestions()
+  }
 })
 
 const summary = computed(() => {
@@ -170,10 +249,13 @@ function handleContinue() {
     </div>
 
     <!-- Bulk action -->
-    <div class="mb-4">
+    <div class="mb-4 flex items-center gap-3">
       <button class="text-xs text-gray-500 hover:text-gray-700 underline" @click="markRemainingOnceOff">
         Mark all remaining as once-off
       </button>
+      <span v-if="modelLoading" class="text-xs text-gray-400 italic">
+        Suggesting tags...
+      </span>
     </div>
 
     <!-- Group list -->
@@ -211,6 +293,14 @@ function handleContinue() {
                 {{ tag }}
               </span>
             </div>
+            <!-- ML tag suggestions for unmatched groups -->
+            <TagSuggestions
+              v-if="groupSuggestions.has(group.description.toLowerCase())"
+              :suggestions="groupSuggestions.get(group.description.toLowerCase())!"
+              @accept="acceptSuggestion(group, $event)"
+              @dismiss="dismissSuggestion(group, $event)"
+              @accept-all="acceptAllSuggestions(group)"
+            />
           </div>
           <div class="flex gap-1">
             <button

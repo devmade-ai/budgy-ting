@@ -73,6 +73,7 @@ const sourceColors: Record<DebugSource, string> = {
   pwa: 'text-teal-600',
   import: 'text-amber-600',
   engine: 'text-indigo-600',
+  ml: 'text-orange-600',
   global: 'text-gray-600',
 }
 

@@ -17,6 +17,7 @@ export type DebugSource =
   | 'pwa'
   | 'import'
   | 'engine'
+  | 'ml'
   | 'global'
 
 export type DebugSeverity = 'info' | 'success' | 'warn' | 'error'
