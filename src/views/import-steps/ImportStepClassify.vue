@@ -141,12 +141,11 @@ onMounted(() => {
     for (const pattern of props.existingPatterns) {
       if (!pattern.isActive || !pattern.autoAccept) continue
       if (!pattern.description?.trim()) continue
-      // Match by description similarity + amount proximity
+      // Match by description similarity, optionally confirmed by amount proximity
+      // Requirement: Auto-classify known patterns. Description match is required;
+      //   amount proximity alone is not enough (e.g. "Car purchase" -12000 ≠ "Rent" -12000)
       const descMatch = pattern.description.toLowerCase() === description.toLowerCase()
-      // Skip amount comparison if expectedAmount is zero (threshold would be meaningless)
-      const amountClose = pattern.expectedAmount !== 0
-        && Math.abs(avgAmount - pattern.expectedAmount) / Math.abs(pattern.expectedAmount) < 0.15
-      if (descMatch || amountClose) {
+      if (descMatch) {
         classification = 'recurring'
         matchedPatternId = pattern.id
         variability = pattern.variability ?? 'fixed'

@@ -78,7 +78,6 @@ const step = ref<1 | 2 | 3>(1)
 const parsedRows = ref<ParsedTransaction[]>([])
 const classifiedGroups = ref<TransactionGroup[]>([])
 const saving = ref(false)
-const importedCount = ref(0)
 
 // ── Step 1 → Step 2: Parse CSV rows into ParsedTransaction[] ──
 function handleUploadComplete(data: {
@@ -135,6 +134,7 @@ function handleUploadComplete(data: {
 // ── Step 2 → Step 3: Classify groups ──
 function handleClassifyComplete(groups: TransactionGroup[]) {
   classifiedGroups.value = groups
+  error.value = ''
   step.value = 3
 }
 
@@ -262,7 +262,6 @@ async function handleConfirmImport() {
       await touchTags([...allTags])
     }
 
-    importedCount.value = newTransactions.length
     saving.value = false
 
     // Requirement: Success feedback before navigating away

@@ -32,6 +32,9 @@ const emit = defineEmits<{
 const dialogRef = ref<HTMLElement | null>(null)
 useDialogA11y(dialogRef, () => emit('close'))
 
+// Unique id prefix for label-input associations (a11y)
+const uid = `txn-edit-${Math.random().toString(36).slice(2, 8)}`
+
 // Local copies — only saved on explicit "Save" click
 const localDescription = ref(props.transaction.description)
 const localDate = ref(props.transaction.date)
@@ -46,10 +49,12 @@ const autocompleteResults = ref<string[]>([])
 const showAutocomplete = ref(false)
 const selectedIndex = ref(-1)
 
-// Timer cleanup for blur handler
-const blurTimeout = ref<ReturnType<typeof setTimeout> | null>(null)
+// Timer cleanup for blur and debounce handlers
+let blurTimer: ReturnType<typeof setTimeout> | undefined
+let debounceTimer: ReturnType<typeof setTimeout> | undefined
 onUnmounted(() => {
-  if (blurTimeout.value) clearTimeout(blurTimeout.value)
+  clearTimeout(blurTimer)
+  clearTimeout(debounceTimer)
 })
 
 // Dismissed ML suggestions
@@ -74,6 +79,10 @@ function handleSave() {
     validationError.value = 'Enter a valid amount.'
     return
   }
+  if (!localDate.value || !/^\d{4}-\d{2}-\d{2}$/.test(localDate.value)) {
+    validationError.value = 'Enter a valid date.'
+    return
+  }
   validationError.value = ''
 
   const signedAmount = localIsIncome.value ? Math.abs(localAmount.value) : -Math.abs(localAmount.value)
@@ -87,8 +96,8 @@ function handleSave() {
 }
 
 function handleBlur() {
-  if (blurTimeout.value) clearTimeout(blurTimeout.value)
-  blurTimeout.value = setTimeout(() => showAutocomplete.value = false, 150)
+  clearTimeout(blurTimer)
+  blurTimer = setTimeout(() => showAutocomplete.value = false, 150)
 }
 
 // ── Tag management ──
@@ -174,7 +183,11 @@ async function updateAutocomplete() {
   }
 }
 
-watch(tagInput, updateAutocomplete)
+// Debounce autocomplete to avoid DB query on every keystroke
+watch(tagInput, () => {
+  clearTimeout(debounceTimer)
+  debounceTimer = setTimeout(updateAutocomplete, 100)
+})
 </script>
 
 <template>
@@ -209,8 +222,9 @@ watch(tagInput, updateAutocomplete)
         <div class="space-y-4">
           <!-- Description -->
           <div>
-            <label class="text-sm text-gray-600 mb-1 block">Description</label>
+            <label :for="`${uid}-desc`" class="text-sm text-gray-600 mb-1 block">Description</label>
             <input
+              :id="`${uid}-desc`"
               v-model="localDescription"
               type="text"
               class="input text-sm w-full min-h-[44px]"
@@ -219,8 +233,9 @@ watch(tagInput, updateAutocomplete)
 
           <!-- Date -->
           <div>
-            <label class="text-sm text-gray-600 mb-1 block">Date</label>
+            <label :for="`${uid}-date`" class="text-sm text-gray-600 mb-1 block">Date</label>
             <input
+              :id="`${uid}-date`"
               v-model="localDate"
               type="date"
               class="input text-sm w-full min-h-[44px]"
@@ -230,8 +245,9 @@ watch(tagInput, updateAutocomplete)
           <!-- Amount + Direction -->
           <div class="flex gap-3">
             <div class="flex-1">
-              <label class="text-sm text-gray-600 mb-1 block">Amount ({{ currencyLabel }})</label>
+              <label :for="`${uid}-amount`" class="text-sm text-gray-600 mb-1 block">Amount ({{ currencyLabel }})</label>
               <input
+                :id="`${uid}-amount`"
                 v-model.number="localAmount"
                 type="number"
                 min="0"
@@ -240,8 +256,9 @@ watch(tagInput, updateAutocomplete)
               />
             </div>
             <div class="w-32">
-              <label class="text-sm text-gray-600 mb-1 block">Direction</label>
+              <label :for="`${uid}-dir`" class="text-sm text-gray-600 mb-1 block">Direction</label>
               <select
+                :id="`${uid}-dir`"
                 v-model="localIsIncome"
                 class="input text-sm w-full min-h-[44px]"
               >
@@ -253,8 +270,9 @@ watch(tagInput, updateAutocomplete)
 
           <!-- Classification -->
           <div>
-            <label class="text-sm text-gray-600 mb-1 block">Type</label>
+            <label :for="`${uid}-type`" class="text-sm text-gray-600 mb-1 block">Type</label>
             <select
+              :id="`${uid}-type`"
               v-model="localClassification"
               class="input text-sm w-full min-h-[44px]"
             >
@@ -265,7 +283,7 @@ watch(tagInput, updateAutocomplete)
 
           <!-- Tags -->
           <div>
-            <label class="text-sm text-gray-600 mb-1 block">Tags</label>
+            <label :for="`${uid}-tags`" class="text-sm text-gray-600 mb-1 block">Tags</label>
             <div class="flex flex-wrap items-center gap-1.5 mb-2">
               <span
                 v-for="tag in localTags"
@@ -300,28 +318,35 @@ watch(tagInput, updateAutocomplete)
             <!-- Manual tag input with autocomplete -->
             <div class="relative mt-2">
               <input
+                :id="`${uid}-tags`"
                 v-model="tagInput"
                 type="text"
                 placeholder="Add a tag..."
                 class="input text-sm w-full min-h-[44px]"
+                role="combobox"
+                :aria-expanded="showAutocomplete"
+                aria-autocomplete="list"
                 @keydown="handleTagKeydown"
                 @blur="handleBlur"
                 @focus="updateAutocomplete"
               />
-              <div
+              <ul
                 v-if="showAutocomplete"
+                role="listbox"
                 class="absolute z-10 left-0 right-0 mt-0.5 bg-white border border-gray-200 rounded shadow-lg max-h-40 overflow-y-auto"
               >
-                <button
+                <li
                   v-for="(result, i) in autocompleteResults"
                   :key="result"
-                  class="block w-full text-left text-sm px-3 py-2 hover:bg-blue-50"
+                  role="option"
+                  :aria-selected="i === selectedIndex"
+                  class="text-sm px-3 py-2 hover:bg-blue-50 cursor-pointer"
                   :class="{ 'bg-blue-50': i === selectedIndex }"
                   @mousedown.prevent="addTag(result)"
                 >
                   {{ result }}
-                </button>
-              </div>
+                </li>
+              </ul>
             </div>
           </div>
         </div>

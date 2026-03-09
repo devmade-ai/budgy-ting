@@ -36,16 +36,38 @@ const BATCH_PER_ITEM_MS = 300
 
 let worker: Worker | null = null
 let requestId = 0
-const timeouts: ReturnType<typeof setTimeout>[] = []
+/** Active timeout IDs — pruned on each new addition to prevent unbounded growth */
+const activeTimeouts = new Set<ReturnType<typeof setTimeout>>()
 
 /** Reference count — only dispose the worker when all consumers have released */
 let refCount = 0
 
-// Pending request callbacks keyed by request id
-const pending = new Map<string, {
-  resolve: (value: TagSuggestion[] | TagSuggestion[][]) => void
+function trackTimeout(fn: () => void, ms: number): ReturnType<typeof setTimeout> {
+  const id = setTimeout(() => {
+    activeTimeouts.delete(id)
+    fn()
+  }, ms)
+  activeTimeouts.add(id)
+  return id
+}
+
+function clearTrackedTimeout(id: ReturnType<typeof setTimeout>) {
+  clearTimeout(id)
+  activeTimeouts.delete(id)
+}
+
+// Pending request callbacks keyed by request id.
+// Separate maps for single vs batch to avoid unsafe union casts.
+const pendingSingle = new Map<string, {
+  resolve: (value: TagSuggestion[]) => void
   reject: (reason: Error) => void
-  batch: boolean
+  timeout: ReturnType<typeof setTimeout>
+}>()
+
+const pendingBatch = new Map<string, {
+  resolve: (value: TagSuggestion[][]) => void
+  reject: (reason: Error) => void
+  timeout: ReturnType<typeof setTimeout>
 }>()
 
 function getWorker(): Worker {
@@ -60,10 +82,17 @@ function getWorker(): Worker {
       modelError.value = String(err)
       modelLoading.value = false
       // Reject all pending requests
-      for (const [id, p] of pending) {
-        p.reject(new Error('Worker error'))
-        pending.delete(id)
+      const workerErr = new Error('Worker error')
+      for (const [, p] of pendingSingle) {
+        clearTrackedTimeout(p.timeout)
+        p.reject(workerErr)
       }
+      pendingSingle.clear()
+      for (const [, p] of pendingBatch) {
+        clearTrackedTimeout(p.timeout)
+        p.reject(workerErr)
+      }
+      pendingBatch.clear()
     }
   }
   return worker
@@ -101,32 +130,43 @@ function handleWorkerMessage(event: MessageEvent<WorkerResponse>) {
       break
 
     case 'result': {
-      const p = pending.get(msg.id)
+      const p = pendingSingle.get(msg.id)
       if (p) {
-        pending.delete(msg.id)
+        clearTrackedTimeout(p.timeout)
+        pendingSingle.delete(msg.id)
         p.resolve(msg.suggestions)
       }
-      if (pending.size === 0) inferring.value = false
+      if (pendingSingle.size === 0 && pendingBatch.size === 0) inferring.value = false
       break
     }
 
     case 'batch-result': {
-      const p = pending.get(msg.id)
+      const p = pendingBatch.get(msg.id)
       if (p) {
-        pending.delete(msg.id)
+        clearTrackedTimeout(p.timeout)
+        pendingBatch.delete(msg.id)
         p.resolve(msg.results)
       }
-      if (pending.size === 0) inferring.value = false
+      if (pendingSingle.size === 0 && pendingBatch.size === 0) inferring.value = false
       break
     }
 
     case 'error': {
-      const p = pending.get(msg.id)
-      if (p) {
-        pending.delete(msg.id)
-        p.reject(new Error(msg.error))
+      // Error can come from either single or batch
+      const ps = pendingSingle.get(msg.id)
+      const pb = pendingBatch.get(msg.id)
+      const errObj = new Error(msg.error)
+      if (ps) {
+        clearTrackedTimeout(ps.timeout)
+        pendingSingle.delete(msg.id)
+        ps.reject(errObj)
       }
-      if (pending.size === 0) inferring.value = false
+      if (pb) {
+        clearTrackedTimeout(pb.timeout)
+        pendingBatch.delete(msg.id)
+        pb.reject(errObj)
+      }
+      if (pendingSingle.size === 0 && pendingBatch.size === 0) inferring.value = false
       debugLog('ml', 'warn', 'Tag suggestion inference error', { error: msg.error })
       break
     }
@@ -183,14 +223,13 @@ function preloadModel() {
   if (modelReady.value || modelLoading.value) return
   postToWorker({ type: 'load-model' })
 
-  const timeout = setTimeout(() => {
+  trackTimeout(() => {
     if (modelLoading.value && !modelReady.value) {
       modelLoading.value = false
       modelError.value = 'Model load timed out'
       debugLog('ml', 'warn', 'Model load timed out after 30s')
     }
   }, MODEL_LOAD_TIMEOUT_MS)
-  timeouts.push(timeout)
 }
 
 /**
@@ -206,24 +245,23 @@ async function suggestTags(description: string): Promise<TagSuggestion[]> {
   inferring.value = true
 
   return new Promise<TagSuggestion[]>((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      if (pending.has(id)) {
-        pending.delete(id)
-        if (pending.size === 0) inferring.value = false
+    const timeout = trackTimeout(() => {
+      if (pendingSingle.has(id)) {
+        pendingSingle.delete(id)
+        if (pendingSingle.size === 0 && pendingBatch.size === 0) inferring.value = false
         debugLog('ml', 'warn', 'Single inference timed out', { description })
         resolve([])
       }
     }, INFERENCE_TIMEOUT_MS)
-    timeouts.push(timeout)
 
-    pending.set(id, {
-      resolve: (v) => { clearTimeout(timeout); (resolve as (v: TagSuggestion[] | TagSuggestion[][]) => void)(v) },
-      reject: (e) => { clearTimeout(timeout); reject(e) },
-      batch: false,
+    pendingSingle.set(id, {
+      resolve: (v) => { clearTrackedTimeout(timeout); resolve(v) },
+      reject: (e) => { clearTrackedTimeout(timeout); reject(e) },
+      timeout,
     })
     postToWorker({ type: 'suggest', id, description, candidateLabels })
   }).then((suggestions) =>
-    (suggestions as TagSuggestion[])
+    suggestions
       .filter((s) => s.confidence >= confidenceThreshold.value)
       .slice(0, 5),
   )
@@ -245,24 +283,23 @@ async function suggestTagsBatch(descriptions: string[]): Promise<TagSuggestion[]
   const batchTimeout = INFERENCE_TIMEOUT_MS + descriptions.length * BATCH_PER_ITEM_MS
 
   return new Promise<TagSuggestion[][]>((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      if (pending.has(id)) {
-        pending.delete(id)
-        if (pending.size === 0) inferring.value = false
+    const timeout = trackTimeout(() => {
+      if (pendingBatch.has(id)) {
+        pendingBatch.delete(id)
+        if (pendingSingle.size === 0 && pendingBatch.size === 0) inferring.value = false
         debugLog('ml', 'warn', 'Batch inference timed out', { count: descriptions.length })
         resolve(descriptions.map(() => []))
       }
     }, batchTimeout)
-    timeouts.push(timeout)
 
-    pending.set(id, {
-      resolve: (v) => { clearTimeout(timeout); (resolve as (v: TagSuggestion[] | TagSuggestion[][]) => void)(v) },
-      reject: (e) => { clearTimeout(timeout); reject(e) },
-      batch: true,
+    pendingBatch.set(id, {
+      resolve: (v) => { clearTrackedTimeout(timeout); resolve(v) },
+      reject: (e) => { clearTrackedTimeout(timeout); reject(e) },
+      timeout,
     })
     postToWorker({ type: 'suggest-batch', id, descriptions, candidateLabels })
   }).then((results) =>
-    (results as TagSuggestion[][]).map((suggestions) =>
+    results.map((suggestions) =>
       suggestions
         .filter((s) => s.confidence >= confidenceThreshold.value)
         .slice(0, 5),
@@ -283,14 +320,15 @@ function dispose() {
     return
   }
 
-  timeouts.forEach(clearTimeout)
-  timeouts.length = 0
+  for (const id of activeTimeouts) clearTimeout(id)
+  activeTimeouts.clear()
 
   // Reject any pending requests
-  for (const [, p] of pending) {
-    p.reject(new Error('Disposed'))
-  }
-  pending.clear()
+  const disposedErr = new Error('Disposed')
+  for (const [, p] of pendingSingle) p.reject(disposedErr)
+  pendingSingle.clear()
+  for (const [, p] of pendingBatch) p.reject(disposedErr)
+  pendingBatch.clear()
 
   if (worker) {
     worker.terminate()
