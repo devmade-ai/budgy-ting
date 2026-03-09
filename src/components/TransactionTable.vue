@@ -125,29 +125,31 @@ function getSuggestions(id: string): TagSuggestion[] {
 
 <template>
   <div>
-    <!-- Filters — touch-friendly input sizing (min-h-44px) -->
-    <div v-if="transactions.length > 5" class="flex flex-wrap gap-2 mb-4">
+    <!-- Filters — full-width search on mobile, inline selects below -->
+    <div v-if="transactions.length > 5" class="flex flex-col sm:flex-row sm:flex-wrap gap-2 mb-4">
       <input
         v-model="search"
         type="text"
         placeholder="Search transactions..."
-        class="input text-sm flex-1 min-w-48 min-h-[44px]"
+        class="input text-sm w-full sm:flex-1 sm:min-w-48 min-h-[44px]"
       />
-      <select
-        v-model="filterTag"
-        class="input text-sm w-auto min-h-[44px]"
-      >
-        <option value="">All tags</option>
-        <option v-for="tag in allTags" :key="tag" :value="tag">{{ tag }}</option>
-      </select>
-      <select
-        v-model="filterClassification"
-        class="input text-sm w-auto min-h-[44px]"
-      >
-        <option value="">All types</option>
-        <option value="recurring">Recurring</option>
-        <option value="once-off">Once-off</option>
-      </select>
+      <div class="flex gap-2">
+        <select
+          v-model="filterTag"
+          class="input text-sm flex-1 sm:flex-none sm:w-auto min-h-[44px]"
+        >
+          <option value="">All tags</option>
+          <option v-for="tag in allTags" :key="tag" :value="tag">{{ tag }}</option>
+        </select>
+        <select
+          v-model="filterClassification"
+          class="input text-sm flex-1 sm:flex-none sm:w-auto min-h-[44px]"
+        >
+          <option value="">All types</option>
+          <option value="recurring">Recurring</option>
+          <option value="once-off">Once-off</option>
+        </select>
+      </div>
     </div>
 
     <!-- Mobile card layout (< sm breakpoint) -->
@@ -260,24 +262,29 @@ function getSuggestions(id: string): TagSuggestion[] {
       </table>
     </div>
 
-    <!-- Pagination -->
+    <!-- Pagination — compact layout on mobile to prevent overflow -->
     <div v-if="totalPages > 1" class="flex items-center justify-between mt-4 text-sm text-gray-500">
-      <span>{{ filtered.length }} transaction{{ filtered.length === 1 ? '' : 's' }}</span>
-      <div class="flex gap-1">
+      <span class="hidden sm:inline">{{ filtered.length }} transaction{{ filtered.length === 1 ? '' : 's' }}</span>
+      <span class="sm:hidden text-xs">{{ filtered.length }}</span>
+      <div class="flex items-center gap-1">
         <button
-          class="px-3 py-2 min-h-[44px] rounded border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
+          class="px-2 sm:px-3 py-2 min-h-[44px] rounded border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
           :disabled="currentPage <= 1"
+          aria-label="Previous page"
           @click="currentPage--"
         >
-          Previous
+          <span class="hidden sm:inline">Previous</span>
+          <span class="sm:hidden i-lucide-chevron-left text-sm" />
         </button>
-        <span class="px-3 py-2">{{ currentPage }} / {{ totalPages }}</span>
+        <span class="px-2 sm:px-3 py-2 text-xs sm:text-sm">{{ currentPage }} / {{ totalPages }}</span>
         <button
-          class="px-3 py-2 min-h-[44px] rounded border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
+          class="px-2 sm:px-3 py-2 min-h-[44px] rounded border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
           :disabled="currentPage >= totalPages"
+          aria-label="Next page"
           @click="currentPage++"
         >
-          Next
+          <span class="hidden sm:inline">Next</span>
+          <span class="sm:hidden i-lucide-chevron-right text-sm" />
         </button>
       </div>
     </div>

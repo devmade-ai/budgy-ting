@@ -134,13 +134,19 @@ const chartOptions = computed(() => {
     return '#6b7280'
   })
 
+  // Requirement: Chart toolbar icons are too small for touch on mobile
+  // Approach: Hide toolbar on mobile (<640px), show on desktop where mouse precision works
+  // Alternatives:
+  //   - Custom larger toolbar: Rejected — ApexCharts doesn't expose icon sizing
+  const isMobile = windowWidth.value < 640
+
   return {
     chart: {
       id: 'cashflow-graph',
       type: 'line' as const,
       height: chartHeight.value,
-      toolbar: { show: true, tools: { download: true, zoom: true, pan: true, reset: true } },
-      zoom: { enabled: true },
+      toolbar: { show: !isMobile, tools: { download: true, zoom: true, pan: true, reset: true } },
+      zoom: { enabled: !isMobile },
       fontFamily: 'inherit',
     },
     stroke: {
@@ -158,11 +164,18 @@ const chartOptions = computed(() => {
     },
     yaxis: {
       labels: {
-        formatter: (val: number) => `${props.currencyLabel}${val.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
-        style: { fontSize: '11px', colors: '#9ca3af' },
+        // Requirement: Y-axis labels overflow on narrow mobile screens
+        // Approach: Use compact notation (1K, 10K) on mobile, full numbers on desktop
+        formatter: (val: number) => {
+          if (isMobile && Math.abs(val) >= 1000) {
+            return `${props.currencyLabel}${(val / 1000).toLocaleString(undefined, { maximumFractionDigits: 1 })}K`
+          }
+          return `${props.currencyLabel}${val.toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+        },
+        style: { fontSize: isMobile ? '10px' : '11px', colors: '#9ca3af' },
       },
       title: {
-        text: chartMode.value === 'cumulative' ? 'Cumulative' : 'Daily Net',
+        text: isMobile ? '' : (chartMode.value === 'cumulative' ? 'Cumulative' : 'Daily Net'),
         style: { fontSize: '12px', color: '#6b7280' },
       },
     },
@@ -181,7 +194,7 @@ const chartOptions = computed(() => {
     legend: {
       position: 'top' as const,
       horizontalAlign: 'left' as const,
-      fontSize: '12px',
+      fontSize: isMobile ? '10px' : '12px',
     },
     noData: {
       text: 'No data for selected period',

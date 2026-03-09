@@ -234,11 +234,11 @@ function displayDate(dateStr: string): string {
         role="dialog"
         :aria-label="editing ? 'Edit transaction' : 'Transaction details'"
         aria-modal="true"
-        class="relative bg-white rounded-xl shadow-xl max-w-md w-full p-5 max-h-[90vh] overflow-y-auto"
+        class="relative bg-white rounded-xl shadow-xl max-w-md w-full p-4 sm:p-5 max-h-[90vh] overflow-y-auto"
       >
-        <!-- Close button -->
+        <!-- Close button — min 44px touch target for mobile -->
         <button
-          class="absolute top-3 right-3 text-gray-400 hover:text-gray-600 transition-colors"
+          class="absolute top-2 right-2 text-gray-400 hover:text-gray-600 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
           aria-label="Close"
           @click="emit('close')"
         >
@@ -339,8 +339,8 @@ function displayDate(dateStr: string): string {
               />
             </div>
 
-            <!-- Amount + Direction -->
-            <div class="flex gap-3">
+            <!-- Amount + Direction — stack on narrow screens, side-by-side on wider -->
+            <div class="flex flex-col sm:flex-row gap-3">
               <div class="flex-1">
                 <label :for="`${uid}-amount`" class="text-sm text-gray-600 mb-1 block">Amount ({{ currencyLabel }})</label>
                 <input
@@ -352,7 +352,7 @@ function displayDate(dateStr: string): string {
                   class="input text-sm w-full min-h-[44px]"
                 />
               </div>
-              <div class="w-32">
+              <div class="sm:w-32">
                 <label :for="`${uid}-dir`" class="text-sm text-gray-600 mb-1 block">Direction</label>
                 <select
                   :id="`${uid}-dir`"

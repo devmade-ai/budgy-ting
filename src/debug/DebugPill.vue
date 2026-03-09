@@ -147,6 +147,10 @@ function toggle() {
 </script>
 
 <template>
+  <!-- Requirement: Debug panel must fit mobile screens without horizontal overflow
+       Approach: Use max-w with calc(100vw - 2rem) so panel respects viewport width
+       Alternatives:
+         - Media query breakpoint: Rejected — calc approach handles all widths smoothly -->
   <div class="fixed bottom-4 right-4 z-[9999]">
     <!-- Collapsed pill -->
     <button
@@ -168,10 +172,10 @@ function toggle() {
     <!-- Expanded panel -->
     <div
       v-else
-      class="bg-gray-900 text-white rounded-xl shadow-2xl w-[360px] max-h-[70vh] flex flex-col overflow-hidden"
+      class="bg-gray-900 text-white rounded-xl shadow-2xl w-[calc(100vw-2rem)] max-w-[360px] max-h-[70vh] flex flex-col overflow-hidden"
     >
       <!-- Header -->
-      <div class="flex items-center justify-between px-3 py-2 border-b border-gray-700">
+      <div class="flex flex-wrap items-center justify-between gap-1 px-3 py-2 border-b border-gray-700">
         <div class="flex gap-1">
           <button
             class="text-xs px-2 py-1 rounded transition-colors"
@@ -185,7 +189,7 @@ function toggle() {
             :class="activeTab === 'env' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white'"
             @click="activeTab = 'env'"
           >
-            Environment
+            Env
           </button>
         </div>
         <div class="flex gap-1">
@@ -246,7 +250,7 @@ function toggle() {
           class="flex justify-between py-1.5 border-b border-gray-800 last:border-0"
         >
           <span class="text-gray-400">{{ item.label }}</span>
-          <span class="text-gray-200 text-right max-w-[220px] truncate ml-2">{{ item.value }}</span>
+          <span class="text-gray-200 text-right min-w-0 break-all ml-2">{{ item.value }}</span>
         </div>
       </div>
     </div>
