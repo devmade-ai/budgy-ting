@@ -108,10 +108,10 @@ src/
 │   ├── WorkspaceEditView.vue      # Edit workspace form
 │   ├── WorkspaceDetailView.vue    # Workspace detail header + actions
 │   ├── WorkspaceDashboard.vue     # Single-screen dashboard (graph + metrics + transactions)
-│   ├── NewImportWizard.vue        # 3-step import wizard (upload, classify, confirm)
+│   ├── NewImportWizard.vue        # 2-step import wizard (upload, review & import)
 │   └── import-steps/              # Import wizard step components
 │       ├── ImportStepUpload.vue   # File upload + column mapping + auto-detection
-│       └── ImportStepClassify.vue # Transaction grouping + recurring/once-off classification
+│       └── ImportStepReview.vue   # Per-transaction review, tagging, classification
 ├── App.vue             # Root component (AppLayout > ErrorBoundary > RouterView)
 └── main.ts             # App entry + debug pill mount + demo seed
 ```
