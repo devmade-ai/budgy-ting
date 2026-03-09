@@ -11,9 +11,11 @@
  *   - Modal instead of page: Rejected — too much content for a modal
  */
 
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { db } from '@/db'
+import { useTagSuggestions } from '@/ml/useTagSuggestions'
+import { useEmbeddings } from '@/ml/useEmbeddings'
 import { generateId } from '@/composables/useId'
 import { nowISO } from '@/composables/useTimestamp'
 import { touchTags } from '@/composables/useTagAutocomplete'
@@ -21,6 +23,7 @@ import { hapticSuccess } from '@/composables/useHaptic'
 import { useToast } from '@/composables/useToast'
 import { parseDate, parseAmount, isDuplicate } from '@/engine/matching'
 import { detectFrequency, detectAnchorDay, calculateIntervals } from '@/engine/patterns'
+import { debugLog } from '@/debug/debugLog'
 import ErrorAlert from '@/components/ErrorAlert.vue'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import ImportStepUpload from './import-steps/ImportStepUpload.vue'
@@ -32,6 +35,8 @@ import type { ParsedTransaction, TransactionGroup } from './import-steps/ImportS
 const props = defineProps<{ id: string }>()
 const router = useRouter()
 const { show: showToast } = useToast()
+const { preloadModel, dispose } = useTagSuggestions()
+const { preloadModel: preloadEmbeddings, dispose: disposeEmbeddings } = useEmbeddings()
 
 /** Step labels for indicator text */
 const stepLabels = ['Upload', 'Classify', 'Confirm'] as const
@@ -43,6 +48,16 @@ const loading = ref(true)
 const error = ref('')
 
 onMounted(async () => {
+  // Reset wizard state in case component is remounted (e.g. user navigates away and back)
+  step.value = 1
+  parsedRows.value = []
+  classifiedGroups.value = []
+  error.value = ''
+
+  // Start ML model downloads early — they load in Web Workers while user maps columns in Step 1
+  preloadModel()
+  preloadEmbeddings()
+
   try {
     const [ws, patterns, txns] = await Promise.all([
       db.workspaces.get(props.id),
@@ -63,12 +78,17 @@ onMounted(async () => {
   }
 })
 
+// Free ML worker memory when leaving the import wizard
+onUnmounted(() => {
+  dispose()
+  disposeEmbeddings()
+})
+
 // ── Wizard state ──
 const step = ref<1 | 2 | 3>(1)
 const parsedRows = ref<ParsedTransaction[]>([])
 const classifiedGroups = ref<TransactionGroup[]>([])
 const saving = ref(false)
-const importedCount = ref(0)
 
 // ── Step 1 → Step 2: Parse CSV rows into ParsedTransaction[] ──
 function handleUploadComplete(data: {
@@ -108,6 +128,14 @@ function handleUploadComplete(data: {
 
   parsedRows.value = rows
 
+  debugLog('import', rows.length > 0 ? 'info' : 'warn', 'CSV parsed', {
+    totalRows: data.parsedData.totalRows,
+    validRows: rows.length,
+    skipped,
+    parseErrors: data.parsedData.errors.length,
+    dateFormat: data.dateFormatIndex,
+  })
+
   if (rows.length === 0) {
     error.value = skipped > 0
       ? `All ${skipped} rows were duplicates or couldn't be parsed. Nothing to import.`
@@ -125,6 +153,7 @@ function handleUploadComplete(data: {
 // ── Step 2 → Step 3: Classify groups ──
 function handleClassifyComplete(groups: TransactionGroup[]) {
   classifiedGroups.value = groups
+  error.value = ''
   step.value = 3
 }
 
@@ -252,15 +281,23 @@ async function handleConfirmImport() {
       await touchTags([...allTags])
     }
 
-    importedCount.value = newTransactions.length
     saving.value = false
+
+    debugLog('import', 'success', 'Import saved', {
+      transactions: newTransactions.length,
+      newPatterns: patternUpdates.filter((p) => p.isNew).length,
+      updatedPatterns: patternUpdates.filter((p) => !p.isNew).length,
+      tags: allTags.size,
+      batchId,
+    })
 
     // Requirement: Success feedback before navigating away
     // Approach: Toast + haptic pulse, then navigate. Brief visual confirmation.
     hapticSuccess()
     showToast(`Imported ${newTransactions.length} transaction${newTransactions.length === 1 ? '' : 's'}`)
     router.push({ name: 'workspace-detail', params: { id: props.id } })
-  } catch {
+  } catch (e) {
+    debugLog('import', 'error', 'Import save failed', { error: String(e) })
     error.value = 'Couldn\'t save imported data. Please try again.'
     saving.value = false
   }

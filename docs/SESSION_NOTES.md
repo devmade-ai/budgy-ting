@@ -4,28 +4,26 @@
 
 ## Worked on
 
-Variable recurring expenses — support for usage-based bills and prepaid/on-demand purchases.
+ML-based auto-tagging for imports — completing remaining plan items (robustness, candidate labels, earlier warmup).
 
 ## Accomplished
 
-- **Added `RecurringVariability` type** (`'fixed' | 'variable' | 'irregular'`) and `variability` field to `RecurringPattern`
-- **Added `'irregular'` frequency type** — for patterns with no fixed schedule
-- **DB schema v7** — adds `variability` index to patterns table, backfills existing patterns with `'fixed'`
-- **Updated pattern engine** — `projectPattern()` handles `'irregular'` frequency by spreading as daily rate (total historical spend / observation days)
-- **Updated forecast engine** — computes historical totals from linked transactions for irregular patterns, passes to `projectPattern` for daily rate calculation
-- **Updated import wizard classify step** — when user marks a group as "recurring", shows sub-type selector: "Fixed amount" / "Varies each time" / "Buy when needed"
-- **Updated demo data** — added variable recurring (City of CT water) and irregular recurring (prepaid electricity, Vodacom data bundle) examples
-- **Updated export/import** — backfills missing `variability` field on imported patterns
-- **Updated test helpers** — `makePattern()` in forecast.test.ts includes `variability: 'fixed'`
+- **Moved model preload to NewImportWizard** — `preloadModel()` now fires in Step 1's `onMounted`, giving the model time to download while the user maps columns. Previously it was in ImportStepClassify (Step 2).
+- **Added model load timeout (30s)** — if model download takes too long (slow network), silently gives up rather than hanging. Sets `modelError` and logs via debug system.
+- **Added inference timeout (10s)** — per-request timeout for both single and batch suggestions. Resolves with empty results on timeout. Clears timeout on success.
+- **Added `dispose()` method** — terminates the Web Worker and resets all state. Called in `NewImportWizard`'s `onUnmounted` to free ~50-100MB of WASM heap after import is complete.
+- **Added fallback default labels** — new users with empty tagCache now get 15 common finance categories (groceries, rent, utilities, etc.) as candidate labels for zero-shot classification.
+- **Added pattern tags as candidate source** — tags from existing `RecurringPattern` entries are merged with tagCache tags before sending to the worker.
+- **Cleanup** — removed duplicate `preloadModel()` call from ImportStepClassify, tracked all timeouts for cleanup
 
 ## Current state
 
-All 109 tests pass. Build succeeds. Type-check clean. DB schema at v7.
+Build passes, type-check clean. All ML auto-tagging plan items complete. The feature has three candidate label sources (tagCache > pattern tags > defaults), proper timeouts, and memory cleanup.
 
 ## Key context
 
-- Three variability types: `fixed` (same amount, regular schedule), `variable` (different amount, regular schedule), `irregular` (no schedule, buy when needed)
-- Irregular patterns use `frequency: 'irregular'` and project as daily rate spread
-- Variable patterns use existing frequency detection but the amount varies (wider prediction bands come from `amountStdDev`)
-- Import wizard sub-type selector only appears when group is classified as "recurring"
-- Export schema still v3 — `variability` backfilled on import if missing
+- `src/ml/useTagSuggestions.ts` is the main composable — module-level singleton worker, 30s model timeout, 10s inference timeout
+- `src/ml/tagSuggestionWorker.ts` — uses `MoritzLaurer/xtremedistil-l6-h256-zeroshot-v1.1-all-33` (~13MB q8)
+- Model preloads in NewImportWizard (Step 1), suggestions requested in ImportStepClassify (Step 2)
+- Worker disposed in NewImportWizard's onUnmounted
+- Default labels: groceries, rent, utilities, transport, insurance, salary, subscriptions, dining, entertainment, medical, savings, transfer, fuel, clothing, education

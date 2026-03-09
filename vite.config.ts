@@ -12,6 +12,12 @@ export default defineConfig({
     VitePWA({
       registerType: 'prompt',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png'],
+      // Requirement: ONNX Runtime WASM files (~22MB) must not be precached by the SW
+      // Approach: Exclude .wasm from precache manifest. Transformers.js fetches and caches
+      //   these via the browser Cache API at runtime, independent of the SW.
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+      },
       manifest: {
         name: 'budgy-ting',
         short_name: 'budgy-ting',
@@ -72,6 +78,16 @@ export default defineConfig({
     alias: {
       '@': resolve(__dirname, 'src'),
     },
+  },
+  // Requirement: ML tag suggestion worker uses ESM imports (Transformers.js)
+  // Approach: Set worker format to 'es' so Vite doesn't try IIFE (which breaks code-splitting)
+  worker: {
+    format: 'es',
+  },
+  // Requirement: Transformers.js uses dynamic imports and WASM internally
+  // Approach: Exclude from Vite's dependency pre-bundling to avoid build errors
+  optimizeDeps: {
+    exclude: ['@huggingface/transformers'],
   },
   test: {
     include: ['src/**/*.test.ts'],

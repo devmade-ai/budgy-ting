@@ -2,7 +2,7 @@
  * In-memory debug event store with pub/sub.
  *
  * Requirement: Alpha-phase diagnostic tool for capturing runtime events
- * Approach: Capped circular buffer (200 entries) with subscriber notifications.
+ * Approach: Capped array (200 entries, oldest evicted) with subscriber notifications.
  *   Global error/unhandledrejection listeners installed at module load.
  *   No persistence — purely in-memory, intended to be removed post-alpha.
  * Alternatives:
@@ -17,6 +17,7 @@ export type DebugSource =
   | 'pwa'
   | 'import'
   | 'engine'
+  | 'ml'
   | 'global'
 
 export type DebugSeverity = 'info' | 'success' | 'warn' | 'error'

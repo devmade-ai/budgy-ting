@@ -12,6 +12,8 @@
  * Does NOT handle: multi-line quoted fields (rare in financial CSVs), custom delimiters
  */
 
+import { debugLog } from '@/debug/debugLog'
+
 export interface ParsedCSV {
   headers: string[]
   rows: Record<string, string>[]
@@ -53,7 +55,15 @@ export function parseCSV(content: string): ParsedCSV {
     rows.push(row)
   }
 
-  return { headers, rows, totalRows: rows.length, errors }
+  const result = { headers, rows, totalRows: rows.length, errors }
+
+  debugLog('import', errors.length > 0 ? 'warn' : 'info', 'CSV parsed', {
+    columns: headers.length,
+    rows: rows.length,
+    errors: errors.length,
+  })
+
+  return result
 }
 
 function splitCSVLines(content: string): string[] {
@@ -77,6 +87,8 @@ function splitCSVLines(content: string): string[] {
     }
   }
 
+  // If still inQuotes at EOF, the last field had an unclosed quote.
+  // Push what we have rather than silently discarding the line.
   if (current.trim()) lines.push(current)
   return lines
 }
@@ -112,6 +124,8 @@ function parseCSVRow(row: string): string[] {
     }
   }
 
+  // If inQuotes is still true, the field had an unclosed quote.
+  // Treat remaining content as the field value rather than corrupting parsing.
   fields.push(current.trim())
   return fields
 }

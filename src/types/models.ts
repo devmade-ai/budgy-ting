@@ -146,6 +146,19 @@ export interface TagCache {
   lastUsed: string
 }
 
+/**
+ * Cached embedding vector for a normalized description text.
+ * Stored in IndexedDB to avoid re-computing embeddings for descriptions
+ * seen in previous imports.
+ */
+export interface EmbeddingCache {
+  /** Normalized text (lowercase + trimmed) */
+  text: string
+  /** 384-dim embedding from all-MiniLM-L6-v2, stored as number[] (IndexedDB-safe) */
+  embedding: number[]
+  computedAt: string
+}
+
 /** Helper: is this an income transaction (positive amount)? */
 export function isIncome(amount: number): boolean {
   return amount > 0

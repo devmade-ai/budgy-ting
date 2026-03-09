@@ -1,21 +1,35 @@
 <script setup lang="ts">
 /**
- * Requirement: Paginated, filterable transaction display for the single-screen workspace view
+ * Requirement: Paginated, filterable transaction display with edit modal
  * Approach: Table on desktop, stacked cards on mobile. Client-side filtering + pagination.
+ *   Click a row to open a modal for editing all transaction fields.
  * Alternatives:
  *   - Table-only with horizontal scroll: Rejected — cards are much easier to scan on mobile
  *   - Virtual scrolling (vue-virtual-scroller): Deferred — paginate first, upgrade later
  *   - Server-side pagination: N/A — local-first IndexedDB app
+ *   - Inline row editor: Rejected — cramped, pushes content around
  */
 
 import { ref, computed, watch } from 'vue'
 import { formatAmount } from '@/composables/useFormat'
 import { isIncome } from '@/types/models'
+import TransactionEditModal from '@/components/TransactionEditModal.vue'
 import type { Transaction } from '@/types/models'
+import type { TagSuggestion } from '@/ml/types'
 
 const props = defineProps<{
   transactions: Transaction[]
   currencyLabel: string
+  /** Per-transaction ML suggestions, keyed by transaction id */
+  tagSuggestions?: Map<string, TagSuggestion[]>
+  /** Whether ML model is currently inferring */
+  suggestionsLoading?: boolean
+}>()
+
+const emit = defineEmits<{
+  'update-transaction': [id: string, fields: Partial<Transaction>]
+  /** Emitted when a row is selected — parent can trigger ML suggestion for this transaction */
+  'request-suggestions': [id: string, description: string]
 }>()
 
 const PAGE_SIZE = 25
@@ -24,6 +38,9 @@ const search = ref('')
 const filterTag = ref('')
 const filterClassification = ref<'' | 'recurring' | 'once-off'>('')
 const currentPage = ref(1)
+
+/** Transaction currently being edited in the modal — null = modal closed */
+const editingTransaction = ref<Transaction | null>(null)
 
 // Collect all unique tags for filter dropdown
 const allTags = computed(() => {
@@ -71,9 +88,38 @@ watch([search, filterTag, filterClassification], () => {
   currentPage.value = 1
 })
 
+// Clamp page when data changes (e.g. transaction deleted externally)
+watch(totalPages, (pages) => {
+  if (currentPage.value > pages) currentPage.value = pages
+})
+
 function formatDate(dateStr: string): string {
   const d = new Date(dateStr + 'T00:00:00')
+  if (isNaN(d.getTime())) return dateStr || '—'
   return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: '2-digit' })
+}
+
+function openEdit(txn: Transaction) {
+  editingTransaction.value = txn
+  emit('request-suggestions', txn.id, txn.description)
+}
+
+function handleSave(fields: Partial<Transaction>) {
+  if (editingTransaction.value) {
+    emit('update-transaction', editingTransaction.value.id, fields)
+  }
+  editingTransaction.value = null
+}
+
+function handleRowKeydown(e: KeyboardEvent, txn: Transaction) {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault()
+    openEdit(txn)
+  }
+}
+
+function getSuggestions(id: string): TagSuggestion[] {
+  return props.tagSuggestions?.get(id) ?? []
 }
 </script>
 
@@ -105,16 +151,15 @@ function formatDate(dateStr: string): string {
     </div>
 
     <!-- Mobile card layout (< sm breakpoint) -->
-    <!-- Requirement: Stacked cards are easier to scan than side-scrolling tables on narrow screens
-         Approach: Show cards on mobile, table on sm+. Each card shows date + description + amount.
-         Alternatives:
-           - Horizontal-scroll table everywhere: Rejected — poor scan-ability on narrow screens
-           - Cards everywhere: Rejected — table is more information-dense on desktop -->
     <div class="sm:hidden space-y-2">
       <div
         v-for="txn in paginatedRows"
         :key="txn.id"
-        class="bg-white rounded-lg border border-gray-200 p-3"
+        role="button"
+        tabindex="0"
+        class="bg-white rounded-lg border border-gray-200 p-3 cursor-pointer hover:border-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400"
+        @click="openEdit(txn)"
+        @keydown="handleRowKeydown($event, txn)"
       >
         <div class="flex items-start justify-between gap-2">
           <div class="min-w-0 flex-1">
@@ -169,7 +214,10 @@ function formatDate(dateStr: string): string {
           <tr
             v-for="txn in paginatedRows"
             :key="txn.id"
-            class="border-b border-gray-100 hover:bg-gray-50"
+            tabindex="0"
+            class="border-b border-gray-100 hover:bg-gray-50 cursor-pointer focus:outline-none focus:bg-blue-50"
+            @click="openEdit(txn)"
+            @keydown="handleRowKeydown($event, txn)"
           >
             <td class="py-2 pr-3 whitespace-nowrap text-gray-500">
               {{ formatDate(txn.date) }}
@@ -233,5 +281,16 @@ function formatDate(dateStr: string): string {
         </button>
       </div>
     </div>
+
+    <!-- Edit modal -->
+    <TransactionEditModal
+      v-if="editingTransaction"
+      :transaction="editingTransaction"
+      :suggestions="getSuggestions(editingTransaction.id)"
+      :suggestions-loading="!!suggestionsLoading"
+      :currency-label="currencyLabel"
+      @save="handleSave"
+      @close="editingTransaction = null"
+    />
   </div>
 </template>

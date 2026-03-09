@@ -73,9 +73,11 @@ describe('calculateRunway', () => {
       makePoint('2026-03-02', -200),
     ]
     const result = calculateRunway(1000, points)
-    expect(result.dailyBalance).toHaveLength(2)
-    expect(result.dailyBalance[0]!.balance).toBe(700)
-    expect(result.dailyBalance[1]!.balance).toBe(500)
+    // First entry is the initial balance (day before forecast starts)
+    expect(result.dailyBalance).toHaveLength(3)
+    expect(result.dailyBalance[0]!.balance).toBe(1000)
+    expect(result.dailyBalance[1]!.balance).toBe(700)
+    expect(result.dailyBalance[2]!.balance).toBe(500)
   })
 
   it('handles income growing cash', () => {

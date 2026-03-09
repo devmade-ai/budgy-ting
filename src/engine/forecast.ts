@@ -19,6 +19,7 @@ import { standardDeviation, mean } from 'simple-statistics'
 import type { Transaction, RecurringPattern } from '@/types/models'
 import { projectPattern } from './patterns'
 import { formatDate } from './dateUtils'
+import { debugLog } from '@/debug/debugLog'
 
 // ── Holt's Double Exponential Smoothing ──
 
@@ -207,8 +208,10 @@ export function calculatePredictionBands(
 
   const errorStdDev = standardDeviation(historicalErrors)
 
-  // Prediction uncertainty grows with forecast horizon (random walk assumption)
-  const horizonFactor = Math.sqrt(Math.max(1, stepsAhead))
+  // Prediction uncertainty grows with forecast horizon (random walk assumption).
+  // Cap at 90 days — beyond that, bands grow so wide they're not actionable.
+  const cappedSteps = Math.min(stepsAhead, 90)
+  const horizonFactor = Math.sqrt(Math.max(1, cappedSteps))
   const adjustedStdDev = errorStdDev * horizonFactor
 
   return {
@@ -451,6 +454,16 @@ export function buildForecast(
     recurringDaily, variableState, variableMethod, variableDailyForecast,
     predictionErrors, dowFactors, startDate, endDate,
   )
+
+  debugLog('engine', 'info', 'Forecast built', {
+    method: variableMethod,
+    forecastDays: daily.length,
+    recurringPatterns: patterns.filter((p) => p.isActive).length,
+    residualDays: residualSeries.length,
+    hasDowFactors: dowFactors !== null,
+    holtLevel: variableState?.level,
+    holtTrend: variableState?.trend,
+  })
 
   return { daily, variableState, dowFactors, predictionErrors, variableMethod }
 }
