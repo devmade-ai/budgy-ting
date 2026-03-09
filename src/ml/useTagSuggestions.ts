@@ -22,6 +22,7 @@ import type { WorkerResponse, WorkerRequest, TagSuggestion } from './types'
 const modelLoading = ref(false)
 const modelReady = ref(false)
 const modelError = ref<string | null>(null)
+const modelProgress = ref(0)
 const inferring = ref(false)
 
 /** Default confidence threshold — suggestions below this are filtered out */
@@ -126,7 +127,7 @@ function handleWorkerMessage(event: MessageEvent<WorkerResponse>) {
       break
 
     case 'model-progress':
-      // Could expose this as a ref if progress UI is needed
+      modelProgress.value = msg.progress
       break
 
     case 'result': {
@@ -213,6 +214,33 @@ async function getCandidateLabels(): Promise<string[]> {
 }
 
 // ── Public API ──
+
+/**
+ * Wait for the model to finish loading. Resolves true if model is ready,
+ * false if it failed or timed out. Safe to call when model is already loaded.
+ */
+function waitForModel(): Promise<boolean> {
+  if (modelReady.value) return Promise.resolve(true)
+  if (modelError.value) return Promise.resolve(false)
+
+  return new Promise<boolean>((resolve) => {
+    const check = setInterval(() => {
+      if (modelReady.value) {
+        clearInterval(check)
+        resolve(true)
+      } else if (modelError.value || (!modelLoading.value && !modelReady.value)) {
+        clearInterval(check)
+        resolve(false)
+      }
+    }, 100)
+
+    // Safety net — don't hang forever
+    trackTimeout(() => {
+      clearInterval(check)
+      resolve(modelReady.value)
+    }, MODEL_LOAD_TIMEOUT_MS + 5_000)
+  })
+}
 
 /**
  * Preload the model so it's ready when suggestions are needed.
@@ -338,6 +366,7 @@ function dispose() {
   modelLoading.value = false
   modelReady.value = false
   modelError.value = null
+  modelProgress.value = 0
   inferring.value = false
 
   debugLog('ml', 'info', 'Tag suggestion worker disposed')
@@ -349,9 +378,11 @@ export function useTagSuggestions() {
     modelLoading,
     modelReady,
     modelError,
+    modelProgress,
     inferring,
     confidenceThreshold,
     preloadModel,
+    waitForModel,
     suggestTags,
     suggestTagsBatch,
     dispose,

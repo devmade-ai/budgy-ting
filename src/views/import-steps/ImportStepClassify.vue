@@ -64,7 +64,14 @@ const groups = ref<TransactionGroup[]>([])
 // Approach: Preload model on mount, batch-request suggestions for groups without tags.
 //   Candidate labels are the user's existing tags from tagCache. If no tags exist
 //   (first import), no suggestions are shown — graceful degradation.
-const { modelReady, modelLoading, suggestTagsBatch } = useTagSuggestions()
+const {
+  modelReady: tagModelReady,
+  modelLoading: tagModelLoading,
+  modelProgress: tagModelProgress,
+  modelError: tagModelError,
+  waitForModel: waitForTagModel,
+  suggestTagsBatch,
+} = useTagSuggestions()
 const groupSuggestions = reactive(new Map<string, TagSuggestion[]>())
 
 // ── Embedding-based fuzzy grouping ──
@@ -256,25 +263,21 @@ onMounted(async () => {
     return b.rows.length - a.rows.length
   })
 
-  // Wait for the embedding model to load, then merge similar groups.
-  // First import: downloads ~22MB (progress bar shown). Subsequent: loads from cache (~1-2s).
-  const embeddingOk = await waitForEmbeddings()
+  // Wait for both ML models to load (they download in parallel during Step 1).
+  // First import: downloads ~35MB total (progress bar shown). Subsequent: loads from cache.
+  const [embeddingOk, tagOk] = await Promise.all([
+    waitForEmbeddings(),
+    waitForTagModel(),
+  ])
+
   if (embeddingOk) {
     await mergeSimilarGroups()
   }
 
   preparingGroups.value = false
 
-  // Model preload happens in NewImportWizard.vue (Step 1) for earlier warmup.
-  // If tag suggestion model is also loaded, request suggestions now.
-  if (modelReady.value) {
-    requestSuggestions()
-  }
-})
-
-// If model loads after mount (first download), request suggestions when ready
-watch(modelReady, (ready) => {
-  if (ready && groupSuggestions.size === 0) {
+  // Both models waited for — request suggestions immediately if tag model loaded
+  if (tagOk) {
     requestSuggestions()
   }
 })
@@ -320,27 +323,55 @@ function handleContinue() {
   <div>
     <h2 class="text-lg font-semibold mb-1">Classify transactions</h2>
 
-    <!-- Loading state while embedding model downloads and groups are prepared -->
+    <!-- Loading state while ML models download and groups are prepared -->
     <template v-if="preparingGroups">
       <p class="text-sm text-gray-500 mb-4">
-        Grouping similar transactions...
+        Preparing smart grouping and tag suggestions...
       </p>
-      <div class="max-w-sm mx-auto mt-8 mb-8">
-        <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
-          <div
-            class="h-full bg-brand-500 rounded-full transition-all duration-300"
-            :style="{ width: embeddingLoading ? `${Math.max(5, embeddingProgress)}%` : '100%' }"
-          />
+      <div class="max-w-sm mx-auto mt-8 mb-8 space-y-4">
+        <!-- Grouping model (embeddings) -->
+        <div>
+          <div class="flex items-center justify-between text-xs text-gray-500 mb-1">
+            <span>Smart grouping</span>
+            <span v-if="embeddingError" class="text-amber-500">Unavailable</span>
+            <span v-else-if="!embeddingLoading && !embeddingError">Ready</span>
+            <span v-else-if="embeddingProgress > 0">{{ Math.round(embeddingProgress) }}%</span>
+          </div>
+          <div class="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+            <div
+              class="h-full rounded-full transition-all duration-300"
+              :class="embeddingError ? 'bg-amber-400' : 'bg-brand-500'"
+              :style="{ width: embeddingError ? '100%' : embeddingLoading ? `${Math.max(5, embeddingProgress)}%` : '100%' }"
+            />
+          </div>
         </div>
-        <p class="text-xs text-gray-400 text-center mt-2">
-          <template v-if="embeddingLoading">
-            {{ embeddingProgress > 0 ? `Downloading model... ${Math.round(embeddingProgress)}%` : 'Preparing model...' }}
+
+        <!-- Tag suggestion model -->
+        <div>
+          <div class="flex items-center justify-between text-xs text-gray-500 mb-1">
+            <span>Tag suggestions</span>
+            <span v-if="tagModelError" class="text-amber-500">Unavailable</span>
+            <span v-else-if="!tagModelLoading && !tagModelError">Ready</span>
+            <span v-else-if="tagModelProgress > 0">{{ Math.round(tagModelProgress) }}%</span>
+          </div>
+          <div class="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+            <div
+              class="h-full rounded-full transition-all duration-300"
+              :class="tagModelError ? 'bg-amber-400' : 'bg-brand-500'"
+              :style="{ width: tagModelError ? '100%' : tagModelLoading ? `${Math.max(5, tagModelProgress)}%` : '100%' }"
+            />
+          </div>
+        </div>
+
+        <p class="text-xs text-gray-400 text-center">
+          <template v-if="embeddingLoading || tagModelLoading">
+            Downloading models for first use — this only happens once
           </template>
-          <template v-else-if="embeddingError">
-            Couldn't load grouping model — using basic matching
+          <template v-else-if="embeddingError && tagModelError">
+            Models unavailable — continuing with basic matching
           </template>
           <template v-else>
-            Clustering descriptions...
+            Grouping transactions...
           </template>
         </p>
       </div>
@@ -366,7 +397,7 @@ function handleContinue() {
       <button class="text-xs text-gray-500 hover:text-gray-700 underline" @click="markRemainingOnceOff">
         Mark all remaining as once-off
       </button>
-      <span v-if="modelLoading" class="text-xs text-gray-400 italic">
+      <span v-if="tagModelLoading" class="text-xs text-gray-400 italic">
         Suggesting tags...
       </span>
     </div>
