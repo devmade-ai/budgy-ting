@@ -1,19 +1,19 @@
 <script setup lang="ts">
 /**
- * Requirement: Paginated, filterable transaction display with inline tag editing
+ * Requirement: Paginated, filterable transaction display with edit modal
  * Approach: Table on desktop, stacked cards on mobile. Client-side filtering + pagination.
- *   Click a row to expand an inline tag editor with ML suggestions.
+ *   Click a row to open a modal for editing all transaction fields.
  * Alternatives:
  *   - Table-only with horizontal scroll: Rejected — cards are much easier to scan on mobile
  *   - Virtual scrolling (vue-virtual-scroller): Deferred — paginate first, upgrade later
  *   - Server-side pagination: N/A — local-first IndexedDB app
- *   - Modal for tag editing: Rejected — inline expansion is faster for quick edits
+ *   - Inline row editor: Rejected — cramped, pushes content around
  */
 
 import { ref, computed, watch } from 'vue'
 import { formatAmount } from '@/composables/useFormat'
 import { isIncome } from '@/types/models'
-import TransactionTagEditor from '@/components/TransactionTagEditor.vue'
+import TransactionEditModal from '@/components/TransactionEditModal.vue'
 import type { Transaction } from '@/types/models'
 import type { TagSuggestion } from '@/ml/types'
 
@@ -28,7 +28,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update-transaction': [id: string, fields: Partial<Transaction>]
-  /** Emitted when a row is expanded — parent can trigger ML suggestion for this transaction */
+  /** Emitted when a row is selected — parent can trigger ML suggestion for this transaction */
   'request-suggestions': [id: string, description: string]
 }>()
 
@@ -39,8 +39,8 @@ const filterTag = ref('')
 const filterClassification = ref<'' | 'recurring' | 'once-off'>('')
 const currentPage = ref(1)
 
-/** Currently expanded row for tag editing — null = all collapsed */
-const expandedId = ref<string | null>(null)
+/** Transaction currently being edited in the modal — null = modal closed */
+const editingTransaction = ref<Transaction | null>(null)
 
 // Collect all unique tags for filter dropdown
 const allTags = computed(() => {
@@ -93,17 +93,16 @@ function formatDate(dateStr: string): string {
   return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: '2-digit' })
 }
 
-function toggleRow(txn: Transaction) {
-  if (expandedId.value === txn.id) {
-    expandedId.value = null
-  } else {
-    expandedId.value = txn.id
-    emit('request-suggestions', txn.id, txn.description)
-  }
+function openEdit(txn: Transaction) {
+  editingTransaction.value = txn
+  emit('request-suggestions', txn.id, txn.description)
 }
 
-function handleTransactionUpdate(id: string, fields: Partial<Transaction>) {
-  emit('update-transaction', id, fields)
+function handleSave(fields: Partial<Transaction>) {
+  if (editingTransaction.value) {
+    emit('update-transaction', editingTransaction.value.id, fields)
+  }
+  editingTransaction.value = null
 }
 
 function getSuggestions(id: string): TagSuggestion[] {
@@ -143,55 +142,40 @@ function getSuggestions(id: string): TagSuggestion[] {
       <div
         v-for="txn in paginatedRows"
         :key="txn.id"
-        class="bg-white rounded-lg border border-gray-200 overflow-hidden"
-        :class="{ 'ring-2 ring-blue-200': expandedId === txn.id }"
+        class="bg-white rounded-lg border border-gray-200 p-3 cursor-pointer hover:border-gray-300 transition-colors"
+        @click="openEdit(txn)"
       >
-        <div
-          class="p-3 cursor-pointer"
-          @click="toggleRow(txn)"
-        >
-          <div class="flex items-start justify-between gap-2">
-            <div class="min-w-0 flex-1">
-              <p class="text-sm font-medium text-gray-900 truncate">{{ txn.description }}</p>
-              <p class="text-xs text-gray-500 mt-0.5">
-                {{ formatDate(txn.date) }}
-                <span
-                  class="ml-1.5 inline-block text-xs px-1.5 py-0.5 rounded"
-                  :class="txn.classification === 'recurring'
-                    ? 'bg-blue-50 text-blue-600'
-                    : 'bg-gray-50 text-gray-500'"
-                >
-                  {{ txn.classification === 'recurring' ? 'Recurring' : 'Once-off' }}
-                </span>
-              </p>
-            </div>
-            <span
-              class="text-sm font-semibold whitespace-nowrap"
-              :class="isIncome(txn.amount) ? 'text-green-600' : 'text-red-600'"
-            >
-              {{ isIncome(txn.amount) ? '+' : '-' }}{{ currencyLabel }}{{ formatAmount(Math.abs(txn.amount)) }}
-            </span>
+        <div class="flex items-start justify-between gap-2">
+          <div class="min-w-0 flex-1">
+            <p class="text-sm font-medium text-gray-900 truncate">{{ txn.description }}</p>
+            <p class="text-xs text-gray-500 mt-0.5">
+              {{ formatDate(txn.date) }}
+              <span
+                class="ml-1.5 inline-block text-xs px-1.5 py-0.5 rounded"
+                :class="txn.classification === 'recurring'
+                  ? 'bg-blue-50 text-blue-600'
+                  : 'bg-gray-50 text-gray-500'"
+              >
+                {{ txn.classification === 'recurring' ? 'Recurring' : 'Once-off' }}
+              </span>
+            </p>
           </div>
-          <div v-if="txn.tags.length > 0" class="mt-1.5 flex flex-wrap gap-1">
-            <span
-              v-for="tag in txn.tags"
-              :key="tag"
-              class="text-xs bg-gray-100 text-gray-600 rounded px-1.5 py-0.5"
-            >
-              {{ tag }}
-            </span>
-          </div>
+          <span
+            class="text-sm font-semibold whitespace-nowrap"
+            :class="isIncome(txn.amount) ? 'text-green-600' : 'text-red-600'"
+          >
+            {{ isIncome(txn.amount) ? '+' : '-' }}{{ currencyLabel }}{{ formatAmount(Math.abs(txn.amount)) }}
+          </span>
         </div>
-        <!-- Inline tag editor (mobile) -->
-        <TransactionTagEditor
-          v-if="expandedId === txn.id"
-          :transaction="txn"
-          :suggestions="getSuggestions(txn.id)"
-          :suggestions-loading="!!suggestionsLoading"
-          :currency-label="currencyLabel"
-          @update:transaction="(fields) => handleTransactionUpdate(txn.id, fields)"
-          @done="expandedId = null"
-        />
+        <div v-if="txn.tags.length > 0" class="mt-1.5 flex flex-wrap gap-1">
+          <span
+            v-for="tag in txn.tags"
+            :key="tag"
+            class="text-xs bg-gray-100 text-gray-600 rounded px-1.5 py-0.5"
+          >
+            {{ tag }}
+          </span>
+        </div>
       </div>
       <div v-if="paginatedRows.length === 0" class="py-8 text-center text-gray-400 text-sm">
         {{ search || filterTag || filterClassification ? 'No matching transactions' : 'No transactions yet' }}
@@ -211,57 +195,44 @@ function getSuggestions(id: string): TagSuggestion[] {
           </tr>
         </thead>
         <tbody>
-          <template v-for="txn in paginatedRows" :key="txn.id">
-            <tr
-              class="border-b border-gray-100 hover:bg-gray-50 cursor-pointer"
-              :class="{ 'bg-blue-50/50': expandedId === txn.id }"
-              @click="toggleRow(txn)"
-            >
-              <td class="py-2 pr-3 whitespace-nowrap text-gray-500">
-                {{ formatDate(txn.date) }}
-              </td>
-              <td class="py-2 pr-3 text-gray-900 max-w-xs truncate">
-                {{ txn.description }}
-              </td>
-              <td class="py-2 pr-3">
-                <span
-                  v-for="tag in txn.tags"
-                  :key="tag"
-                  class="inline-block text-xs bg-gray-100 text-gray-600 rounded px-1.5 py-0.5 mr-1"
-                >
-                  {{ tag }}
-                </span>
-              </td>
-              <td class="py-2 pr-3">
-                <span
-                  class="text-xs px-1.5 py-0.5 rounded"
-                  :class="txn.classification === 'recurring'
-                    ? 'bg-blue-50 text-blue-600'
-                    : 'bg-gray-50 text-gray-500'"
-                >
-                  {{ txn.classification === 'recurring' ? 'Recurring' : 'Once-off' }}
-                </span>
-              </td>
-              <td
-                class="py-2 text-right font-medium whitespace-nowrap"
-                :class="isIncome(txn.amount) ? 'text-green-600' : 'text-red-600'"
+          <tr
+            v-for="txn in paginatedRows"
+            :key="txn.id"
+            class="border-b border-gray-100 hover:bg-gray-50 cursor-pointer"
+            @click="openEdit(txn)"
+          >
+            <td class="py-2 pr-3 whitespace-nowrap text-gray-500">
+              {{ formatDate(txn.date) }}
+            </td>
+            <td class="py-2 pr-3 text-gray-900 max-w-xs truncate">
+              {{ txn.description }}
+            </td>
+            <td class="py-2 pr-3">
+              <span
+                v-for="tag in txn.tags"
+                :key="tag"
+                class="inline-block text-xs bg-gray-100 text-gray-600 rounded px-1.5 py-0.5 mr-1"
               >
-                {{ isIncome(txn.amount) ? '+' : '-' }}{{ currencyLabel }}{{ formatAmount(Math.abs(txn.amount)) }}
-              </td>
-            </tr>
-            <!-- Inline tag editor row (desktop) -->
-            <tr v-if="expandedId === txn.id">
-              <td colspan="5" class="p-0">
-                <TransactionTagEditor
-                  :transaction="txn"
-                  :suggestions="getSuggestions(txn.id)"
-                  :suggestions-loading="!!suggestionsLoading"
-                  @update:tags="(tags) => handleTagUpdate(txn.id, tags)"
-                  @done="expandedId = null"
-                />
-              </td>
-            </tr>
-          </template>
+                {{ tag }}
+              </span>
+            </td>
+            <td class="py-2 pr-3">
+              <span
+                class="text-xs px-1.5 py-0.5 rounded"
+                :class="txn.classification === 'recurring'
+                  ? 'bg-blue-50 text-blue-600'
+                  : 'bg-gray-50 text-gray-500'"
+              >
+                {{ txn.classification === 'recurring' ? 'Recurring' : 'Once-off' }}
+              </span>
+            </td>
+            <td
+              class="py-2 text-right font-medium whitespace-nowrap"
+              :class="isIncome(txn.amount) ? 'text-green-600' : 'text-red-600'"
+            >
+              {{ isIncome(txn.amount) ? '+' : '-' }}{{ currencyLabel }}{{ formatAmount(Math.abs(txn.amount)) }}
+            </td>
+          </tr>
           <tr v-if="paginatedRows.length === 0">
             <td colspan="5" class="py-8 text-center text-gray-400">
               {{ search || filterTag || filterClassification ? 'No matching transactions' : 'No transactions yet' }}
@@ -292,5 +263,16 @@ function getSuggestions(id: string): TagSuggestion[] {
         </button>
       </div>
     </div>
+
+    <!-- Edit modal -->
+    <TransactionEditModal
+      v-if="editingTransaction"
+      :transaction="editingTransaction"
+      :suggestions="getSuggestions(editingTransaction.id)"
+      :suggestions-loading="!!suggestionsLoading"
+      :currency-label="currencyLabel"
+      @save="handleSave"
+      @close="editingTransaction = null"
+    />
   </div>
 </template>
