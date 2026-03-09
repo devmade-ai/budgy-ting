@@ -10,7 +10,7 @@
  *   - Per-row classification: Rejected — too tedious with 100+ rows
  */
 
-import { ref, computed, onMounted, onUnmounted, watch, reactive } from 'vue'
+import { ref, computed, onMounted, onUnmounted, reactive } from 'vue'
 import { formatAmount } from '@/composables/useFormat'
 import { isIncome } from '@/types/models'
 import type { RecurringPattern, RecurringVariability } from '@/types/models'
@@ -65,7 +65,6 @@ const groups = ref<TransactionGroup[]>([])
 //   Candidate labels are the user's existing tags from tagCache. If no tags exist
 //   (first import), no suggestions are shown — graceful degradation.
 const {
-  modelReady: tagModelReady,
   modelLoading: tagModelLoading,
   modelProgress: tagModelProgress,
   modelError: tagModelError,

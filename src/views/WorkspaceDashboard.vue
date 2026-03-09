@@ -119,7 +119,7 @@ async function handleUpdateTransaction(id: string, fields: Partial<Transaction>)
     // Update local ref for immediate UI feedback
     const idx = transactions.value.findIndex((t) => t.id === id)
     if (idx !== -1) {
-      transactions.value[idx] = { ...transactions.value[idx], ...fields }
+      transactions.value[idx] = { ...transactions.value[idx], ...fields } as Transaction
     }
 
     // Update tagCache with any new tags

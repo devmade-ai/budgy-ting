@@ -133,8 +133,9 @@ function acceptAllSuggestions() {
 function handleTagKeydown(e: KeyboardEvent) {
   if (e.key === 'Enter' || e.key === ',') {
     e.preventDefault()
-    if (selectedIndex.value >= 0 && autocompleteResults.value[selectedIndex.value]) {
-      addTag(autocompleteResults.value[selectedIndex.value])
+    const selected = autocompleteResults.value[selectedIndex.value]
+    if (selectedIndex.value >= 0 && selected) {
+      addTag(selected)
     } else if (tagInput.value.trim()) {
       addTag(tagInput.value)
     }
