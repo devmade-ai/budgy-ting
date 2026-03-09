@@ -18,6 +18,8 @@ const MODEL_ID = 'MoritzLaurer/xtremedistil-l6-h256-zeroshot-v1.1-all-33'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let classifier: any = null
+/** Guard against concurrent loadModel() calls */
+let loadingPromise: Promise<void> | null = null
 
 function post(msg: WorkerResponse) {
   self.postMessage(msg)
@@ -29,30 +31,37 @@ async function loadModel() {
     return
   }
 
+  // Prevent concurrent loads — return the in-flight promise if one exists
+  if (loadingPromise) return loadingPromise
+
   post({ type: 'model-loading' })
 
-  try {
-    const { pipeline } = await import('@huggingface/transformers')
+  loadingPromise = (async () => {
+    try {
+      const { pipeline } = await import('@huggingface/transformers')
 
-    classifier = await pipeline(
-      'zero-shot-classification',
-      MODEL_ID,
-      {
-        dtype: 'q8',
-        // ProgressInfo is a union type — only 'progress' events have .progress
-        progress_callback: (progress: Record<string, unknown>) => {
-          if (typeof progress.progress === 'number') {
-            post({ type: 'model-progress', progress: progress.progress })
-          }
+      classifier = await pipeline(
+        'zero-shot-classification',
+        MODEL_ID,
+        {
+          dtype: 'q8',
+          // ProgressInfo is a union type — only 'progress' events have .progress
+          progress_callback: (progress: Record<string, unknown>) => {
+            if (typeof progress.progress === 'number') {
+              post({ type: 'model-progress', progress: progress.progress })
+            }
+          },
         },
-      },
-    )
+      )
 
-    post({ type: 'model-ready' })
-  } catch (err) {
-    classifier = null
-    post({ type: 'model-error', error: String(err) })
-  }
+      post({ type: 'model-ready' })
+    } catch (err) {
+      classifier = null
+      post({ type: 'model-error', error: String(err) })
+    } finally {
+      loadingPromise = null
+    }
+  })()
 }
 
 async function suggest(

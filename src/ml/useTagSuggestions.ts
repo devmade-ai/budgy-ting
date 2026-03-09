@@ -15,8 +15,7 @@
 import { ref } from 'vue'
 import { db } from '@/db'
 import { debugLog } from '@/debug/debugLog'
-import type { WorkerResponse, TagSuggestion } from './types'
-import type { WorkerRequest } from './types'
+import type { WorkerResponse, WorkerRequest, TagSuggestion } from './types'
 
 // ── Module-level singleton state ──
 
@@ -30,12 +29,17 @@ const confidenceThreshold = ref(0.5)
 
 /** Model load timeout — give up if download takes too long (slow network) */
 const MODEL_LOAD_TIMEOUT_MS = 30_000
-/** Per-batch inference timeout — resolve with empty results rather than hanging */
+/** Per-item inference timeout — single suggestions and batch base timeout */
 const INFERENCE_TIMEOUT_MS = 10_000
+/** Extra time per batch item beyond the base — ~300ms per description */
+const BATCH_PER_ITEM_MS = 300
 
 let worker: Worker | null = null
 let requestId = 0
 const timeouts: ReturnType<typeof setTimeout>[] = []
+
+/** Reference count — only dispose the worker when all consumers have released */
+let refCount = 0
 
 // Pending request callbacks keyed by request id
 const pending = new Map<string, {
@@ -82,6 +86,7 @@ function handleWorkerMessage(event: MessageEvent<WorkerResponse>) {
     case 'model-ready':
       modelLoading.value = false
       modelReady.value = true
+      modelError.value = null // Clear stale timeout error if model eventually loaded
       debugLog('ml', 'success', 'Tag suggestion model ready')
       break
 
@@ -236,6 +241,9 @@ async function suggestTagsBatch(descriptions: string[]): Promise<TagSuggestion[]
   const id = String(++requestId)
   inferring.value = true
 
+  // Scale timeout with batch size — base + per-item allowance
+  const batchTimeout = INFERENCE_TIMEOUT_MS + descriptions.length * BATCH_PER_ITEM_MS
+
   return new Promise<TagSuggestion[][]>((resolve, reject) => {
     const timeout = setTimeout(() => {
       if (pending.has(id)) {
@@ -244,7 +252,7 @@ async function suggestTagsBatch(descriptions: string[]): Promise<TagSuggestion[]
         debugLog('ml', 'warn', 'Batch inference timed out', { count: descriptions.length })
         resolve(descriptions.map(() => []))
       }
-    }, INFERENCE_TIMEOUT_MS)
+    }, batchTimeout)
     timeouts.push(timeout)
 
     pending.set(id, {
@@ -263,10 +271,18 @@ async function suggestTagsBatch(descriptions: string[]): Promise<TagSuggestion[]
 }
 
 /**
- * Terminate the worker and free memory.
- * Call when the import wizard unmounts — the model is not needed outside imports.
+ * Release one consumer reference. Only terminates the worker when the last
+ * consumer releases (ref count drops to 0). This prevents the Dashboard
+ * and ImportWizard from destroying each other's shared worker during
+ * route transitions.
  */
 function dispose() {
+  refCount = Math.max(0, refCount - 1)
+  if (refCount > 0) {
+    debugLog('ml', 'info', `Tag suggestion consumer released (${refCount} remaining)`)
+    return
+  }
+
   timeouts.forEach(clearTimeout)
   timeouts.length = 0
 
@@ -290,6 +306,7 @@ function dispose() {
 }
 
 export function useTagSuggestions() {
+  refCount++
   return {
     modelLoading,
     modelReady,

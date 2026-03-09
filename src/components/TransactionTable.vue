@@ -88,6 +88,11 @@ watch([search, filterTag, filterClassification], () => {
   currentPage.value = 1
 })
 
+// Clamp page when data changes (e.g. transaction deleted externally)
+watch(totalPages, (pages) => {
+  if (currentPage.value > pages) currentPage.value = pages
+})
+
 function formatDate(dateStr: string): string {
   const d = new Date(dateStr + 'T00:00:00')
   return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: '2-digit' })
@@ -103,6 +108,13 @@ function handleSave(fields: Partial<Transaction>) {
     emit('update-transaction', editingTransaction.value.id, fields)
   }
   editingTransaction.value = null
+}
+
+function handleRowKeydown(e: KeyboardEvent, txn: Transaction) {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault()
+    openEdit(txn)
+  }
 }
 
 function getSuggestions(id: string): TagSuggestion[] {
@@ -142,8 +154,11 @@ function getSuggestions(id: string): TagSuggestion[] {
       <div
         v-for="txn in paginatedRows"
         :key="txn.id"
-        class="bg-white rounded-lg border border-gray-200 p-3 cursor-pointer hover:border-gray-300 transition-colors"
+        role="button"
+        tabindex="0"
+        class="bg-white rounded-lg border border-gray-200 p-3 cursor-pointer hover:border-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400"
         @click="openEdit(txn)"
+        @keydown="handleRowKeydown($event, txn)"
       >
         <div class="flex items-start justify-between gap-2">
           <div class="min-w-0 flex-1">
@@ -198,8 +213,10 @@ function getSuggestions(id: string): TagSuggestion[] {
           <tr
             v-for="txn in paginatedRows"
             :key="txn.id"
-            class="border-b border-gray-100 hover:bg-gray-50 cursor-pointer"
+            tabindex="0"
+            class="border-b border-gray-100 hover:bg-gray-50 cursor-pointer focus:outline-none focus:bg-blue-50"
             @click="openEdit(txn)"
+            @keydown="handleRowKeydown($event, txn)"
           >
             <td class="py-2 pr-3 whitespace-nowrap text-gray-500">
               {{ formatDate(txn.date) }}

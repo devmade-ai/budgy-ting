@@ -10,7 +10,7 @@
  *   - Separate edit route: Rejected — breaks single-screen dashboard flow
  */
 
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onUnmounted } from 'vue'
 import { db } from '@/db'
 import { useDialogA11y } from '@/composables/useDialogA11y'
 import TagSuggestions from '@/components/TagSuggestions.vue'
@@ -46,6 +46,12 @@ const autocompleteResults = ref<string[]>([])
 const showAutocomplete = ref(false)
 const selectedIndex = ref(-1)
 
+// Timer cleanup for blur handler
+const blurTimeout = ref<ReturnType<typeof setTimeout> | null>(null)
+onUnmounted(() => {
+  if (blurTimeout.value) clearTimeout(blurTimeout.value)
+})
+
 // Dismissed ML suggestions
 const dismissed = ref(new Set<string>())
 
@@ -55,15 +61,34 @@ const filteredSuggestions = computed(() =>
   ),
 )
 
+// Validation — description required, amount must be a valid number
+const validationError = ref('')
+
 function handleSave() {
+  const trimmedDesc = localDescription.value.trim()
+  if (!trimmedDesc) {
+    validationError.value = 'Description is required.'
+    return
+  }
+  if (isNaN(localAmount.value) || localAmount.value < 0) {
+    validationError.value = 'Enter a valid amount.'
+    return
+  }
+  validationError.value = ''
+
   const signedAmount = localIsIncome.value ? Math.abs(localAmount.value) : -Math.abs(localAmount.value)
   emit('save', {
-    description: localDescription.value.trim(),
+    description: trimmedDesc,
     date: localDate.value,
     amount: signedAmount,
     classification: localClassification.value,
     tags: [...localTags.value],
   })
+}
+
+function handleBlur() {
+  if (blurTimeout.value) clearTimeout(blurTimeout.value)
+  blurTimeout.value = setTimeout(() => showAutocomplete.value = false, 150)
 }
 
 // ── Tag management ──
@@ -280,7 +305,7 @@ watch(tagInput, updateAutocomplete)
                 placeholder="Add a tag..."
                 class="input text-sm w-full min-h-[44px]"
                 @keydown="handleTagKeydown"
-                @blur="() => setTimeout(() => showAutocomplete = false, 150)"
+                @blur="handleBlur"
                 @focus="updateAutocomplete"
               />
               <div
@@ -301,8 +326,11 @@ watch(tagInput, updateAutocomplete)
           </div>
         </div>
 
+        <!-- Validation error -->
+        <p v-if="validationError" class="text-sm text-red-600 mt-4">{{ validationError }}</p>
+
         <!-- Action buttons -->
-        <div class="flex gap-3 mt-6">
+        <div class="flex gap-3 mt-4">
           <button
             class="btn-secondary flex-1"
             @click="emit('close')"
