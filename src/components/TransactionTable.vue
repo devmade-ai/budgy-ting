@@ -27,7 +27,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  'update-tags': [id: string, tags: string[]]
+  'update-transaction': [id: string, fields: Partial<Transaction>]
   /** Emitted when a row is expanded — parent can trigger ML suggestion for this transaction */
   'request-suggestions': [id: string, description: string]
 }>()
@@ -102,8 +102,8 @@ function toggleRow(txn: Transaction) {
   }
 }
 
-function handleTagUpdate(id: string, tags: string[]) {
-  emit('update-tags', id, tags)
+function handleTransactionUpdate(id: string, fields: Partial<Transaction>) {
+  emit('update-transaction', id, fields)
 }
 
 function getSuggestions(id: string): TagSuggestion[] {
@@ -188,7 +188,8 @@ function getSuggestions(id: string): TagSuggestion[] {
           :transaction="txn"
           :suggestions="getSuggestions(txn.id)"
           :suggestions-loading="!!suggestionsLoading"
-          @update:tags="(tags) => handleTagUpdate(txn.id, tags)"
+          :currency-label="currencyLabel"
+          @update:transaction="(fields) => handleTransactionUpdate(txn.id, fields)"
           @done="expandedId = null"
         />
       </div>

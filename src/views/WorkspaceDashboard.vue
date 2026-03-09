@@ -111,23 +111,23 @@ watch(cashOnHand, (val) => {
   }, 500)
 })
 
-// Handle tag updates from TransactionTable
-async function handleUpdateTags(id: string, tags: string[]) {
+// Handle transaction field updates from TransactionTable
+async function handleUpdateTransaction(id: string, fields: Partial<Transaction>) {
   try {
-    await db.transactions.update(id, { tags, updatedAt: new Date().toISOString() })
+    await db.transactions.update(id, { ...fields, updatedAt: new Date().toISOString() })
 
     // Update local ref for immediate UI feedback
     const idx = transactions.value.findIndex((t) => t.id === id)
     if (idx !== -1) {
-      transactions.value[idx] = { ...transactions.value[idx], tags }
+      transactions.value[idx] = { ...transactions.value[idx], ...fields }
     }
 
     // Update tagCache with any new tags
-    if (tags.length > 0) {
-      await touchTags(tags)
+    if (fields.tags && fields.tags.length > 0) {
+      await touchTags(fields.tags)
     }
   } catch {
-    error.value = 'Couldn\'t save tag changes. Please try again.'
+    error.value = 'Couldn\'t save changes. Please try again.'
   }
 }
 
@@ -203,7 +203,7 @@ async function handleRequestSuggestions(id: string, description: string) {
         :currency-label="workspace.currencyLabel"
         :tag-suggestions="tagSuggestions"
         :suggestions-loading="inferring"
-        @update-tags="handleUpdateTags"
+        @update-transaction="handleUpdateTransaction"
         @request-suggestions="handleRequestSuggestions"
       />
     </div>

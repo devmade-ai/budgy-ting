@@ -1,38 +1,45 @@
 <script setup lang="ts">
 /**
- * Requirement: Inline tag editor for transactions in the dashboard table
- * Approach: Renders below an expanded row — shows current tags as removable chips,
- *   ML suggestions via TagSuggestions, and a text input for manual tag entry.
- *   Autocomplete from tagCache via useTagAutocomplete pattern.
+ * Requirement: Inline transaction editor for the dashboard table
+ * Approach: Renders below an expanded row — editable fields for description, date,
+ *   amount, classification, and tags. Tags section includes ML suggestions and
+ *   autocomplete from tagCache.
  * Alternatives:
- *   - Modal dialog: Rejected — too heavy for quick tag edits
- *   - Full transaction edit form: Rejected — only tags need editing right now
+ *   - Modal dialog: Rejected — too heavy for quick inline edits
+ *   - Separate edit page/route: Rejected — breaks single-screen dashboard flow
  */
 
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { db } from '@/db'
 import TagSuggestions from '@/components/TagSuggestions.vue'
 import type { TagSuggestion } from '@/ml/types'
-import type { Transaction } from '@/types/models'
+import type { Transaction, TransactionClassification } from '@/types/models'
 
 const props = defineProps<{
   transaction: Transaction
   suggestions: TagSuggestion[]
   suggestionsLoading: boolean
+  currencyLabel: string
 }>()
 
 const emit = defineEmits<{
-  'update:tags': [tags: string[]]
+  'update:transaction': [fields: Partial<Transaction>]
   done: []
 }>()
 
+// Local copies for immediate UI feedback
+const localDescription = ref(props.transaction.description)
+const localDate = ref(props.transaction.date)
+const localAmount = ref(Math.abs(props.transaction.amount))
+const localIsIncome = ref(props.transaction.amount >= 0)
+const localClassification = ref<TransactionClassification>(props.transaction.classification)
+const localTags = ref<string[]>([...props.transaction.tags])
+
+// Tag input state
 const tagInput = ref('')
 const autocompleteResults = ref<string[]>([])
 const showAutocomplete = ref(false)
 const selectedIndex = ref(-1)
-
-// Local copy of tags for immediate UI feedback
-const localTags = ref<string[]>([...props.transaction.tags])
 
 // Dismissed ML suggestions (don't re-show after dismiss)
 const dismissed = ref(new Set<string>())
@@ -46,24 +53,43 @@ const filteredSuggestions = computed(() =>
 
 // Sync when parent transaction changes
 watch(
-  () => props.transaction.tags,
-  (newTags) => {
-    localTags.value = [...newTags]
+  () => props.transaction,
+  (txn) => {
+    localDescription.value = txn.description
+    localDate.value = txn.date
+    localAmount.value = Math.abs(txn.amount)
+    localIsIncome.value = txn.amount >= 0
+    localClassification.value = txn.classification
+    localTags.value = [...txn.tags]
   },
 )
+
+// Emit changes on each field update (debounced at parent level)
+function emitUpdate() {
+  const signedAmount = localIsIncome.value ? Math.abs(localAmount.value) : -Math.abs(localAmount.value)
+  emit('update:transaction', {
+    description: localDescription.value.trim(),
+    date: localDate.value,
+    amount: signedAmount,
+    classification: localClassification.value,
+    tags: [...localTags.value],
+  })
+}
+
+// ── Tag management ──
 
 function addTag(tag: string) {
   const trimmed = tag.trim()
   if (!trimmed || localTags.value.includes(trimmed)) return
   localTags.value.push(trimmed)
-  emit('update:tags', [...localTags.value])
   tagInput.value = ''
   showAutocomplete.value = false
+  emitUpdate()
 }
 
 function removeTag(tag: string) {
   localTags.value = localTags.value.filter((t) => t !== tag)
-  emit('update:tags', [...localTags.value])
+  emitUpdate()
 }
 
 function acceptSuggestion(tag: string) {
@@ -80,10 +106,10 @@ function acceptAllSuggestions() {
       localTags.value.push(s.tag)
     }
   }
-  emit('update:tags', [...localTags.value])
+  emitUpdate()
 }
 
-function handleInputKeydown(e: KeyboardEvent) {
+function handleTagKeydown(e: KeyboardEvent) {
   if (e.key === 'Enter' || e.key === ',') {
     e.preventDefault()
     if (selectedIndex.value >= 0 && autocompleteResults.value[selectedIndex.value]) {
@@ -143,72 +169,132 @@ watch(tagInput, updateAutocomplete)
 
 <template>
   <div
-    class="bg-gray-50 border-t border-gray-200 px-3 py-3"
+    class="bg-gray-50 border-t border-gray-200 px-3 py-3 space-y-3"
     @click.stop
   >
-    <!-- Current tags -->
-    <div class="flex flex-wrap items-center gap-1.5 mb-2">
-      <span class="text-xs text-gray-500 mr-1">Tags:</span>
-      <span
-        v-for="tag in localTags"
-        :key="tag"
-        class="inline-flex items-center gap-0.5 text-xs bg-blue-50 text-blue-700 rounded px-1.5 py-0.5"
-      >
-        {{ tag }}
-        <button
-          class="i-lucide-x text-[10px] opacity-60 hover:opacity-100 ml-0.5"
-          :title="`Remove ${tag}`"
-          @click="removeTag(tag)"
+    <!-- Row 1: Description + Date -->
+    <div class="flex flex-wrap gap-2">
+      <div class="flex-1 min-w-48">
+        <label class="text-xs text-gray-500 mb-0.5 block">Description</label>
+        <input
+          v-model="localDescription"
+          type="text"
+          class="input text-xs w-full min-h-[36px]"
+          @change="emitUpdate()"
         />
-      </span>
-      <span v-if="localTags.length === 0" class="text-xs text-gray-400 italic">
-        No tags
-      </span>
+      </div>
+      <div class="w-36">
+        <label class="text-xs text-gray-500 mb-0.5 block">Date</label>
+        <input
+          v-model="localDate"
+          type="date"
+          class="input text-xs w-full min-h-[36px]"
+          @change="emitUpdate()"
+        />
+      </div>
     </div>
 
-    <!-- ML suggestions -->
-    <TagSuggestions
-      v-if="filteredSuggestions.length > 0"
-      :suggestions="filteredSuggestions"
-      @accept="acceptSuggestion"
-      @dismiss="dismissSuggestion"
-      @accept-all="acceptAllSuggestions"
-    />
-    <div v-if="suggestionsLoading" class="flex items-center gap-1 mt-1 text-xs text-gray-400">
-      <span class="i-lucide-loader-2 animate-spin text-xs" />
-      Suggesting tags...
-    </div>
-
-    <!-- Manual tag input with autocomplete -->
-    <div class="relative mt-2">
-      <input
-        v-model="tagInput"
-        type="text"
-        placeholder="Add a tag..."
-        class="input text-xs w-full min-h-[36px]"
-        @keydown="handleInputKeydown"
-        @blur="() => setTimeout(() => showAutocomplete = false, 150)"
-        @focus="updateAutocomplete"
-      />
-      <!-- Autocomplete dropdown -->
-      <div
-        v-if="showAutocomplete"
-        class="absolute z-10 left-0 right-0 mt-0.5 bg-white border border-gray-200 rounded shadow-lg max-h-40 overflow-y-auto"
-      >
-        <button
-          v-for="(result, i) in autocompleteResults"
-          :key="result"
-          class="block w-full text-left text-xs px-3 py-1.5 hover:bg-blue-50"
-          :class="{ 'bg-blue-50': i === selectedIndex }"
-          @mousedown.prevent="addTag(result)"
+    <!-- Row 2: Amount + Type + Classification -->
+    <div class="flex flex-wrap items-end gap-2">
+      <div class="w-32">
+        <label class="text-xs text-gray-500 mb-0.5 block">Amount ({{ currencyLabel }})</label>
+        <input
+          v-model.number="localAmount"
+          type="number"
+          min="0"
+          step="0.01"
+          class="input text-xs w-full min-h-[36px]"
+          @change="emitUpdate()"
+        />
+      </div>
+      <div class="w-28">
+        <label class="text-xs text-gray-500 mb-0.5 block">Direction</label>
+        <select
+          v-model="localIsIncome"
+          class="input text-xs w-full min-h-[36px]"
+          @change="emitUpdate()"
         >
-          {{ result }}
-        </button>
+          <option :value="false">Expense</option>
+          <option :value="true">Income</option>
+        </select>
+      </div>
+      <div class="w-28">
+        <label class="text-xs text-gray-500 mb-0.5 block">Type</label>
+        <select
+          v-model="localClassification"
+          class="input text-xs w-full min-h-[36px]"
+          @change="emitUpdate()"
+        >
+          <option value="recurring">Recurring</option>
+          <option value="once-off">Once-off</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Row 3: Tags -->
+    <div>
+      <label class="text-xs text-gray-500 mb-0.5 block">Tags</label>
+      <div class="flex flex-wrap items-center gap-1.5 mb-1.5">
+        <span
+          v-for="tag in localTags"
+          :key="tag"
+          class="inline-flex items-center gap-0.5 text-xs bg-blue-50 text-blue-700 rounded px-1.5 py-0.5"
+        >
+          {{ tag }}
+          <button
+            class="i-lucide-x text-[10px] opacity-60 hover:opacity-100 ml-0.5"
+            :title="`Remove ${tag}`"
+            @click="removeTag(tag)"
+          />
+        </span>
+        <span v-if="localTags.length === 0" class="text-xs text-gray-400 italic">
+          No tags
+        </span>
+      </div>
+
+      <!-- ML suggestions -->
+      <TagSuggestions
+        v-if="filteredSuggestions.length > 0"
+        :suggestions="filteredSuggestions"
+        @accept="acceptSuggestion"
+        @dismiss="dismissSuggestion"
+        @accept-all="acceptAllSuggestions"
+      />
+      <div v-if="suggestionsLoading" class="flex items-center gap-1 mt-1 text-xs text-gray-400">
+        <span class="i-lucide-loader-2 animate-spin text-xs" />
+        Suggesting tags...
+      </div>
+
+      <!-- Manual tag input with autocomplete -->
+      <div class="relative mt-1.5">
+        <input
+          v-model="tagInput"
+          type="text"
+          placeholder="Add a tag..."
+          class="input text-xs w-full min-h-[36px]"
+          @keydown="handleTagKeydown"
+          @blur="() => setTimeout(() => showAutocomplete = false, 150)"
+          @focus="updateAutocomplete"
+        />
+        <div
+          v-if="showAutocomplete"
+          class="absolute z-10 left-0 right-0 mt-0.5 bg-white border border-gray-200 rounded shadow-lg max-h-40 overflow-y-auto"
+        >
+          <button
+            v-for="(result, i) in autocompleteResults"
+            :key="result"
+            class="block w-full text-left text-xs px-3 py-1.5 hover:bg-blue-50"
+            :class="{ 'bg-blue-50': i === selectedIndex }"
+            @mousedown.prevent="addTag(result)"
+          >
+            {{ result }}
+          </button>
+        </div>
       </div>
     </div>
 
     <!-- Done button -->
-    <div class="mt-2 flex justify-end">
+    <div class="flex justify-end">
       <button
         class="text-xs text-blue-600 hover:text-blue-800 font-medium px-2 py-1"
         @click="emit('done')"
