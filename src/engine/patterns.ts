@@ -14,6 +14,7 @@
 import { median, standardDeviation, mean } from 'simple-statistics'
 import type { Transaction, Frequency, RecurringPattern } from '@/types/models'
 import { formatDate } from './dateUtils'
+import { debugLog } from '@/debug/debugLog'
 
 /**
  * Coefficient of variation (stddev / mean) threshold above which a recurring item
@@ -242,7 +243,15 @@ export function detectAllPatterns(
   }
 
   // Sort by confidence descending
-  return patterns.sort((a, b) => b.confidence - a.confidence)
+  const sorted = patterns.sort((a, b) => b.confidence - a.confidence)
+
+  debugLog('engine', 'info', 'Patterns detected', {
+    groups: groups.size,
+    detected: sorted.length,
+    frequencies: sorted.map((p) => `${p.description.slice(0, 20)}:${p.frequency}@${Math.round(p.confidence * 100)}%`),
+  })
+
+  return sorted
 }
 
 /** Shared input type for projection functions */

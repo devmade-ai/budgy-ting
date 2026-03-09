@@ -19,6 +19,7 @@ import { standardDeviation, mean } from 'simple-statistics'
 import type { Transaction, RecurringPattern } from '@/types/models'
 import { projectPattern } from './patterns'
 import { formatDate } from './dateUtils'
+import { debugLog } from '@/debug/debugLog'
 
 // ── Holt's Double Exponential Smoothing ──
 
@@ -453,6 +454,16 @@ export function buildForecast(
     recurringDaily, variableState, variableMethod, variableDailyForecast,
     predictionErrors, dowFactors, startDate, endDate,
   )
+
+  debugLog('engine', 'info', 'Forecast built', {
+    method: variableMethod,
+    forecastDays: daily.length,
+    recurringPatterns: patterns.filter((p) => p.isActive).length,
+    residualDays: residualSeries.length,
+    hasDowFactors: dowFactors !== null,
+    holtLevel: variableState?.level,
+    holtTrend: variableState?.trend,
+  })
 
   return { daily, variableState, dowFactors, predictionErrors, variableMethod }
 }

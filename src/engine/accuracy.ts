@@ -15,6 +15,7 @@
 import { mean, standardDeviation } from 'simple-statistics'
 import type { Transaction } from '@/types/models'
 import type { DailyForecastPoint } from './forecast'
+import { debugLog } from '@/debug/debugLog'
 
 export interface DailyAccuracyPoint {
   date: string
@@ -137,7 +138,7 @@ export function summarizeAccuracy(
   const hitsCount = points.filter((p) => p.absoluteError <= threshold).length
   const hitRate = (hitsCount / points.length) * 100
 
-  return {
+  const summary: AccuracySummary = {
     mae: Math.round(mae * 100) / 100,
     rmse: Math.round(rmse * 100) / 100,
     bias: Math.round(bias * 100) / 100,
@@ -146,4 +147,14 @@ export function summarizeAccuracy(
     hitRateThreshold: Math.round(threshold * 100) / 100,
     dataPoints: points.length,
   }
+
+  debugLog('engine', 'info', 'Accuracy computed', {
+    dataPoints: summary.dataPoints,
+    mae: summary.mae,
+    wmape: summary.wmape,
+    bias: summary.bias,
+    hitRate: summary.hitRate,
+  })
+
+  return summary
 }

@@ -12,6 +12,8 @@
  * Does NOT handle: multi-line quoted fields (rare in financial CSVs), custom delimiters
  */
 
+import { debugLog } from '@/debug/debugLog'
+
 export interface ParsedCSV {
   headers: string[]
   rows: Record<string, string>[]
@@ -53,7 +55,15 @@ export function parseCSV(content: string): ParsedCSV {
     rows.push(row)
   }
 
-  return { headers, rows, totalRows: rows.length, errors }
+  const result = { headers, rows, totalRows: rows.length, errors }
+
+  debugLog('import', errors.length > 0 ? 'warn' : 'info', 'CSV parsed', {
+    columns: headers.length,
+    rows: rows.length,
+    errors: errors.length,
+  })
+
+  return result
 }
 
 function splitCSVLines(content: string): string[] {

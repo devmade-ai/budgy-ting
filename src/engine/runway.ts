@@ -13,6 +13,7 @@
 
 import type { DailyForecastPoint } from './forecast'
 import { formatDate } from './dateUtils'
+import { debugLog } from '@/debug/debugLog'
 
 export interface RunwayResult {
   /** Days until balance hits zero (null = cash lasts beyond forecast horizon) */
@@ -79,7 +80,7 @@ export function calculateRunway(
     }
 
     if (balance <= 0) {
-      return {
+      const result: RunwayResult = {
         daysRemaining: i + 1,
         depletionDate: day.date,
         endBalance: Math.round(balance * 100) / 100,
@@ -87,17 +88,32 @@ export function calculateRunway(
         minimumBalanceDate: minDate,
         dailyBalance,
       }
+      debugLog('engine', 'warn', 'Runway depleted', {
+        daysRemaining: result.daysRemaining,
+        depletionDate: result.depletionDate,
+        minimumBalance: result.minimumBalance,
+        cashOnHand,
+      })
+      return result
     }
   }
 
-  return {
-    daysRemaining: null, // cash lasts beyond forecast horizon
+  const result: RunwayResult = {
+    daysRemaining: null,
     depletionDate: null,
     endBalance: Math.round(balance * 100) / 100,
     minimumBalance: Math.round(minBalance * 100) / 100,
     minimumBalanceDate: minDate,
     dailyBalance,
   }
+  debugLog('engine', 'info', 'Runway calculated', {
+    forecastDays: dailyForecasts.length,
+    endBalance: result.endBalance,
+    minimumBalance: result.minimumBalance,
+    minimumBalanceDate: result.minimumBalanceDate,
+    cashOnHand,
+  })
+  return result
 }
 
 /**

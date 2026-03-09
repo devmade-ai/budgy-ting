@@ -23,6 +23,7 @@ import { hapticSuccess } from '@/composables/useHaptic'
 import { useToast } from '@/composables/useToast'
 import { parseDate, parseAmount, isDuplicate } from '@/engine/matching'
 import { detectFrequency, detectAnchorDay, calculateIntervals } from '@/engine/patterns'
+import { debugLog } from '@/debug/debugLog'
 import ErrorAlert from '@/components/ErrorAlert.vue'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import ImportStepUpload from './import-steps/ImportStepUpload.vue'
@@ -126,6 +127,14 @@ function handleUploadComplete(data: {
   }
 
   parsedRows.value = rows
+
+  debugLog('import', rows.length > 0 ? 'info' : 'warn', 'CSV parsed', {
+    totalRows: data.parsedData.totalRows,
+    validRows: rows.length,
+    skipped,
+    parseErrors: data.parsedData.errors.length,
+    dateFormat: data.dateFormatIndex,
+  })
 
   if (rows.length === 0) {
     error.value = skipped > 0
@@ -274,12 +283,21 @@ async function handleConfirmImport() {
 
     saving.value = false
 
+    debugLog('import', 'success', 'Import saved', {
+      transactions: newTransactions.length,
+      newPatterns: patternUpdates.filter((p) => p.isNew).length,
+      updatedPatterns: patternUpdates.filter((p) => !p.isNew).length,
+      tags: allTags.size,
+      batchId,
+    })
+
     // Requirement: Success feedback before navigating away
     // Approach: Toast + haptic pulse, then navigate. Brief visual confirmation.
     hapticSuccess()
     showToast(`Imported ${newTransactions.length} transaction${newTransactions.length === 1 ? '' : 's'}`)
     router.push({ name: 'workspace-detail', params: { id: props.id } })
-  } catch {
+  } catch (e) {
+    debugLog('import', 'error', 'Import save failed', { error: String(e) })
     error.value = 'Couldn\'t save imported data. Please try again.'
     saving.value = false
   }

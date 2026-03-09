@@ -17,6 +17,7 @@ import Dexie, { type EntityTable } from 'dexie'
 import type {
   Workspace, Transaction, RecurringPattern, ImportBatch, TagCache, EmbeddingCache,
 } from '@/types/models'
+import { debugLog } from '@/debug/debugLog'
 
 const db = new Dexie('budgy-ting') as Dexie & {
   workspaces: EntityTable<Workspace, 'id'>
@@ -87,7 +88,7 @@ db.version(6).stores({
   actuals: null,
   categoryMappings: null,
 }).upgrade((tx) => {
-  // Clean slate: clear workspaces so demo data re-seeds on next load
+  debugLog('db', 'info', 'Schema upgrade v6: clean slate migration')
   return tx.table('workspaces').clear()
 })
 
@@ -104,7 +105,7 @@ db.version(7).stores({
   importBatches: 'id, workspaceId, importedAt',
   tagCache: 'tag, lastUsed',
 }).upgrade(async (tx) => {
-  // Backfill existing patterns with variability: 'fixed'
+  debugLog('db', 'info', 'Schema upgrade v7: backfilling pattern variability')
   const patterns = tx.table('patterns')
   await patterns.toCollection().modify((pattern: Record<string, unknown>) => {
     if (!pattern['variability']) {
@@ -126,6 +127,10 @@ db.version(8).stores({
   importBatches: 'id, workspaceId, importedAt',
   tagCache: 'tag, lastUsed',
   embeddingCache: 'text, computedAt',
+})
+
+db.on('ready', () => {
+  debugLog('db', 'success', 'Database ready', { version: db.verno })
 })
 
 export { db }
