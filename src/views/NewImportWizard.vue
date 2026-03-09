@@ -15,6 +15,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { db } from '@/db'
 import { useTagSuggestions } from '@/ml/useTagSuggestions'
+import { useEmbeddings } from '@/ml/useEmbeddings'
 import { generateId } from '@/composables/useId'
 import { nowISO } from '@/composables/useTimestamp'
 import { touchTags } from '@/composables/useTagAutocomplete'
@@ -34,6 +35,7 @@ const props = defineProps<{ id: string }>()
 const router = useRouter()
 const { show: showToast } = useToast()
 const { preloadModel, dispose } = useTagSuggestions()
+const { preloadModel: preloadEmbeddings, dispose: disposeEmbeddings } = useEmbeddings()
 
 /** Step labels for indicator text */
 const stepLabels = ['Upload', 'Classify', 'Confirm'] as const
@@ -45,8 +47,9 @@ const loading = ref(true)
 const error = ref('')
 
 onMounted(async () => {
-  // Start ML model download early — it loads in a Web Worker while user maps columns in Step 1
+  // Start ML model downloads early — they load in Web Workers while user maps columns in Step 1
   preloadModel()
+  preloadEmbeddings()
 
   try {
     const [ws, patterns, txns] = await Promise.all([
@@ -71,6 +74,7 @@ onMounted(async () => {
 // Free ML worker memory when leaving the import wizard
 onUnmounted(() => {
   dispose()
+  disposeEmbeddings()
 })
 
 // ── Wizard state ──

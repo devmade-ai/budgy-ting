@@ -9,11 +9,12 @@
  *   - Per-row classification: Rejected — too tedious with 100+ rows
  */
 
-import { ref, computed, onMounted, watch, reactive } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, reactive } from 'vue'
 import { formatAmount } from '@/composables/useFormat'
 import { isIncome } from '@/types/models'
 import type { RecurringPattern, RecurringVariability } from '@/types/models'
 import { useTagSuggestions } from '@/ml/useTagSuggestions'
+import { useEmbeddings } from '@/ml/useEmbeddings'
 import TagSuggestions from '@/components/TagSuggestions.vue'
 import type { TagSuggestion } from '@/ml/types'
 
@@ -64,6 +65,25 @@ const groups = ref<TransactionGroup[]>([])
 //   (first import), no suggestions are shown — graceful degradation.
 const { modelReady, modelLoading, suggestTagsBatch } = useTagSuggestions()
 const groupSuggestions = reactive(new Map<string, TagSuggestion[]>())
+
+// ── Embedding-based fuzzy grouping ──
+// Requirement: Merge semantically similar descriptions (e.g. "WOOLWORTHS SANDTON"
+//   and "WOOLWORTHS CBD 0232") into one group, rather than requiring exact match.
+// Approach: If embedding model is already loaded (cached from prior import), cluster
+//   group descriptions after exact grouping. Only runs on mount — no re-grouping after
+//   user starts classifying (avoids confusing UI jumps).
+// Alternatives:
+//   - Watch modelReady and re-group later: Rejected — groups jumping after user interaction
+//   - Always wait for model: Rejected — blocks UI on first import when model isn't cached
+const {
+  modelReady: embeddingReady,
+  clusterTexts,
+  dispose: disposeEmbeddings,
+} = useEmbeddings()
+
+onUnmounted(() => {
+  disposeEmbeddings()
+})
 
 async function requestSuggestions() {
   const unmatched = groups.value.filter((g) => !g.matchedPatternId && g.tags.length === 0)
@@ -118,8 +138,59 @@ function acceptAllSuggestions(group: TransactionGroup) {
   groupSuggestions.delete(key)
 }
 
-onMounted(() => {
-  // Group by description (case-insensitive)
+/**
+ * Merge semantically similar groups using embedding-based clustering.
+ * Only called if the embedding model is already loaded. Mutates groups.value.
+ */
+async function mergeSimilarGroups() {
+  if (groups.value.length <= 1) return
+
+  const descriptions = groups.value.map((g) => g.description)
+  const clusters = await clusterTexts(descriptions, 0.75)
+
+  // Only merge if clustering actually reduced the number of groups
+  if (clusters.length >= descriptions.length) return
+
+  const mergedGroups: TransactionGroup[] = []
+  for (const cluster of clusters) {
+    if (cluster.memberIndices.length === 1) {
+      mergedGroups.push(groups.value[cluster.memberIndices[0]!]!)
+    } else {
+      // Merge multiple groups into one — primary group absorbs the rest
+      const primary = groups.value[cluster.memberIndices[0]!]!
+      for (let i = 1; i < cluster.memberIndices.length; i++) {
+        const other = groups.value[cluster.memberIndices[i]!]!
+        primary.rows.push(...other.rows)
+        for (const tag of other.tags) {
+          if (!primary.tags.includes(tag)) primary.tags.push(tag)
+        }
+        // Inherit matched pattern if primary doesn't have one
+        if (!primary.matchedPatternId && other.matchedPatternId) {
+          primary.matchedPatternId = other.matchedPatternId
+          primary.classification = other.classification
+          primary.variability = other.variability
+        }
+      }
+      // Recalculate aggregates
+      primary.totalAmount = primary.rows.reduce((s, r) => s + r.amount, 0)
+      primary.avgAmount = primary.totalAmount / primary.rows.length
+      // Use the cluster representative as the group description
+      primary.description = cluster.representative
+      mergedGroups.push(primary)
+    }
+  }
+
+  groups.value = mergedGroups
+  // Re-sort: auto-matched first, then by occurrence count desc
+  groups.value.sort((a, b) => {
+    if (a.matchedPatternId && !b.matchedPatternId) return -1
+    if (!a.matchedPatternId && b.matchedPatternId) return 1
+    return b.rows.length - a.rows.length
+  })
+}
+
+onMounted(async () => {
+  // Group by description (case-insensitive) — instant, no model needed
   const groupMap = new Map<string, ParsedTransaction[]>()
   for (const row of props.parsedRows) {
     const key = row.description.toLowerCase().trim()
@@ -177,6 +248,12 @@ onMounted(() => {
     if (!a.matchedPatternId && b.matchedPatternId) return 1
     return b.rows.length - a.rows.length
   })
+
+  // If embedding model is ready (cached from prior import), merge similar groups
+  // before the user sees them. This must happen before tag suggestions.
+  if (embeddingReady.value) {
+    await mergeSimilarGroups()
+  }
 
   // Model preload happens in NewImportWizard.vue (Step 1) for earlier warmup.
   // If model is already loaded (cached from prior import), request suggestions now.
