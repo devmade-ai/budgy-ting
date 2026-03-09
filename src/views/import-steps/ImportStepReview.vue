@@ -66,6 +66,7 @@ const {
   modelError: tagModelError,
   waitForModel: waitForTagModel,
   suggestTagsBatch,
+  dispose: disposeTagSuggestions,
 } = useTagSuggestions()
 const txSuggestions = reactive(new Map<number, TagSuggestion[]>())
 
@@ -83,6 +84,7 @@ const {
 const preparing = ref(true)
 
 onUnmounted(() => {
+  disposeTagSuggestions()
   disposeEmbeddings()
   clearTimeout(tagBlurTimer)
   clearTimeout(tagDebounceTimer)
