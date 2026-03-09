@@ -12,6 +12,7 @@
  */
 
 import type { DailyForecastPoint } from './forecast'
+import { formatDate } from './dateUtils'
 
 export interface RunwayResult {
   /** Days until balance hits zero (null = cash lasts beyond forecast horizon) */
@@ -53,6 +54,17 @@ export function calculateRunway(
   let minBalance = cashOnHand
   let minDate = dailyForecasts[0]!.date
   const dailyBalance: Array<{ date: string; balance: number }> = []
+
+  // Include the starting balance as the first point so the graph
+  // shows the initial reference point before any forecast changes apply.
+  // Use the day before the first forecast date as the anchor.
+  const firstForecastDate = new Date(dailyForecasts[0]!.date + 'T00:00:00')
+  const startDate = new Date(firstForecastDate)
+  startDate.setDate(startDate.getDate() - 1)
+  dailyBalance.push({
+    date: formatDate(startDate),
+    balance: Math.round(cashOnHand * 100) / 100,
+  })
 
   for (let i = 0; i < dailyForecasts.length; i++) {
     const day = dailyForecasts[i]!

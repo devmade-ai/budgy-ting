@@ -9,6 +9,7 @@
 import { computed } from 'vue'
 import MetricCard from './MetricCard.vue'
 import { formatAmount } from '@/composables/useFormat'
+import { formatDate } from '@/engine/dateUtils'
 import { totalIncome as calcTotalIncome, totalExpenses as calcTotalExpenses } from '@/engine/transactionMath'
 import type { Transaction, RecurringPattern } from '@/types/models'
 import type { ForecastResult } from '@/engine/forecast'
@@ -65,9 +66,11 @@ const metrics = computed(() => {
   })
 
   // Monthly burn rate (last 30 days)
+  // Use formatDate() for local-timezone date string — toISOString() gives UTC which
+  // can be off by 1 day for users east/west of UTC
   const thirtyDaysAgo = new Date()
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-  const thirtyDaysStr = thirtyDaysAgo.toISOString().slice(0, 10)
+  const thirtyDaysStr = formatDate(thirtyDaysAgo)
   const recentExpenses = txns
     .filter((t) => t.amount < 0 && t.date >= thirtyDaysStr)
     .reduce((s, t) => s + Math.abs(t.amount), 0)
