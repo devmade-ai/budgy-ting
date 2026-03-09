@@ -2,10 +2,11 @@
 /**
  * Requirement: Step 2 of redesigned import — classify each transaction group as
  *   recurring / once-off / ignore. Groups transactions by description similarity.
- * Approach: Group by exact description match (case-insensitive), let user classify each group.
- *   Auto-accept known recurring patterns.
+ * Approach: Group by exact description match (case-insensitive), then merge semantically
+ *   similar groups via all-MiniLM-L6-v2 embeddings. Auto-accept known recurring patterns.
  * Alternatives:
- *   - Fuzzy grouping: Deferred — exact match covers most bank statement patterns
+ *   - Exact match only: Previous approach — misses similar descriptions like
+ *     "WOOLWORTHS SANDTON" vs "WOOLWORTHS CBD 0232"
  *   - Per-row classification: Rejected — too tedious with 100+ rows
  */
 
@@ -69,17 +70,23 @@ const groupSuggestions = reactive(new Map<string, TagSuggestion[]>())
 // ── Embedding-based fuzzy grouping ──
 // Requirement: Merge semantically similar descriptions (e.g. "WOOLWORTHS SANDTON"
 //   and "WOOLWORTHS CBD 0232") into one group, rather than requiring exact match.
-// Approach: If embedding model is already loaded (cached from prior import), cluster
-//   group descriptions after exact grouping. Only runs on mount — no re-grouping after
-//   user starts classifying (avoids confusing UI jumps).
+// Approach: Always wait for the embedding model to load (with progress bar), then
+//   cluster group descriptions before showing them to the user.
+//   First import downloads the model (~22MB); subsequent imports load from cache (~1-2s).
 // Alternatives:
-//   - Watch modelReady and re-group later: Rejected — groups jumping after user interaction
-//   - Always wait for model: Rejected — blocks UI on first import when model isn't cached
+//   - Skip if model not ready: Rejected — user never sees fuzzy grouping on first import
+//   - Silent background merge: Rejected — groups jumping after user starts classifying
 const {
-  modelReady: embeddingReady,
+  modelLoading: embeddingLoading,
+  modelProgress: embeddingProgress,
+  modelError: embeddingError,
   clusterTexts,
+  waitForModel: waitForEmbeddings,
   dispose: disposeEmbeddings,
 } = useEmbeddings()
+
+/** True while waiting for the embedding model + building groups */
+const preparingGroups = ref(true)
 
 onUnmounted(() => {
   disposeEmbeddings()
@@ -249,14 +256,17 @@ onMounted(async () => {
     return b.rows.length - a.rows.length
   })
 
-  // If embedding model is ready (cached from prior import), merge similar groups
-  // before the user sees them. This must happen before tag suggestions.
-  if (embeddingReady.value) {
+  // Wait for the embedding model to load, then merge similar groups.
+  // First import: downloads ~22MB (progress bar shown). Subsequent: loads from cache (~1-2s).
+  const embeddingOk = await waitForEmbeddings()
+  if (embeddingOk) {
     await mergeSimilarGroups()
   }
 
+  preparingGroups.value = false
+
   // Model preload happens in NewImportWizard.vue (Step 1) for earlier warmup.
-  // If model is already loaded (cached from prior import), request suggestions now.
+  // If tag suggestion model is also loaded, request suggestions now.
   if (modelReady.value) {
     requestSuggestions()
   }
@@ -309,6 +319,35 @@ function handleContinue() {
 <template>
   <div>
     <h2 class="text-lg font-semibold mb-1">Classify transactions</h2>
+
+    <!-- Loading state while embedding model downloads and groups are prepared -->
+    <template v-if="preparingGroups">
+      <p class="text-sm text-gray-500 mb-4">
+        Grouping similar transactions...
+      </p>
+      <div class="max-w-sm mx-auto mt-8 mb-8">
+        <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
+          <div
+            class="h-full bg-brand-500 rounded-full transition-all duration-300"
+            :style="{ width: embeddingLoading ? `${Math.max(5, embeddingProgress)}%` : '100%' }"
+          />
+        </div>
+        <p class="text-xs text-gray-400 text-center mt-2">
+          <template v-if="embeddingLoading">
+            {{ embeddingProgress > 0 ? `Downloading model... ${Math.round(embeddingProgress)}%` : 'Preparing model...' }}
+          </template>
+          <template v-else-if="embeddingError">
+            Couldn't load grouping model — using basic matching
+          </template>
+          <template v-else>
+            Clustering descriptions...
+          </template>
+        </p>
+      </div>
+    </template>
+
+    <!-- Main classify UI — shown after groups are ready -->
+    <template v-else>
     <p class="text-sm text-gray-500 mb-4">
       Mark each group as recurring (repeats regularly), once-off, or ignore.
       {{ summary.autoAccepted.length > 0 ? `${summary.autoAccepted.length} auto-matched from your patterns.` : '' }}
@@ -468,5 +507,6 @@ function handleContinue() {
         Continue ({{ summary.importedRows }} transactions)
       </button>
     </div>
+    </template>
   </div>
 </template>

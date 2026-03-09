@@ -25,6 +25,7 @@ import type {
 const modelLoading = ref(false)
 const modelReady = ref(false)
 const modelError = ref<string | null>(null)
+const modelProgress = ref(0)
 const computing = ref(false)
 
 const MODEL_LOAD_TIMEOUT_MS = 60_000 // Embedding model is ~22MB, allow more time
@@ -125,6 +126,7 @@ function handleWorkerMessage(event: MessageEvent<EmbeddingWorkerResponse>) {
       break
 
     case 'model-progress':
+      modelProgress.value = msg.progress
       break
 
     case 'embed-result': {
@@ -171,6 +173,33 @@ function handleWorkerMessage(event: MessageEvent<EmbeddingWorkerResponse>) {
 }
 
 // ── Public API ──
+
+/**
+ * Wait for the model to finish loading. Resolves true if model is ready,
+ * false if it failed or timed out. Safe to call when model is already loaded.
+ */
+function waitForModel(): Promise<boolean> {
+  if (modelReady.value) return Promise.resolve(true)
+  if (modelError.value) return Promise.resolve(false)
+
+  return new Promise<boolean>((resolve) => {
+    const check = setInterval(() => {
+      if (modelReady.value) {
+        clearInterval(check)
+        resolve(true)
+      } else if (modelError.value || (!modelLoading.value && !modelReady.value)) {
+        clearInterval(check)
+        resolve(false)
+      }
+    }, 100)
+
+    // Safety net — don't hang forever (tied to MODEL_LOAD_TIMEOUT_MS + buffer)
+    trackTimeout(() => {
+      clearInterval(check)
+      resolve(modelReady.value)
+    }, MODEL_LOAD_TIMEOUT_MS + 5_000)
+  })
+}
 
 function preloadModel() {
   if (modelReady.value || modelLoading.value) return
@@ -287,6 +316,7 @@ function dispose() {
   modelLoading.value = false
   modelReady.value = false
   modelError.value = null
+  modelProgress.value = 0
   computing.value = false
 
   debugLog('ml', 'info', 'Embedding worker disposed')
@@ -298,8 +328,10 @@ export function useEmbeddings() {
     modelLoading,
     modelReady,
     modelError,
+    modelProgress,
     computing,
     preloadModel,
+    waitForModel,
     embedTexts,
     clusterTexts,
     dispose,
