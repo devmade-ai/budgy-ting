@@ -10,12 +10,13 @@
  *   - Per-row classification: Rejected — too tedious with 100+ rows
  */
 
-import { ref, computed, onMounted, onUnmounted, reactive } from 'vue'
+import { ref, computed, onMounted, onUnmounted, reactive, watch } from 'vue'
 import { formatAmount } from '@/composables/useFormat'
 import { isIncome } from '@/types/models'
 import type { RecurringPattern, RecurringVariability } from '@/types/models'
 import { useTagSuggestions } from '@/ml/useTagSuggestions'
 import { useEmbeddings } from '@/ml/useEmbeddings'
+import { db } from '@/db'
 import TagSuggestions from '@/components/TagSuggestions.vue'
 import type { TagSuggestion } from '@/ml/types'
 
@@ -309,6 +310,134 @@ function setVariability(index: number, v: RecurringVariability) {
   // Fixed and variable patterns keep their detected frequency
 }
 
+// ── Manual tag input per group ──
+// Requirement: Users need to type custom tags during import, not just accept ML suggestions
+// Approach: Per-group tag input with autocomplete from existing patterns + other groups' tags.
+//   Lightweight inline input — no separate modal or complex UI.
+// Alternatives:
+//   - No manual input: Rejected — users stuck if ML doesn't suggest what they want
+//   - Full tag editor modal: Rejected — too heavy for import flow, breaks scanning rhythm
+
+/** Track which group has the tag input open (by index), -1 = none */
+const tagInputGroupIndex = ref(-1)
+const tagInputValue = ref('')
+const tagAutocompleteResults = ref<string[]>([])
+const tagAutocompleteVisible = ref(false)
+const tagSelectedIndex = ref(-1)
+
+let tagBlurTimer: ReturnType<typeof setTimeout> | undefined
+let tagDebounceTimer: ReturnType<typeof setTimeout> | undefined
+onUnmounted(() => {
+  clearTimeout(tagBlurTimer)
+  clearTimeout(tagDebounceTimer)
+})
+
+/** All known tags from existing patterns + already-tagged groups */
+const allKnownTags = computed(() => {
+  const tags = new Set<string>()
+  for (const p of props.existingPatterns) {
+    for (const t of p.tags) tags.add(t)
+  }
+  for (const g of groups.value) {
+    for (const t of g.tags) tags.add(t)
+  }
+  return [...tags].sort()
+})
+
+function toggleTagInput(index: number) {
+  if (tagInputGroupIndex.value === index) {
+    tagInputGroupIndex.value = -1
+    tagInputValue.value = ''
+    tagAutocompleteVisible.value = false
+  } else {
+    tagInputGroupIndex.value = index
+    tagInputValue.value = ''
+    tagAutocompleteVisible.value = false
+  }
+}
+
+function addTagToGroup(index: number, tag: string) {
+  const trimmed = tag.trim()
+  if (!trimmed) return
+  const group = groups.value[index]
+  if (!group || group.tags.includes(trimmed)) return
+  group.tags.push(trimmed)
+  tagInputValue.value = ''
+  tagAutocompleteVisible.value = false
+}
+
+function removeTagFromGroup(index: number, tag: string) {
+  const group = groups.value[index]
+  if (!group) return
+  group.tags = group.tags.filter((t) => t !== tag)
+}
+
+function handleTagInputKeydown(e: KeyboardEvent, index: number) {
+  if (e.key === 'Enter' || e.key === ',') {
+    e.preventDefault()
+    const selected = tagAutocompleteResults.value[tagSelectedIndex.value]
+    if (tagSelectedIndex.value >= 0 && selected) {
+      addTagToGroup(index, selected)
+    } else if (tagInputValue.value.trim()) {
+      addTagToGroup(index, tagInputValue.value)
+    }
+    tagSelectedIndex.value = -1
+  } else if (e.key === 'ArrowDown') {
+    e.preventDefault()
+    if (tagSelectedIndex.value < tagAutocompleteResults.value.length - 1) {
+      tagSelectedIndex.value++
+    }
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault()
+    if (tagSelectedIndex.value > 0) {
+      tagSelectedIndex.value--
+    }
+  } else if (e.key === 'Escape') {
+    tagAutocompleteVisible.value = false
+    tagSelectedIndex.value = -1
+  }
+}
+
+function handleTagInputBlur() {
+  clearTimeout(tagBlurTimer)
+  tagBlurTimer = setTimeout(() => { tagAutocompleteVisible.value = false }, 150)
+}
+
+async function updateTagAutocomplete() {
+  const q = tagInputValue.value.trim().toLowerCase()
+  if (!q) {
+    tagAutocompleteResults.value = []
+    tagAutocompleteVisible.value = false
+    return
+  }
+
+  const group = groups.value[tagInputGroupIndex.value]
+  const currentTags = group?.tags ?? []
+
+  // Merge tagCache + known tags from patterns/groups
+  const tagSet = new Set<string>()
+  try {
+    const cached = await db.tagCache.toArray()
+    for (const t of cached) tagSet.add(t.tag)
+  } catch { /* non-critical */ }
+  for (const t of allKnownTags.value) tagSet.add(t)
+
+  const matches = [...tagSet].filter((t) => !currentTags.includes(t))
+  const prefix = matches.filter((t) => t.toLowerCase().startsWith(q))
+  const substring = matches.filter(
+    (t) => !t.toLowerCase().startsWith(q) && t.toLowerCase().includes(q),
+  )
+  tagAutocompleteResults.value = [...prefix, ...substring].slice(0, 8)
+  tagAutocompleteVisible.value = tagAutocompleteResults.value.length > 0
+  tagSelectedIndex.value = -1
+}
+
+// Debounce tag autocomplete
+watch(tagInputValue, () => {
+  clearTimeout(tagDebounceTimer)
+  tagDebounceTimer = setTimeout(updateTagAutocomplete, 100)
+})
+
 function markRemainingOnceOff() {
   for (const g of groups.value) {
     if (!g.matchedPatternId && g.classification !== 'ignore') {
@@ -431,13 +560,18 @@ function handleContinue() {
                 (auto-matched)
               </span>
             </p>
-            <div v-if="group.tags.length > 0" class="flex gap-1 mt-1">
+            <div v-if="group.tags.length > 0" class="flex flex-wrap gap-1 mt-1">
               <span
                 v-for="tag in group.tags"
                 :key="tag"
-                class="text-xs bg-gray-100 text-gray-600 rounded px-1.5 py-0.5"
+                class="inline-flex items-center gap-0.5 text-xs bg-gray-100 text-gray-600 rounded px-1.5 py-0.5"
               >
                 {{ tag }}
+                <button
+                  class="i-lucide-x text-[10px] opacity-50 hover:opacity-100 ml-0.5"
+                  :title="`Remove ${tag}`"
+                  @click="removeTagFromGroup(i, tag)"
+                />
               </span>
             </div>
             <!-- ML tag suggestions for unmatched groups -->
@@ -448,6 +582,47 @@ function handleContinue() {
               @dismiss="dismissSuggestion(group, $event)"
               @accept-all="acceptAllSuggestions(group)"
             />
+            <!-- Manual tag input — toggle with "+ Tag" button -->
+            <div v-if="group.classification !== 'ignore'" class="mt-1.5">
+              <button
+                v-if="tagInputGroupIndex !== i"
+                class="text-xs text-gray-400 hover:text-blue-500 transition-colors"
+                @click="toggleTagInput(i)"
+              >
+                + Tag
+              </button>
+              <div v-else class="relative">
+                <input
+                  v-model="tagInputValue"
+                  type="text"
+                  placeholder="Type a tag..."
+                  class="input text-xs w-full py-1.5 px-2"
+                  role="combobox"
+                  :aria-expanded="tagAutocompleteVisible"
+                  aria-autocomplete="list"
+                  @keydown="handleTagInputKeydown($event, i)"
+                  @blur="handleTagInputBlur"
+                  @focus="updateTagAutocomplete"
+                />
+                <ul
+                  v-if="tagAutocompleteVisible"
+                  role="listbox"
+                  class="absolute z-10 left-0 right-0 mt-0.5 bg-white border border-gray-200 rounded shadow-lg max-h-32 overflow-y-auto"
+                >
+                  <li
+                    v-for="(result, ri) in tagAutocompleteResults"
+                    :key="result"
+                    role="option"
+                    :aria-selected="ri === tagSelectedIndex"
+                    class="text-xs px-2.5 py-1.5 hover:bg-blue-50 cursor-pointer"
+                    :class="{ 'bg-blue-50': ri === tagSelectedIndex }"
+                    @mousedown.prevent="addTagToGroup(i, result)"
+                  >
+                    {{ result }}
+                  </li>
+                </ul>
+              </div>
+            </div>
           </div>
           <div class="flex gap-1">
             <button
