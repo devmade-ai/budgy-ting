@@ -76,14 +76,36 @@ const series = computed(() => {
     })
   }
 
-  // Forecast
+  // Forecast — bridge from last actual so lines connect without a gap
+  // Requirement: No visual gap between actuals line and forecast line
+  // Approach: Prepend the last actual data point to the forecast series so the
+  //   forecast line starts where actuals end. This creates a seamless visual join.
+  // Alternatives:
+  //   - Extend actuals to today with zero amounts: Rejected — misleading data
+  //   - Overlap date ranges: Rejected — tooltip shows duplicate entries
   if (props.forecastPoints.length > 0) {
+    const forecastData = props.forecastPoints.map((p) => ({
+      x: p.date,
+      y: chartMode.value === 'cumulative' ? p.cumulative : p.amount,
+    }))
+
+    // If we have actuals, prepend the last actual point so the forecast line
+    // connects visually to where actuals end (no gap)
+    if (actualPoints.value.length > 0) {
+      const lastActual = actualPoints.value[actualPoints.value.length - 1]!
+      const firstForecastDate = props.forecastPoints[0]?.date
+      // Only bridge if there's actually a date gap
+      if (firstForecastDate && lastActual.date < firstForecastDate) {
+        forecastData.unshift({
+          x: lastActual.date,
+          y: chartMode.value === 'cumulative' ? lastActual.cumulative : lastActual.amount,
+        })
+      }
+    }
+
     result.push({
       name: 'Forecast',
-      data: props.forecastPoints.map((p) => ({
-        x: p.date,
-        y: chartMode.value === 'cumulative' ? p.cumulative : p.amount,
-      })),
+      data: forecastData,
     })
   }
 
