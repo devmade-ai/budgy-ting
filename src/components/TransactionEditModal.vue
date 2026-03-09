@@ -26,6 +26,8 @@ const props = defineProps<{
   suggestions: TagSuggestion[]
   suggestionsLoading: boolean
   currencyLabel: string
+  /** All known tags from the workspace — used for autocomplete fallback when tagCache is empty */
+  knownTags?: string[]
 }>()
 
 const emit = defineEmits<{
@@ -164,6 +166,12 @@ function handleTagKeydown(e: KeyboardEvent) {
   }
 }
 
+// Requirement: Autocomplete should always show results when the user has tags in their workspace
+// Approach: Merge tagCache + knownTags prop so autocomplete works even when tagCache is empty
+//   (e.g. demo data or first session before any saves)
+// Alternatives:
+//   - Only tagCache: Rejected — empty for demo workspaces, users see dead input
+//   - Only knownTags: Rejected — tagCache has recency info for better ranking
 async function updateAutocomplete() {
   const q = tagInput.value.trim().toLowerCase()
   if (!q) {
@@ -173,10 +181,15 @@ async function updateAutocomplete() {
   }
 
   try {
+    // Merge tags from tagCache + knownTags prop (deduped)
+    const tagSet = new Set<string>()
     const allCached = await db.tagCache.toArray()
-    const matches = allCached
-      .map((t) => t.tag)
-      .filter((tag) => !localTags.value.includes(tag))
+    for (const t of allCached) tagSet.add(t.tag)
+    if (props.knownTags) {
+      for (const t of props.knownTags) tagSet.add(t)
+    }
+
+    const matches = [...tagSet].filter((tag) => !localTags.value.includes(tag))
 
     const prefix = matches.filter((t) => t.toLowerCase().startsWith(q))
     const substring = matches.filter(

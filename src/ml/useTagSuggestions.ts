@@ -25,8 +25,13 @@ const modelError = ref<string | null>(null)
 const modelProgress = ref(0)
 const inferring = ref(false)
 
-/** Default confidence threshold — suggestions below this are filtered out */
-const confidenceThreshold = ref(0.5)
+/**
+ * Default confidence threshold — suggestions below this are filtered out.
+ * Lowered from 0.5 to 0.15: zero-shot on short transaction descriptions
+ * (e.g. "Pick n Pay") routinely scores 0.2–0.4 for correct labels.
+ * 0.5 filtered out nearly everything, leaving users with no suggestions.
+ */
+const confidenceThreshold = ref(0.15)
 
 /** Model load timeout — give up if download takes too long (slow network) */
 const MODEL_LOAD_TIMEOUT_MS = 30_000
@@ -288,11 +293,22 @@ async function suggestTags(description: string): Promise<TagSuggestion[]> {
       timeout,
     })
     postToWorker({ type: 'suggest', id, description, candidateLabels })
-  }).then((suggestions) =>
-    suggestions
+  }).then((suggestions) => {
+    const filtered = suggestions
       .filter((s) => s.confidence >= confidenceThreshold.value)
-      .slice(0, 5),
-  )
+      .slice(0, 5)
+
+    if (suggestions.length > 0 && filtered.length === 0) {
+      debugLog('ml', 'info', 'All suggestions below confidence threshold', {
+        description,
+        threshold: confidenceThreshold.value,
+        topScore: Math.max(...suggestions.map((s) => s.confidence)),
+        count: suggestions.length,
+      })
+    }
+
+    return filtered
+  })
 }
 
 /**

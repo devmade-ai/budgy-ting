@@ -289,6 +289,7 @@ function getSuggestions(id: string): TagSuggestion[] {
       :suggestions="getSuggestions(editingTransaction.id)"
       :suggestions-loading="!!suggestionsLoading"
       :currency-label="currencyLabel"
+      :known-tags="allTags"
       @save="handleSave"
       @close="editingTransaction = null"
     />
