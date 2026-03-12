@@ -201,7 +201,7 @@ function getSuggestions(id: string): TagSuggestion[] {
               <span
                 v-for="tag in txn.tags"
                 :key="tag"
-                class="inline-block text-xs bg-gray-100 text-gray-600 rounded px-1.5 py-0.5 mr-1"
+                class="tag-pill inline-block mr-1"
               >
                 {{ tag }}
               </span>
