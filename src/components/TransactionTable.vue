@@ -11,7 +11,8 @@
  */
 
 import { ref, computed, watch } from 'vue'
-import { formatAmount } from '@/composables/useFormat'
+import { formatAmount, formatDateForDisplay } from '@/composables/useFormat'
+import { usePagination } from '@/composables/usePagination'
 import { isIncome } from '@/types/models'
 import TransactionEditModal from '@/components/TransactionEditModal.vue'
 import type { Transaction } from '@/types/models'
@@ -32,12 +33,9 @@ const emit = defineEmits<{
   'request-suggestions': [id: string, description: string]
 }>()
 
-const PAGE_SIZE = 25
-
 const search = ref('')
 const filterTag = ref('')
 const filterClassification = ref<'' | 'recurring' | 'once-off'>('')
-const currentPage = ref(1)
 
 /** Transaction currently being edited in the modal — null = modal closed */
 const editingTransaction = ref<Transaction | null>(null)
@@ -54,50 +52,30 @@ const allTags = computed(() => {
 const filtered = computed(() => {
   let result = [...props.transactions]
 
-  // Search by description
   if (search.value) {
     const q = search.value.toLowerCase()
     result = result.filter((t) => t.description.toLowerCase().includes(q))
   }
 
-  // Filter by tag
   if (filterTag.value) {
     result = result.filter((t) => t.tags.includes(filterTag.value))
   }
 
-  // Filter by classification
   if (filterClassification.value) {
     result = result.filter((t) => t.classification === filterClassification.value)
   }
 
-  // Sort by date descending (newest first)
   result.sort((a, b) => b.date.localeCompare(a.date))
 
   return result
 })
 
-const totalPages = computed(() => Math.max(1, Math.ceil(filtered.value.length / PAGE_SIZE)))
-
-const paginatedRows = computed(() => {
-  const start = (currentPage.value - 1) * PAGE_SIZE
-  return filtered.value.slice(start, start + PAGE_SIZE)
-})
+const { currentPage, totalPages, paginatedItems: paginatedRows, resetPage } = usePagination(filtered)
 
 // Reset page when filters change
 watch([search, filterTag, filterClassification], () => {
-  currentPage.value = 1
+  resetPage()
 })
-
-// Clamp page when data changes (e.g. transaction deleted externally)
-watch(totalPages, (pages) => {
-  if (currentPage.value > pages) currentPage.value = pages
-})
-
-function formatDate(dateStr: string): string {
-  const d = new Date(dateStr + 'T00:00:00')
-  if (isNaN(d.getTime())) return dateStr || '—'
-  return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: '2-digit' })
-}
 
 function openEdit(txn: Transaction) {
   editingTransaction.value = txn
@@ -165,7 +143,7 @@ function getSuggestions(id: string): TagSuggestion[] {
           <div class="min-w-0 flex-1">
             <p class="text-sm font-medium text-gray-900 truncate">{{ txn.description }}</p>
             <p class="text-xs text-gray-500 mt-0.5">
-              {{ formatDate(txn.date) }}
+              {{ formatDateForDisplay(txn.date) }}
               <span
                 class="ml-1.5 inline-block text-xs px-1.5 py-0.5 rounded"
                 :class="txn.classification === 'recurring'
@@ -220,7 +198,7 @@ function getSuggestions(id: string): TagSuggestion[] {
             @keydown="handleRowKeydown($event, txn)"
           >
             <td class="py-2 pr-3 whitespace-nowrap text-gray-500">
-              {{ formatDate(txn.date) }}
+              {{ formatDateForDisplay(txn.date) }}
             </td>
             <td class="py-2 pr-3 text-gray-900 max-w-xs truncate">
               {{ txn.description }}
