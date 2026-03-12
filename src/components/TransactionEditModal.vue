@@ -391,7 +391,7 @@ function displayDate(dateStr: string): string {
                   {{ tag }}
                   <button
                     class="opacity-60 hover:opacity-100 ml-0.5"
-                    :title="`Remove ${tag}`"
+                    :aria-label="`Remove ${tag}`"
                     @click="removeTag(tag)"
                   >
                     <X :size="10" />

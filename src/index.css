@@ -43,7 +43,4 @@
   .page-title {
     @apply text-2xl font-bold text-gray-900;
   }
-  .section-title {
-    @apply text-lg font-semibold text-gray-800;
-  }
 }
