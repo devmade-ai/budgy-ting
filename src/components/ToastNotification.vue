@@ -9,6 +9,8 @@
  */
 
 import { useToast } from '@/composables/useToast'
+import { CheckCircle, AlertCircle, AlertTriangle, X } from 'lucide-vue-next'
+import type { Component } from 'vue'
 
 const { state, dismiss } = useToast()
 
@@ -18,10 +20,10 @@ const variantClasses: Record<string, string> = {
   warning: 'bg-amber-500 text-white',
 }
 
-const variantIcons: Record<string, string> = {
-  success: 'i-lucide-check-circle',
-  error: 'i-lucide-alert-circle',
-  warning: 'i-lucide-alert-triangle',
+const variantIcons: Record<string, Component> = {
+  success: CheckCircle,
+  error: AlertCircle,
+  warning: AlertTriangle,
 }
 </script>
 
@@ -42,14 +44,14 @@ const variantIcons: Record<string, string> = {
         role="status"
         aria-live="polite"
       >
-        <span :class="variantIcons[state.variant]" aria-hidden="true" />
+        <component :is="variantIcons[state.variant]" :size="16" aria-hidden="true" />
         <span>{{ state.message }}</span>
         <button
           class="ml-2 opacity-70 hover:opacity-100 transition-opacity"
           aria-label="Dismiss"
           @click="dismiss"
         >
-          <span class="i-lucide-x text-sm" aria-hidden="true" />
+          <X :size="14" aria-hidden="true" />
         </button>
       </div>
     </Transition>

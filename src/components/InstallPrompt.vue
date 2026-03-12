@@ -7,6 +7,7 @@
  */
 
 import { usePWAInstall } from '@/composables/usePWAInstall'
+import { Smartphone } from 'lucide-vue-next'
 
 const {
   isNativeInstallAvailable,
@@ -37,7 +38,7 @@ function handleShowInstructions() {
     class="bg-brand-50 border-b border-brand-200 px-4 py-2.5 flex items-center justify-between gap-3"
   >
     <div class="flex items-center gap-2 min-w-0">
-      <span class="i-lucide-smartphone text-brand-600 shrink-0" />
+      <Smartphone :size="16" class="text-brand-600 shrink-0" />
       <span class="text-sm text-brand-800 truncate">
         Install budgy-ting for quick access
       </span>

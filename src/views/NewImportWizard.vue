@@ -12,6 +12,7 @@
 
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { ArrowLeft } from 'lucide-vue-next'
 import { db } from '@/db'
 import { useTagSuggestions } from '@/ml/useTagSuggestions'
 import { useEmbeddings } from '@/ml/useEmbeddings'
@@ -340,7 +341,7 @@ function goBack() {
       class="text-sm text-gray-500 hover:text-gray-700 mb-4 flex items-center gap-1"
       @click="goBack"
     >
-      <span class="i-lucide-arrow-left" />
+      <ArrowLeft :size="16" />
       {{ step === 1 ? 'Back to workspace' : 'Previous step' }}
     </button>
 

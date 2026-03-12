@@ -20,6 +20,7 @@ import EmptyState from '@/components/EmptyState.vue'
 import { formatAmount } from '@/composables/useFormat'
 import { useInstallReminder } from '@/composables/useInstallReminder'
 import { estimateMonthlySpend } from '@/engine/transactionMath'
+import { FolderOpen, Plus, Smartphone, Wallet, ChevronRight } from 'lucide-vue-next'
 import type { Workspace } from '@/types/models'
 import type { ExportSchema } from '@/engine/exportImport'
 
@@ -176,7 +177,7 @@ const { showInstallReminder, checkInstallReminder, dismissInstallReminder } = us
       <h1 class="page-title">Workspaces</h1>
       <div class="flex gap-2">
         <label class="btn-secondary text-sm cursor-pointer">
-          <span class="i-lucide-folder-open mr-1" />
+          <FolderOpen :size="16" class="mr-1 inline-block" />
           Restore
           <input
             type="file"
@@ -186,7 +187,7 @@ const { showInstallReminder, checkInstallReminder, dismissInstallReminder } = us
           />
         </label>
         <button class="btn-primary" @click="createWorkspace">
-          <span class="i-lucide-plus mr-1" />
+          <Plus :size="16" class="mr-1 inline-block" />
           New Workspace
         </button>
       </div>
@@ -198,7 +199,7 @@ const { showInstallReminder, checkInstallReminder, dismissInstallReminder } = us
       class="bg-brand-50 border border-brand-200 rounded-lg p-3 mb-4 flex items-center justify-between text-sm"
     >
       <div class="flex items-center gap-2 text-brand-700">
-        <span class="i-lucide-smartphone text-lg" />
+        <Smartphone :size="18" />
         <span>Add budgy-ting to your home screen for quick access</span>
       </div>
       <button
@@ -225,7 +226,7 @@ const { showInstallReminder, checkInstallReminder, dismissInstallReminder } = us
 
     <EmptyState
       v-else-if="workspaces.length === 0"
-      icon="i-lucide-wallet"
+      :icon="Wallet"
       title="No workspaces yet"
       description="Create your first workspace or restore from a backup"
     >
@@ -270,7 +271,7 @@ const { showInstallReminder, checkInstallReminder, dismissInstallReminder } = us
                 </template>
               </p>
             </div>
-            <span class="i-lucide-chevron-right text-gray-400" />
+            <ChevronRight :size="16" class="text-gray-400" />
           </div>
         </button>
       </div>

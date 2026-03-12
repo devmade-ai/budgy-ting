@@ -10,6 +10,7 @@
  */
 
 import { ref, onMounted, onUnmounted } from 'vue'
+import type { Component } from 'vue'
 import { useRouter } from 'vue-router'
 import { db } from '@/db'
 import { exportWorkspace, downloadJSON } from '@/engine/exportImport'
@@ -20,6 +21,7 @@ import BottomSheet from '@/components/BottomSheet.vue'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import ErrorAlert from '@/components/ErrorAlert.vue'
 import WorkspaceDashboard from '@/views/WorkspaceDashboard.vue'
+import { ArrowLeft, Upload, MoreVertical, Download, Pencil, Trash2 } from 'lucide-vue-next'
 import type { Workspace } from '@/types/models'
 
 const props = defineProps<{ id: string }>()
@@ -129,9 +131,9 @@ async function deleteWorkspace() {
 }
 
 /** Menu items shared between bottom sheet and dropdown */
-const menuActions = [
-  { label: 'Export', icon: 'i-lucide-download', action: handleExport },
-  { label: 'Edit workspace', icon: 'i-lucide-pencil', action: editWorkspace },
+const menuActions: Array<{ label: string; icon: Component; action: () => void }> = [
+  { label: 'Export', icon: Download, action: handleExport },
+  { label: 'Edit workspace', icon: Pencil, action: editWorkspace },
 ]
 </script>
 
@@ -147,7 +149,7 @@ const menuActions = [
         class="text-sm text-gray-500 hover:text-gray-700 mb-2 flex items-center gap-1 min-h-[44px]"
         @click="router.push({ name: 'workspace-list' })"
       >
-        <span class="i-lucide-arrow-left" />
+        <ArrowLeft :size="16" />
         Workspaces
       </button>
       <div class="flex items-center justify-between">
@@ -164,7 +166,7 @@ const menuActions = [
             title="Import actuals"
             @click="router.push({ name: 'import-actuals', params: { id: props.id } })"
           >
-            <span class="i-lucide-upload mr-1" />
+            <Upload :size="16" class="mr-1 inline-block" />
             Import
           </button>
           <div ref="actionsMenuRef" class="relative">
@@ -177,7 +179,7 @@ const menuActions = [
               :aria-expanded="actionsMenuOpen"
               @click="toggleActionsMenu"
             >
-              <span class="i-lucide-more-vertical text-lg" aria-hidden="true" />
+              <MoreVertical :size="18" aria-hidden="true" />
             </button>
 
             <!-- Desktop dropdown (hidden on mobile) -->
@@ -193,7 +195,7 @@ const menuActions = [
                 role="menuitem"
                 @click="item.action()"
               >
-                <span :class="item.icon" class="text-base text-gray-400" aria-hidden="true" />
+                <component :is="item.icon" :size="16" class="text-gray-400" aria-hidden="true" />
                 {{ item.label }}
               </button>
               <div class="border-t border-gray-100 my-1" role="separator" />
@@ -202,7 +204,7 @@ const menuActions = [
                 role="menuitem"
                 @click="confirmDelete"
               >
-                <span class="i-lucide-trash-2 text-base text-red-400" aria-hidden="true" />
+                <Trash2 :size="16" class="text-red-400" aria-hidden="true" />
                 Delete workspace
               </button>
             </div>
@@ -224,7 +226,7 @@ const menuActions = [
           class="w-full text-left px-3 py-3 text-sm text-gray-700 hover:bg-gray-50 rounded-lg flex items-center gap-3"
           @click="item.action()"
         >
-          <span :class="item.icon" class="text-lg text-gray-400" aria-hidden="true" />
+          <component :is="item.icon" :size="18" class="text-gray-400" aria-hidden="true" />
           {{ item.label }}
         </button>
         <div class="border-t border-gray-100 my-1" />
@@ -232,7 +234,7 @@ const menuActions = [
           class="w-full text-left px-3 py-3 text-sm text-red-600 hover:bg-red-50 rounded-lg flex items-center gap-3"
           @click="confirmDelete"
         >
-          <span class="i-lucide-trash-2 text-lg text-red-400" aria-hidden="true" />
+          <Trash2 :size="18" class="text-red-400" aria-hidden="true" />
           Delete workspace
         </button>
       </div>

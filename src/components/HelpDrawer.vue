@@ -12,6 +12,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { marked } from 'marked'
 import { useDialogA11y } from '@/composables/useDialogA11y'
+import { X } from 'lucide-vue-next'
 
 const props = defineProps<{
   title: string
@@ -79,7 +80,7 @@ onUnmounted(() => {
             aria-label="Close"
             @click="handleClose"
           >
-            <span class="i-lucide-x text-lg" aria-hidden="true" />
+            <X :size="18" aria-hidden="true" />
           </button>
         </div>
 

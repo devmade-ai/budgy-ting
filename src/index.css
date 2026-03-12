@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+/* Requirement: Non-technical users need a clean, modern look
+   Approach: Custom theme with brand colours for consistent budget-related visual cues */
+@theme {
+  --color-brand-50: #ecfdf5;
+  --color-brand-100: #d1fae5;
+  --color-brand-200: #a7f3d0;
+  --color-brand-300: #6ee7b7;
+  --color-brand-400: #34d399;
+  --color-brand-500: #10b981;
+  --color-brand-600: #059669;
+  --color-brand-700: #047857;
+  --color-brand-800: #065f46;
+  --color-brand-900: #064e3b;
+  --color-overspend: #ef4444;
+  --color-underspend: #22c55e;
+  --color-neutral: #6b7280;
+}
+
+/* Shortcut classes migrated from UnoCSS uno.config.ts shortcuts
+   Note: Tailwind v4 @apply can't reference custom component classes,
+   so btn base styles are inlined into each btn-* variant. */
+@layer components {
+  .btn {
+    @apply px-4 py-2 rounded-lg font-medium transition-colors duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply px-4 py-2 rounded-lg font-medium transition-colors duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed bg-brand-500 text-white hover:bg-brand-600 active:bg-brand-700;
+  }
+  .btn-secondary {
+    @apply px-4 py-2 rounded-lg font-medium transition-colors duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed bg-gray-100 text-gray-700 hover:bg-gray-200 active:bg-gray-300;
+  }
+  .btn-danger {
+    @apply px-4 py-2 rounded-lg font-medium transition-colors duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed bg-red-50 text-red-600 hover:bg-red-100 active:bg-red-200;
+  }
+  .input-field {
+    @apply w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500;
+  }
+  .card {
+    @apply bg-white rounded-xl border border-gray-200 p-4 shadow-sm;
+  }
+  .page-title {
+    @apply text-2xl font-bold text-gray-900;
+  }
+  .section-title {
+    @apply text-lg font-semibold text-gray-800;
+  }
+}

@@ -13,6 +13,7 @@
  */
 
 import { ref, computed, reactive, onMounted, onUnmounted, watch } from 'vue'
+import { X } from 'lucide-vue-next'
 import { formatAmount } from '@/composables/useFormat'
 import { isIncome } from '@/types/models'
 import type { RecurringPattern, RecurringVariability } from '@/types/models'
@@ -611,10 +612,12 @@ function handleImport() {
                 >
                   {{ tag }}
                   <button
-                    class="i-lucide-x text-[10px] opacity-50 hover:opacity-100 ml-0.5"
+                    class="opacity-50 hover:opacity-100 ml-0.5"
                     :title="`Remove ${tag}`"
                     @click="removeTag(originalIndex, tag)"
-                  />
+                  >
+                    <X :size="10" />
+                  </button>
                 </span>
               </div>
 

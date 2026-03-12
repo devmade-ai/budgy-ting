@@ -9,8 +9,10 @@
  */
 
 import { ref, computed } from 'vue'
+import type { Component } from 'vue'
 import { usePWAInstall } from '@/composables/usePWAInstall'
 import { useDialogA11y } from '@/composables/useDialogA11y'
+import { Share, PlusSquare, Check, Menu, MoreVertical, Download } from 'lucide-vue-next'
 
 const emit = defineEmits<{
   close: []
@@ -23,7 +25,7 @@ useDialogA11y(dialogRef, () => emit('close'))
 interface InstructionStep {
   step: number
   text: string
-  icon?: string
+  icon?: Component
 }
 
 const instructions = computed<{ title: string; steps: InstructionStep[] }>(() => {
@@ -32,9 +34,9 @@ const instructions = computed<{ title: string; steps: InstructionStep[] }>(() =>
       return {
         title: 'Install on iPhone / iPad',
         steps: [
-          { step: 1, text: 'Tap the Share button at the bottom of the screen', icon: 'i-lucide-share' },
-          { step: 2, text: 'Scroll down and tap "Add to Home Screen"', icon: 'i-lucide-plus-square' },
-          { step: 3, text: 'Tap "Add" in the top right corner', icon: 'i-lucide-check' },
+          { step: 1, text: 'Tap the Share button at the bottom of the screen', icon: Share },
+          { step: 2, text: 'Scroll down and tap "Add to Home Screen"', icon: PlusSquare },
+          { step: 3, text: 'Tap "Add" in the top right corner', icon: Check },
           { step: 4, text: 'budgy-ting will appear on your home screen' },
         ],
       }
@@ -43,8 +45,8 @@ const instructions = computed<{ title: string; steps: InstructionStep[] }>(() =>
       return {
         title: 'Install on Mac',
         steps: [
-          { step: 1, text: 'Click "File" in the menu bar at the top', icon: 'i-lucide-menu' },
-          { step: 2, text: 'Click "Add to Dock"', icon: 'i-lucide-plus-square' },
+          { step: 1, text: 'Click "File" in the menu bar at the top', icon: Menu },
+          { step: 2, text: 'Click "Add to Dock"', icon: PlusSquare },
           { step: 3, text: 'budgy-ting will appear in your Dock' },
         ],
       }
@@ -53,8 +55,8 @@ const instructions = computed<{ title: string; steps: InstructionStep[] }>(() =>
       return {
         title: 'Install on Android',
         steps: [
-          { step: 1, text: 'Tap the three-dot menu at the top right', icon: 'i-lucide-more-vertical' },
-          { step: 2, text: 'Tap "Install"', icon: 'i-lucide-download' },
+          { step: 1, text: 'Tap the three-dot menu at the top right', icon: MoreVertical },
+          { step: 2, text: 'Tap "Install"', icon: Download },
           { step: 3, text: 'Confirm by tapping "Install" again' },
           { step: 4, text: 'budgy-ting will appear on your home screen' },
         ],
@@ -112,7 +114,7 @@ const instructions = computed<{ title: string; steps: InstructionStep[] }>(() =>
               {{ step.step }}
             </span>
             <div class="flex items-center gap-2 text-sm text-gray-700">
-              <span v-if="step.icon" :class="step.icon" class="text-gray-400 shrink-0" aria-hidden="true" />
+              <component v-if="step.icon" :is="step.icon" :size="16" class="text-gray-400 shrink-0" aria-hidden="true" />
               <span>{{ step.text }}</span>
             </div>
           </li>

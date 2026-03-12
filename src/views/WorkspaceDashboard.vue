@@ -11,6 +11,7 @@
  */
 
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { Wallet } from 'lucide-vue-next'
 import { db } from '@/db'
 import { buildForecast } from '@/engine/forecast'
 import { calculateRunway } from '@/engine/runway'
@@ -153,7 +154,7 @@ async function handleRequestSuggestions(id: string, description: string) {
     <!-- Cash on hand input -->
     <div class="flex flex-wrap items-center gap-3 mb-6">
       <label class="text-sm text-gray-600 flex items-center gap-2">
-        <span class="i-lucide-wallet text-base text-gray-400" />
+        <Wallet :size="16" class="text-gray-400" />
         Cash on hand
       </label>
       <div class="flex items-center gap-1">

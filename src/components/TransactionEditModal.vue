@@ -18,6 +18,7 @@ import { formatAmount } from '@/composables/useFormat'
 import { isIncome } from '@/types/models'
 import { useDialogA11y } from '@/composables/useDialogA11y'
 import TagSuggestions from '@/components/TagSuggestions.vue'
+import { X, Loader2 } from 'lucide-vue-next'
 import type { TagSuggestion } from '@/ml/types'
 import type { Transaction, TransactionClassification } from '@/types/models'
 
@@ -242,7 +243,7 @@ function displayDate(dateStr: string): string {
           aria-label="Close"
           @click="emit('close')"
         >
-          <span class="i-lucide-x text-lg" />
+          <X :size="18" />
         </button>
 
         <!-- ── Read-only view ── -->
@@ -389,10 +390,12 @@ function displayDate(dateStr: string): string {
                 >
                   {{ tag }}
                   <button
-                    class="i-lucide-x text-[10px] opacity-60 hover:opacity-100 ml-0.5"
+                    class="opacity-60 hover:opacity-100 ml-0.5"
                     :title="`Remove ${tag}`"
                     @click="removeTag(tag)"
-                  />
+                  >
+                    <X :size="10" />
+                  </button>
                 </span>
                 <span v-if="localTags.length === 0" class="text-xs text-gray-400 italic">
                   No tags
@@ -408,7 +411,7 @@ function displayDate(dateStr: string): string {
                 @accept-all="acceptAllSuggestions"
               />
               <div v-if="suggestionsLoading" class="flex items-center gap-1 mt-1 text-xs text-gray-400">
-                <span class="i-lucide-loader-2 animate-spin text-xs" />
+                <Loader2 :size="12" class="animate-spin" />
                 Suggesting tags...
               </div>
 

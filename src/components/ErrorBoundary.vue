@@ -8,6 +8,7 @@
  */
 
 import { ref, onErrorCaptured } from 'vue'
+import { AlertTriangle } from 'lucide-vue-next'
 
 const hasError = ref(false)
 const errorMessage = ref('')
@@ -27,7 +28,7 @@ function retry() {
 
 <template>
   <div v-if="hasError" class="max-w-md mx-auto mt-16 text-center">
-    <div class="i-lucide-alert-triangle text-5xl text-amber-400 mx-auto mb-4" />
+    <AlertTriangle :size="48" class="text-amber-400 mx-auto mb-4" />
     <h2 class="text-lg font-semibold text-gray-900 mb-2">Something went wrong</h2>
     <p class="text-gray-500 text-sm mb-1">
       The app ran into a problem. Your data is safe.
