@@ -131,18 +131,18 @@ function getSuggestions(id: string): TagSuggestion[] {
         v-model="search"
         type="text"
         placeholder="Search transactions..."
-        class="input text-sm flex-1 min-w-48 min-h-[44px]"
+        class="input-field text-sm flex-1 min-w-48 min-h-[44px]"
       />
       <select
         v-model="filterTag"
-        class="input text-sm w-auto min-h-[44px]"
+        class="input-field text-sm w-auto min-h-[44px]"
       >
         <option value="">All tags</option>
         <option v-for="tag in allTags" :key="tag" :value="tag">{{ tag }}</option>
       </select>
       <select
         v-model="filterClassification"
-        class="input text-sm w-auto min-h-[44px]"
+        class="input-field text-sm w-auto min-h-[44px]"
       >
         <option value="">All types</option>
         <option value="recurring">Recurring</option>

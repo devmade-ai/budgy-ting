@@ -325,7 +325,7 @@ function displayDate(dateStr: string): string {
                 :id="`${uid}-desc`"
                 v-model="localDescription"
                 type="text"
-                class="input text-sm w-full min-h-[44px]"
+                class="input-field text-sm w-full min-h-[44px]"
               />
             </div>
 
@@ -336,7 +336,7 @@ function displayDate(dateStr: string): string {
                 :id="`${uid}-date`"
                 v-model="localDate"
                 type="date"
-                class="input text-sm w-full min-h-[44px]"
+                class="input-field text-sm w-full min-h-[44px]"
               />
             </div>
 
@@ -350,7 +350,7 @@ function displayDate(dateStr: string): string {
                   type="number"
                   min="0"
                   step="0.01"
-                  class="input text-sm w-full min-h-[44px]"
+                  class="input-field text-sm w-full min-h-[44px]"
                 />
               </div>
               <div class="w-32">
@@ -358,7 +358,7 @@ function displayDate(dateStr: string): string {
                 <select
                   :id="`${uid}-dir`"
                   v-model="localIsIncome"
-                  class="input text-sm w-full min-h-[44px]"
+                  class="input-field text-sm w-full min-h-[44px]"
                 >
                   <option :value="false">Expense</option>
                   <option :value="true">Income</option>
@@ -372,7 +372,7 @@ function displayDate(dateStr: string): string {
               <select
                 :id="`${uid}-type`"
                 v-model="localClassification"
-                class="input text-sm w-full min-h-[44px]"
+                class="input-field text-sm w-full min-h-[44px]"
               >
                 <option value="recurring">Recurring</option>
                 <option value="once-off">Once-off</option>
@@ -422,7 +422,7 @@ function displayDate(dateStr: string): string {
                   v-model="tagInput"
                   type="text"
                   placeholder="Add a tag..."
-                  class="input text-sm w-full min-h-[44px]"
+                  class="input-field text-sm w-full min-h-[44px]"
                   role="combobox"
                   :aria-expanded="showAutocomplete"
                   aria-autocomplete="list"
