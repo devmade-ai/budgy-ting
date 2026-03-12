@@ -14,6 +14,7 @@
 import { ref, watch, onUnmounted } from 'vue'
 import type { Ref } from 'vue'
 import { db } from '@/db'
+import { debugLog } from '@/debug/debugLog'
 
 interface UseTagInputOptions {
   /** The tags array to add/remove from */
@@ -110,7 +111,8 @@ export function useTagInput(options: UseTagInputOptions) {
       autocompleteResults.value = [...prefix, ...substring].slice(0, 8)
       showAutocomplete.value = autocompleteResults.value.length > 0
       selectedIndex.value = -1
-    } catch {
+    } catch (e) {
+      debugLog('global', 'warn', 'Tag autocomplete query failed', { error: String(e) })
       autocompleteResults.value = []
       showAutocomplete.value = false
     }

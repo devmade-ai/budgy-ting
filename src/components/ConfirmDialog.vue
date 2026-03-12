@@ -44,19 +44,23 @@ useDialogA11y(dialogRef, () => emit('cancel'))
       >
         <h3 class="text-lg font-semibold text-gray-900 mb-2">{{ title }}</h3>
         <p class="text-sm text-gray-600 mb-6">{{ message }}</p>
+        <!-- Requirement: Standard button order — Cancel left, Confirm right
+             Approach: Cancel (secondary) first, confirm (primary/danger) second
+             Alternatives:
+               - Confirm-first: Rejected — violates platform convention (macOS, Material, etc.) -->
         <div class="flex gap-3">
+          <button
+            class="btn-secondary flex-1"
+            @click="emit('cancel')"
+          >
+            Cancel
+          </button>
           <button
             class="flex-1"
             :class="danger ? 'btn-danger' : 'btn-primary'"
             @click="hapticConfirm(); emit('confirm')"
           >
             {{ confirmLabel || 'Confirm' }}
-          </button>
-          <button
-            class="btn-secondary flex-1"
-            @click="emit('cancel')"
-          >
-            Cancel
           </button>
         </div>
       </div>

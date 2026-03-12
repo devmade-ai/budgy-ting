@@ -14,6 +14,7 @@ import { ref, computed, watch } from 'vue'
 import { formatAmount, formatDateForDisplay } from '@/composables/useFormat'
 import { usePagination } from '@/composables/usePagination'
 import { isIncome } from '@/types/models'
+import ClassificationBadge from '@/components/ClassificationBadge.vue'
 import TransactionEditModal from '@/components/TransactionEditModal.vue'
 import type { Transaction } from '@/types/models'
 import type { TagSuggestion } from '@/ml/types'
@@ -144,14 +145,7 @@ function getSuggestions(id: string): TagSuggestion[] {
             <p class="text-sm font-medium text-gray-900 truncate">{{ txn.description }}</p>
             <p class="text-xs text-gray-500 mt-0.5">
               {{ formatDateForDisplay(txn.date) }}
-              <span
-                class="ml-1.5 inline-block text-xs px-1.5 py-0.5 rounded"
-                :class="txn.classification === 'recurring'
-                  ? 'bg-blue-50 text-blue-600'
-                  : 'bg-gray-50 text-gray-500'"
-              >
-                {{ txn.classification === 'recurring' ? 'Recurring' : 'Once-off' }}
-              </span>
+              <ClassificationBadge :classification="txn.classification" class="ml-1.5 inline-block" />
             </p>
           </div>
           <span
@@ -165,7 +159,7 @@ function getSuggestions(id: string): TagSuggestion[] {
           <span
             v-for="tag in txn.tags"
             :key="tag"
-            class="text-xs bg-gray-100 text-gray-600 rounded px-1.5 py-0.5"
+            class="tag-pill"
           >
             {{ tag }}
           </span>
@@ -213,14 +207,7 @@ function getSuggestions(id: string): TagSuggestion[] {
               </span>
             </td>
             <td class="py-2 pr-3">
-              <span
-                class="text-xs px-1.5 py-0.5 rounded"
-                :class="txn.classification === 'recurring'
-                  ? 'bg-blue-50 text-blue-600'
-                  : 'bg-gray-50 text-gray-500'"
-              >
-                {{ txn.classification === 'recurring' ? 'Recurring' : 'Once-off' }}
-              </span>
+              <ClassificationBadge :classification="txn.classification" />
             </td>
             <td
               class="py-2 text-right font-medium whitespace-nowrap"

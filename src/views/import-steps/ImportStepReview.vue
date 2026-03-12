@@ -554,7 +554,7 @@ function handleImport() {
                 <span
                   v-for="tag in tx.tags"
                   :key="tag"
-                  class="inline-flex items-center gap-0.5 text-xs bg-gray-100 text-gray-600 rounded px-1.5 py-0.5"
+                  class="tag-pill inline-flex items-center gap-0.5"
                 >
                   {{ tag }}
                   <button

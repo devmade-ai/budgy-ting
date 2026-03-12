@@ -190,7 +190,7 @@ function acceptAllSuggestions() {
                 <span
                   v-for="tag in transaction.tags"
                   :key="tag"
-                  class="text-xs bg-gray-100 text-gray-600 rounded px-1.5 py-0.5"
+                  class="tag-pill"
                 >
                   {{ tag }}
                 </span>

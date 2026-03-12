@@ -43,4 +43,11 @@
   .page-title {
     @apply text-2xl font-bold text-gray-900;
   }
+  /* Requirement: Deduplicate tag pill styling across TransactionTable, TransactionEditModal, ImportStepReview
+     Approach: Shared CSS class in components layer
+     Alternatives:
+       - Vue component: Rejected — markup differs (some have remove buttons, some don't) */
+  .tag-pill {
+    @apply text-xs bg-gray-100 text-gray-600 rounded px-1.5 py-0.5;
+  }
 }

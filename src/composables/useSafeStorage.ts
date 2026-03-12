@@ -34,13 +34,3 @@ export function safeSetItem(key: string, value: string): void {
   }
 }
 
-/**
- * Safely remove a key from localStorage.
- */
-export function safeRemoveItem(key: string): void {
-  try {
-    localStorage.removeItem(key)
-  } catch (e) {
-    debugLog('global', 'warn', 'localStorage remove failed', { key, error: String(e) })
-  }
-}
