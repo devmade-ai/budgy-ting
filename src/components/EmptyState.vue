@@ -7,9 +7,10 @@
  *   - Custom SVG illustrations: Deferred — nice-to-have but requires design work
  *   - Tiny gray icon: Rejected — too stark, doesn't invite action
  */
+import type { Component } from 'vue'
 
 defineProps<{
-  icon: string
+  icon: Component
   title: string
   description?: string
 }>()
@@ -18,7 +19,7 @@ defineProps<{
 <template>
   <div class="text-center py-12">
     <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-      <div :class="icon" class="text-3xl text-gray-400" />
+      <component :is="icon" :size="28" class="text-gray-400" />
     </div>
     <p class="text-gray-600 font-medium text-lg">{{ title }}</p>
     <p v-if="description" class="text-gray-400 text-sm mt-1.5 mb-5 max-w-xs mx-auto">

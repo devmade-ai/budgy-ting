@@ -19,6 +19,7 @@ import type {
   EmbeddingWorkerResponse,
   DescriptionCluster,
 } from './types'
+import { createTimeoutTracker } from './workerTimeout'
 
 // ── Module-level singleton state ──
 
@@ -38,21 +39,7 @@ let worker: Worker | null = null
 let requestId = 0
 let refCount = 0
 
-const activeTimeouts = new Set<ReturnType<typeof setTimeout>>()
-
-function trackTimeout(fn: () => void, ms: number): ReturnType<typeof setTimeout> {
-  const id = setTimeout(() => {
-    activeTimeouts.delete(id)
-    fn()
-  }, ms)
-  activeTimeouts.add(id)
-  return id
-}
-
-function clearTrackedTimeout(id: ReturnType<typeof setTimeout>) {
-  clearTimeout(id)
-  activeTimeouts.delete(id)
-}
+const { trackTimeout, clearTrackedTimeout, clearAll: clearAllTimeouts } = createTimeoutTracker()
 
 // Separate pending maps for typed responses
 const pendingEmbed = new Map<string, {
@@ -299,8 +286,7 @@ function dispose() {
     return
   }
 
-  for (const id of activeTimeouts) clearTimeout(id)
-  activeTimeouts.clear()
+  clearAllTimeouts()
 
   const disposedErr = new Error('Disposed')
   for (const [, p] of pendingEmbed) p.reject(disposedErr)

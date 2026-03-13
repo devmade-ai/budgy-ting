@@ -5,6 +5,7 @@
  */
 
 import { ref } from 'vue'
+import { Upload, File } from 'lucide-vue-next'
 import { parseCSV, parseJSONImport } from '@/engine/csvParser'
 import { DATE_FORMATS, detectDateFormat } from '@/engine/matching'
 import type { ParsedCSV } from '@/engine/csvParser'
@@ -128,7 +129,7 @@ function handleContinue() {
     <label
       class="card flex flex-col items-center justify-center py-12 border-2 border-dashed border-gray-300 hover:border-brand-400 transition-colors cursor-pointer"
     >
-      <div class="i-lucide-upload text-3xl text-gray-400 mb-3" />
+      <Upload :size="28" class="text-gray-400 mb-3" />
       <p class="text-gray-600 font-medium">Choose a file</p>
       <p class="text-gray-400 text-sm mt-1">CSV or JSON, max 10 MB</p>
       <input
@@ -141,7 +142,7 @@ function handleContinue() {
 
     <!-- File info — shown immediately after selection, before parsing completes -->
     <div v-if="selectedFile && !parsedData" class="mt-4 flex items-center gap-3 text-sm text-gray-600">
-      <span class="i-lucide-file text-lg text-gray-400" />
+      <File :size="18" class="text-gray-400" />
       <div>
         <p class="font-medium">{{ selectedFile.name }}</p>
         <p class="text-xs text-gray-400">{{ selectedFile.size }}</p>
@@ -199,7 +200,7 @@ function handleContinue() {
         <label class="text-sm text-gray-600">Date format:</label>
         <select
           v-model.number="dateFormatIndex"
-          class="input text-sm w-auto min-h-[44px]"
+          class="input-field text-sm w-auto min-h-[44px]"
         >
           <option
             v-for="(fmt, i) in DATE_FORMATS"

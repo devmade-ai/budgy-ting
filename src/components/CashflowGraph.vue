@@ -10,6 +10,7 @@
 
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import VueApexCharts from 'vue3-apexcharts'
+import { LineChart } from 'lucide-vue-next'
 import type { Transaction } from '@/types/models'
 import type { DailyForecastPoint } from '@/engine/forecast'
 import type { RunwayResult } from '@/engine/runway'
@@ -230,7 +231,7 @@ const hasData = computed(() => actualPoints.value.length > 0 || props.forecastPo
       />
     </div>
     <div v-else class="text-center py-12">
-      <div class="i-lucide-line-chart text-4xl text-gray-300 mx-auto mb-3" />
+      <LineChart :size="36" class="text-gray-300 mx-auto mb-3" />
       <p class="text-gray-500">No data to chart</p>
       <p class="text-gray-400 text-sm mt-1">Import transactions to see your cashflow</p>
     </div>

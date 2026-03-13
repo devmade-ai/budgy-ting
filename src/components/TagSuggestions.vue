@@ -9,6 +9,7 @@
  */
 
 import type { TagSuggestion } from '@/ml/types'
+import { Sparkles, X } from 'lucide-vue-next'
 
 const props = defineProps<{
   suggestions: TagSuggestion[]
@@ -23,7 +24,7 @@ const emit = defineEmits<{
 
 <template>
   <div v-if="props.suggestions.length > 0" class="flex flex-wrap items-center gap-1 mt-1">
-    <span class="i-lucide-sparkles text-amber-400 text-xs flex-shrink-0" aria-hidden="true" />
+    <Sparkles :size="12" class="text-amber-400 flex-shrink-0" aria-hidden="true" />
     <span
       v-for="s in props.suggestions"
       :key="s.tag"
@@ -37,10 +38,12 @@ const emit = defineEmits<{
         {{ s.tag }}
       </button>
       <button
-        class="i-lucide-x text-[10px] opacity-50 hover:opacity-100 ml-0.5"
+        class="opacity-50 hover:opacity-100 ml-0.5"
         :aria-label="`Dismiss ${s.tag}`"
         @click="emit('dismiss', s.tag)"
-      />
+      >
+        <X :size="10" />
+      </button>
     </span>
     <button
       v-if="props.suggestions.length >= 2"

@@ -18,6 +18,7 @@ import InstallInstructionsModal from '@/components/InstallInstructionsModal.vue'
 import TutorialModal from '@/components/TutorialModal.vue'
 import HelpDrawer from '@/components/HelpDrawer.vue'
 import ToastNotification from '@/components/ToastNotification.vue'
+import { Menu, CircleHelp, BookOpen, TestTubes, FileText, FileSpreadsheet, RefreshCw } from 'lucide-vue-next'
 
 // Build-time markdown imports — bundled as strings, no runtime fetch
 import userGuideMd from '../../docs/USER_GUIDE.md?raw'
@@ -130,7 +131,7 @@ function handleCheckForUpdate() {
             :aria-expanded="menuOpen"
             @click="toggleMenu"
           >
-            <span class="i-lucide-menu text-lg" aria-hidden="true" />
+            <Menu :size="18" aria-hidden="true" />
           </button>
 
           <!-- Dropdown menu -->
@@ -144,7 +145,7 @@ function handleCheckForUpdate() {
               role="menuitem"
               @click="handleTutorial"
             >
-              <span class="i-lucide-circle-help text-base text-gray-400" aria-hidden="true" />
+              <CircleHelp :size="16" class="text-gray-400" aria-hidden="true" />
               How it works
             </button>
             <button
@@ -152,7 +153,7 @@ function handleCheckForUpdate() {
               role="menuitem"
               @click="openDrawer('user-guide')"
             >
-              <span class="i-lucide-book-open text-base text-gray-400" aria-hidden="true" />
+              <BookOpen :size="16" class="text-gray-400" aria-hidden="true" />
               User Guide
             </button>
             <button
@@ -160,7 +161,7 @@ function handleCheckForUpdate() {
               role="menuitem"
               @click="openDrawer('testing-guide')"
             >
-              <span class="i-lucide-test-tubes text-base text-gray-400" aria-hidden="true" />
+              <TestTubes :size="16" class="text-gray-400" aria-hidden="true" />
               Test Scenarios
             </button>
             <div class="border-t border-gray-100 my-1" role="separator" />
@@ -169,7 +170,7 @@ function handleCheckForUpdate() {
               role="menuitem"
               @click="openDrawer('import-format')"
             >
-              <span class="i-lucide-file-text text-base text-gray-400" aria-hidden="true" />
+              <FileText :size="16" class="text-gray-400" aria-hidden="true" />
               Import Format
             </button>
             <button
@@ -177,7 +178,7 @@ function handleCheckForUpdate() {
               role="menuitem"
               @click="openDrawer('sample-csv')"
             >
-              <span class="i-lucide-file-spreadsheet text-base text-gray-400" aria-hidden="true" />
+              <FileSpreadsheet :size="16" class="text-gray-400" aria-hidden="true" />
               Sample CSV
             </button>
             <div class="border-t border-gray-100 my-1" role="separator" />
@@ -187,7 +188,7 @@ function handleCheckForUpdate() {
               :disabled="checking"
               @click="handleCheckForUpdate"
             >
-              <span class="i-lucide-refresh-cw text-base text-gray-400" :class="{ 'animate-spin': checking }" aria-hidden="true" />
+              <RefreshCw :size="16" class="text-gray-400" :class="{ 'animate-spin': checking }" aria-hidden="true" />
               {{ checking ? 'Checking...' : 'Check for updates' }}
             </button>
           </div>

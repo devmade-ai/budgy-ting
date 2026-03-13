@@ -8,7 +8,8 @@
  *   - Full-screen modal: Rejected — too heavy for a simple menu
  */
 
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref } from 'vue'
+import { useDialogA11y } from '@/composables/useDialogA11y'
 
 defineProps<{
   open: boolean
@@ -19,22 +20,11 @@ const emit = defineEmits<{
 }>()
 
 const sheetRef = ref<HTMLElement | null>(null)
+useDialogA11y(sheetRef, () => emit('close'))
 
 function handleBackdropClick() {
   emit('close')
 }
-
-function handleKeydown(e: KeyboardEvent) {
-  if (e.key === 'Escape') emit('close')
-}
-
-onMounted(() => {
-  document.addEventListener('keydown', handleKeydown)
-})
-
-onUnmounted(() => {
-  document.removeEventListener('keydown', handleKeydown)
-})
 </script>
 
 <template>

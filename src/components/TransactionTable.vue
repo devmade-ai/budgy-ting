@@ -11,8 +11,10 @@
  */
 
 import { ref, computed, watch } from 'vue'
-import { formatAmount } from '@/composables/useFormat'
+import { formatAmount, formatDateForDisplay } from '@/composables/useFormat'
+import { usePagination } from '@/composables/usePagination'
 import { isIncome } from '@/types/models'
+import ClassificationBadge from '@/components/ClassificationBadge.vue'
 import TransactionEditModal from '@/components/TransactionEditModal.vue'
 import type { Transaction } from '@/types/models'
 import type { TagSuggestion } from '@/ml/types'
@@ -32,12 +34,9 @@ const emit = defineEmits<{
   'request-suggestions': [id: string, description: string]
 }>()
 
-const PAGE_SIZE = 25
-
 const search = ref('')
 const filterTag = ref('')
 const filterClassification = ref<'' | 'recurring' | 'once-off'>('')
-const currentPage = ref(1)
 
 /** Transaction currently being edited in the modal — null = modal closed */
 const editingTransaction = ref<Transaction | null>(null)
@@ -54,50 +53,30 @@ const allTags = computed(() => {
 const filtered = computed(() => {
   let result = [...props.transactions]
 
-  // Search by description
   if (search.value) {
     const q = search.value.toLowerCase()
     result = result.filter((t) => t.description.toLowerCase().includes(q))
   }
 
-  // Filter by tag
   if (filterTag.value) {
     result = result.filter((t) => t.tags.includes(filterTag.value))
   }
 
-  // Filter by classification
   if (filterClassification.value) {
     result = result.filter((t) => t.classification === filterClassification.value)
   }
 
-  // Sort by date descending (newest first)
   result.sort((a, b) => b.date.localeCompare(a.date))
 
   return result
 })
 
-const totalPages = computed(() => Math.max(1, Math.ceil(filtered.value.length / PAGE_SIZE)))
-
-const paginatedRows = computed(() => {
-  const start = (currentPage.value - 1) * PAGE_SIZE
-  return filtered.value.slice(start, start + PAGE_SIZE)
-})
+const { currentPage, totalPages, paginatedItems: paginatedRows, resetPage } = usePagination(filtered)
 
 // Reset page when filters change
 watch([search, filterTag, filterClassification], () => {
-  currentPage.value = 1
+  resetPage()
 })
-
-// Clamp page when data changes (e.g. transaction deleted externally)
-watch(totalPages, (pages) => {
-  if (currentPage.value > pages) currentPage.value = pages
-})
-
-function formatDate(dateStr: string): string {
-  const d = new Date(dateStr + 'T00:00:00')
-  if (isNaN(d.getTime())) return dateStr || '—'
-  return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: '2-digit' })
-}
 
 function openEdit(txn: Transaction) {
   editingTransaction.value = txn
@@ -131,18 +110,18 @@ function getSuggestions(id: string): TagSuggestion[] {
         v-model="search"
         type="text"
         placeholder="Search transactions..."
-        class="input text-sm flex-1 min-w-48 min-h-[44px]"
+        class="input-field text-sm flex-1 min-w-48 min-h-[44px]"
       />
       <select
         v-model="filterTag"
-        class="input text-sm w-auto min-h-[44px]"
+        class="input-field text-sm w-auto min-h-[44px]"
       >
         <option value="">All tags</option>
         <option v-for="tag in allTags" :key="tag" :value="tag">{{ tag }}</option>
       </select>
       <select
         v-model="filterClassification"
-        class="input text-sm w-auto min-h-[44px]"
+        class="input-field text-sm w-auto min-h-[44px]"
       >
         <option value="">All types</option>
         <option value="recurring">Recurring</option>
@@ -165,15 +144,8 @@ function getSuggestions(id: string): TagSuggestion[] {
           <div class="min-w-0 flex-1">
             <p class="text-sm font-medium text-gray-900 truncate">{{ txn.description }}</p>
             <p class="text-xs text-gray-500 mt-0.5">
-              {{ formatDate(txn.date) }}
-              <span
-                class="ml-1.5 inline-block text-xs px-1.5 py-0.5 rounded"
-                :class="txn.classification === 'recurring'
-                  ? 'bg-blue-50 text-blue-600'
-                  : 'bg-gray-50 text-gray-500'"
-              >
-                {{ txn.classification === 'recurring' ? 'Recurring' : 'Once-off' }}
-              </span>
+              {{ formatDateForDisplay(txn.date) }}
+              <ClassificationBadge :classification="txn.classification" class="ml-1.5 inline-block" />
             </p>
           </div>
           <span
@@ -187,7 +159,7 @@ function getSuggestions(id: string): TagSuggestion[] {
           <span
             v-for="tag in txn.tags"
             :key="tag"
-            class="text-xs bg-gray-100 text-gray-600 rounded px-1.5 py-0.5"
+            class="tag-pill"
           >
             {{ tag }}
           </span>
@@ -220,7 +192,7 @@ function getSuggestions(id: string): TagSuggestion[] {
             @keydown="handleRowKeydown($event, txn)"
           >
             <td class="py-2 pr-3 whitespace-nowrap text-gray-500">
-              {{ formatDate(txn.date) }}
+              {{ formatDateForDisplay(txn.date) }}
             </td>
             <td class="py-2 pr-3 text-gray-900 max-w-xs truncate">
               {{ txn.description }}
@@ -229,20 +201,13 @@ function getSuggestions(id: string): TagSuggestion[] {
               <span
                 v-for="tag in txn.tags"
                 :key="tag"
-                class="inline-block text-xs bg-gray-100 text-gray-600 rounded px-1.5 py-0.5 mr-1"
+                class="tag-pill inline-block mr-1"
               >
                 {{ tag }}
               </span>
             </td>
             <td class="py-2 pr-3">
-              <span
-                class="text-xs px-1.5 py-0.5 rounded"
-                :class="txn.classification === 'recurring'
-                  ? 'bg-blue-50 text-blue-600'
-                  : 'bg-gray-50 text-gray-500'"
-              >
-                {{ txn.classification === 'recurring' ? 'Recurring' : 'Once-off' }}
-              </span>
+              <ClassificationBadge :classification="txn.classification" />
             </td>
             <td
               class="py-2 text-right font-medium whitespace-nowrap"

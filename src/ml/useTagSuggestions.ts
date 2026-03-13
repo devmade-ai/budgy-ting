@@ -16,6 +16,7 @@ import { ref } from 'vue'
 import { db } from '@/db'
 import { debugLog } from '@/debug/debugLog'
 import type { WorkerResponse, WorkerRequest, TagSuggestion } from './types'
+import { createTimeoutTracker } from './workerTimeout'
 
 // ── Module-level singleton state ──
 
@@ -42,25 +43,11 @@ const BATCH_PER_ITEM_MS = 300
 
 let worker: Worker | null = null
 let requestId = 0
-/** Active timeout IDs — pruned on each new addition to prevent unbounded growth */
-const activeTimeouts = new Set<ReturnType<typeof setTimeout>>()
 
 /** Reference count — only dispose the worker when all consumers have released */
 let refCount = 0
 
-function trackTimeout(fn: () => void, ms: number): ReturnType<typeof setTimeout> {
-  const id = setTimeout(() => {
-    activeTimeouts.delete(id)
-    fn()
-  }, ms)
-  activeTimeouts.add(id)
-  return id
-}
-
-function clearTrackedTimeout(id: ReturnType<typeof setTimeout>) {
-  clearTimeout(id)
-  activeTimeouts.delete(id)
-}
+const { trackTimeout, clearTrackedTimeout, clearAll: clearAllTimeouts } = createTimeoutTracker()
 
 // Pending request callbacks keyed by request id.
 // Separate maps for single vs batch to avoid unsafe union casts.
@@ -364,8 +351,7 @@ function dispose() {
     return
   }
 
-  for (const id of activeTimeouts) clearTimeout(id)
-  activeTimeouts.clear()
+  clearAllTimeouts()
 
   // Reject any pending requests
   const disposedErr = new Error('Disposed')

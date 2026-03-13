@@ -6,6 +6,8 @@
  *   - Toast/notification system: Deferred — inline banners are simpler for MVP
  */
 
+import { X } from 'lucide-vue-next'
+
 defineProps<{
   message: string
   variant?: 'error' | 'success' | 'warning'
@@ -34,7 +36,7 @@ const variantClasses: Record<string, { wrapper: string; button: string }> = {
       aria-label="Dismiss message"
       @click="emit('dismiss')"
     >
-      <span class="i-lucide-x" />
+      <X :size="16" />
     </button>
   </div>
 </template>

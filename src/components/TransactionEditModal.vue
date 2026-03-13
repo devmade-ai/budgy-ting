@@ -12,12 +12,13 @@
  *   - Separate edit route: Rejected — breaks single-screen dashboard flow
  */
 
-import { ref, computed, watch, onUnmounted } from 'vue'
-import { db } from '@/db'
-import { formatAmount } from '@/composables/useFormat'
+import { ref, computed } from 'vue'
+import { formatAmount, formatDateForDisplay } from '@/composables/useFormat'
+import { useTagInput } from '@/composables/useTagInput'
 import { isIncome } from '@/types/models'
 import { useDialogA11y } from '@/composables/useDialogA11y'
 import TagSuggestions from '@/components/TagSuggestions.vue'
+import { X, Loader2 } from 'lucide-vue-next'
 import type { TagSuggestion } from '@/ml/types'
 import type { Transaction, TransactionClassification } from '@/types/models'
 
@@ -53,18 +54,19 @@ const localIsIncome = ref(props.transaction.amount >= 0)
 const localClassification = ref<TransactionClassification>(props.transaction.classification)
 const localTags = ref<string[]>([...props.transaction.tags])
 
-// Tag input state
-const tagInput = ref('')
-const autocompleteResults = ref<string[]>([])
-const showAutocomplete = ref(false)
-const selectedIndex = ref(-1)
-
-// Timer cleanup for blur and debounce handlers
-let blurTimer: ReturnType<typeof setTimeout> | undefined
-let debounceTimer: ReturnType<typeof setTimeout> | undefined
-onUnmounted(() => {
-  clearTimeout(blurTimer)
-  clearTimeout(debounceTimer)
+const {
+  tagInput,
+  autocompleteResults,
+  showAutocomplete,
+  selectedIndex,
+  addTag,
+  removeTag,
+  handleKeydown: handleTagKeydown,
+  handleBlur,
+  updateAutocomplete,
+} = useTagInput({
+  tags: localTags,
+  knownTags: () => props.knownTags ?? [],
 })
 
 // Dismissed ML suggestions
@@ -105,25 +107,6 @@ function handleSave() {
   })
 }
 
-function handleBlur() {
-  clearTimeout(blurTimer)
-  blurTimer = setTimeout(() => showAutocomplete.value = false, 150)
-}
-
-// ── Tag management ──
-
-function addTag(tag: string) {
-  const trimmed = tag.trim()
-  if (!trimmed || localTags.value.includes(trimmed)) return
-  localTags.value.push(trimmed)
-  tagInput.value = ''
-  showAutocomplete.value = false
-}
-
-function removeTag(tag: string) {
-  localTags.value = localTags.value.filter((t) => t !== tag)
-}
-
 function acceptSuggestion(tag: string) {
   addTag(tag)
 }
@@ -138,83 +121,6 @@ function acceptAllSuggestions() {
       localTags.value.push(s.tag)
     }
   }
-}
-
-function handleTagKeydown(e: KeyboardEvent) {
-  if (e.key === 'Enter' || e.key === ',') {
-    e.preventDefault()
-    const selected = autocompleteResults.value[selectedIndex.value]
-    if (selectedIndex.value >= 0 && selected) {
-      addTag(selected)
-    } else if (tagInput.value.trim()) {
-      addTag(tagInput.value)
-    }
-    selectedIndex.value = -1
-  } else if (e.key === 'ArrowDown') {
-    e.preventDefault()
-    if (selectedIndex.value < autocompleteResults.value.length - 1) {
-      selectedIndex.value++
-    }
-  } else if (e.key === 'ArrowUp') {
-    e.preventDefault()
-    if (selectedIndex.value > 0) {
-      selectedIndex.value--
-    }
-  } else if (e.key === 'Escape') {
-    showAutocomplete.value = false
-    selectedIndex.value = -1
-  }
-}
-
-// Requirement: Autocomplete should always show results when the user has tags in their workspace
-// Approach: Merge tagCache + knownTags prop so autocomplete works even when tagCache is empty
-//   (e.g. demo data or first session before any saves)
-// Alternatives:
-//   - Only tagCache: Rejected — empty for demo workspaces, users see dead input
-//   - Only knownTags: Rejected — tagCache has recency info for better ranking
-async function updateAutocomplete() {
-  const q = tagInput.value.trim().toLowerCase()
-  if (!q) {
-    autocompleteResults.value = []
-    showAutocomplete.value = false
-    return
-  }
-
-  try {
-    // Merge tags from tagCache + knownTags prop (deduped)
-    const tagSet = new Set<string>()
-    const allCached = await db.tagCache.toArray()
-    for (const t of allCached) tagSet.add(t.tag)
-    if (props.knownTags) {
-      for (const t of props.knownTags) tagSet.add(t)
-    }
-
-    const matches = [...tagSet].filter((tag) => !localTags.value.includes(tag))
-
-    const prefix = matches.filter((t) => t.toLowerCase().startsWith(q))
-    const substring = matches.filter(
-      (t) => !t.toLowerCase().startsWith(q) && t.toLowerCase().includes(q),
-    )
-
-    autocompleteResults.value = [...prefix, ...substring].slice(0, 8)
-    showAutocomplete.value = autocompleteResults.value.length > 0
-    selectedIndex.value = -1
-  } catch {
-    autocompleteResults.value = []
-    showAutocomplete.value = false
-  }
-}
-
-// Debounce autocomplete to avoid DB query on every keystroke
-watch(tagInput, () => {
-  clearTimeout(debounceTimer)
-  debounceTimer = setTimeout(updateAutocomplete, 100)
-})
-
-function displayDate(dateStr: string): string {
-  const d = new Date(dateStr + 'T00:00:00')
-  if (isNaN(d.getTime())) return dateStr || '—'
-  return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
 }
 </script>
 
@@ -242,7 +148,7 @@ function displayDate(dateStr: string): string {
           aria-label="Close"
           @click="emit('close')"
         >
-          <span class="i-lucide-x text-lg" />
+          <X :size="18" />
         </button>
 
         <!-- ── Read-only view ── -->
@@ -258,7 +164,7 @@ function displayDate(dateStr: string): string {
             <div class="flex gap-6">
               <div>
                 <span class="text-xs text-gray-500 uppercase tracking-wide">Date</span>
-                <p class="text-sm text-gray-900 mt-0.5">{{ displayDate(transaction.date) }}</p>
+                <p class="text-sm text-gray-900 mt-0.5">{{ formatDateForDisplay(transaction.date, 'numeric') }}</p>
               </div>
               <div>
                 <span class="text-xs text-gray-500 uppercase tracking-wide">Type</span>
@@ -284,7 +190,7 @@ function displayDate(dateStr: string): string {
                 <span
                   v-for="tag in transaction.tags"
                   :key="tag"
-                  class="text-xs bg-gray-100 text-gray-600 rounded px-1.5 py-0.5"
+                  class="tag-pill"
                 >
                   {{ tag }}
                 </span>
@@ -324,7 +230,7 @@ function displayDate(dateStr: string): string {
                 :id="`${uid}-desc`"
                 v-model="localDescription"
                 type="text"
-                class="input text-sm w-full min-h-[44px]"
+                class="input-field text-sm w-full min-h-[44px]"
               />
             </div>
 
@@ -335,7 +241,7 @@ function displayDate(dateStr: string): string {
                 :id="`${uid}-date`"
                 v-model="localDate"
                 type="date"
-                class="input text-sm w-full min-h-[44px]"
+                class="input-field text-sm w-full min-h-[44px]"
               />
             </div>
 
@@ -349,7 +255,7 @@ function displayDate(dateStr: string): string {
                   type="number"
                   min="0"
                   step="0.01"
-                  class="input text-sm w-full min-h-[44px]"
+                  class="input-field text-sm w-full min-h-[44px]"
                 />
               </div>
               <div class="w-32">
@@ -357,7 +263,7 @@ function displayDate(dateStr: string): string {
                 <select
                   :id="`${uid}-dir`"
                   v-model="localIsIncome"
-                  class="input text-sm w-full min-h-[44px]"
+                  class="input-field text-sm w-full min-h-[44px]"
                 >
                   <option :value="false">Expense</option>
                   <option :value="true">Income</option>
@@ -371,7 +277,7 @@ function displayDate(dateStr: string): string {
               <select
                 :id="`${uid}-type`"
                 v-model="localClassification"
-                class="input text-sm w-full min-h-[44px]"
+                class="input-field text-sm w-full min-h-[44px]"
               >
                 <option value="recurring">Recurring</option>
                 <option value="once-off">Once-off</option>
@@ -389,10 +295,12 @@ function displayDate(dateStr: string): string {
                 >
                   {{ tag }}
                   <button
-                    class="i-lucide-x text-[10px] opacity-60 hover:opacity-100 ml-0.5"
-                    :title="`Remove ${tag}`"
+                    class="opacity-60 hover:opacity-100 ml-0.5"
+                    :aria-label="`Remove ${tag}`"
                     @click="removeTag(tag)"
-                  />
+                  >
+                    <X :size="10" />
+                  </button>
                 </span>
                 <span v-if="localTags.length === 0" class="text-xs text-gray-400 italic">
                   No tags
@@ -408,7 +316,7 @@ function displayDate(dateStr: string): string {
                 @accept-all="acceptAllSuggestions"
               />
               <div v-if="suggestionsLoading" class="flex items-center gap-1 mt-1 text-xs text-gray-400">
-                <span class="i-lucide-loader-2 animate-spin text-xs" />
+                <Loader2 :size="12" class="animate-spin" />
                 Suggesting tags...
               </div>
 
@@ -419,7 +327,7 @@ function displayDate(dateStr: string): string {
                   v-model="tagInput"
                   type="text"
                   placeholder="Add a tag..."
-                  class="input text-sm w-full min-h-[44px]"
+                  class="input-field text-sm w-full min-h-[44px]"
                   role="combobox"
                   :aria-expanded="showAutocomplete"
                   aria-autocomplete="list"

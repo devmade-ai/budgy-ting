@@ -13,12 +13,14 @@
  */
 
 import { ref, computed, reactive, onMounted, onUnmounted, watch } from 'vue'
+import { X } from 'lucide-vue-next'
 import { formatAmount } from '@/composables/useFormat'
+import { usePagination } from '@/composables/usePagination'
+import { useTagInput } from '@/composables/useTagInput'
 import { isIncome } from '@/types/models'
 import type { RecurringPattern, RecurringVariability } from '@/types/models'
 import { useTagSuggestions } from '@/ml/useTagSuggestions'
 import { useEmbeddings } from '@/ml/useEmbeddings'
-import { db } from '@/db'
 import TagSuggestions from '@/components/TagSuggestions.vue'
 import type { TagSuggestion } from '@/ml/types'
 
@@ -52,9 +54,6 @@ const emit = defineEmits<{
   back: []
 }>()
 
-// ── Pagination ──
-const PAGE_SIZE = 25
-const currentPage = ref(1)
 const search = ref('')
 
 const transactions = ref<ReviewTransaction[]>([])
@@ -86,8 +85,6 @@ const preparing = ref(true)
 onUnmounted(() => {
   disposeTagSuggestions()
   disposeEmbeddings()
-  clearTimeout(tagBlurTimer)
-  clearTimeout(tagDebounceTimer)
 })
 
 // ── Cosine similarity for fuzzy matching ──
@@ -288,13 +285,6 @@ function acceptAllSuggestions(index: number) {
 
 // ── Manual tag input ──
 const tagInputIndex = ref(-1)
-const tagInputValue = ref('')
-const tagAutocompleteResults = ref<string[]>([])
-const tagAutocompleteVisible = ref(false)
-const tagSelectedIndex = ref(-1)
-
-let tagBlurTimer: ReturnType<typeof setTimeout> | undefined
-let tagDebounceTimer: ReturnType<typeof setTimeout> | undefined
 
 /** All known tags from patterns + already-tagged transactions */
 const allKnownTags = computed(() => {
@@ -306,6 +296,32 @@ const allKnownTags = computed(() => {
     for (const t of tx.tags) tags.add(t)
   }
   return [...tags].sort()
+})
+
+// Proxy ref: composable operates on whichever transaction's tags are active
+const activeTagsProxy = computed({
+  get: () => {
+    const tx = transactions.value[tagInputIndex.value]
+    return tx?.tags ?? []
+  },
+  set: (val: string[]) => {
+    const tx = transactions.value[tagInputIndex.value]
+    if (tx) tx.tags = val
+  },
+})
+
+const {
+  tagInput: tagInputValue,
+  autocompleteResults: tagAutocompleteResults,
+  showAutocomplete: tagAutocompleteVisible,
+  selectedIndex: tagSelectedIndex,
+  addTag: addTagToActive,
+  handleKeydown: handleTagInputKeydown,
+  handleBlur: handleTagBlur,
+  updateAutocomplete: updateTagAutocomplete,
+} = useTagInput({
+  tags: activeTagsProxy,
+  knownTags: allKnownTags,
 })
 
 function toggleTagInput(index: number) {
@@ -321,13 +337,9 @@ function toggleTagInput(index: number) {
 }
 
 function addTag(index: number, tag: string) {
-  const trimmed = tag.trim()
-  if (!trimmed) return
-  const tx = transactions.value[index]
-  if (!tx || tx.tags.includes(trimmed)) return
-  tx.tags.push(trimmed)
-  tagInputValue.value = ''
-  tagAutocompleteVisible.value = false
+  // Ensure we're targeting the right transaction
+  tagInputIndex.value = index
+  addTagToActive(tag)
 }
 
 function removeTag(index: number, tag: string) {
@@ -337,69 +349,9 @@ function removeTag(index: number, tag: string) {
 }
 
 function handleTagKeydown(e: KeyboardEvent, index: number) {
-  if (e.key === 'Enter' || e.key === ',') {
-    e.preventDefault()
-    const selected = tagAutocompleteResults.value[tagSelectedIndex.value]
-    if (tagSelectedIndex.value >= 0 && selected) {
-      addTag(index, selected)
-    } else if (tagInputValue.value.trim()) {
-      addTag(index, tagInputValue.value)
-    }
-    tagSelectedIndex.value = -1
-  } else if (e.key === 'ArrowDown') {
-    e.preventDefault()
-    if (tagSelectedIndex.value < tagAutocompleteResults.value.length - 1) {
-      tagSelectedIndex.value++
-    }
-  } else if (e.key === 'ArrowUp') {
-    e.preventDefault()
-    if (tagSelectedIndex.value > 0) {
-      tagSelectedIndex.value--
-    }
-  } else if (e.key === 'Escape') {
-    tagAutocompleteVisible.value = false
-    tagSelectedIndex.value = -1
-  }
+  tagInputIndex.value = index
+  handleTagInputKeydown(e)
 }
-
-function handleTagBlur() {
-  clearTimeout(tagBlurTimer)
-  tagBlurTimer = setTimeout(() => { tagAutocompleteVisible.value = false }, 150)
-}
-
-async function updateTagAutocomplete() {
-  const q = tagInputValue.value.trim().toLowerCase()
-  if (!q) {
-    tagAutocompleteResults.value = []
-    tagAutocompleteVisible.value = false
-    return
-  }
-
-  const tx = transactions.value[tagInputIndex.value]
-  const currentTags = tx?.tags ?? []
-
-  // Merge tagCache + known tags from patterns/transactions
-  const tagSet = new Set<string>()
-  try {
-    const cached = await db.tagCache.toArray()
-    for (const t of cached) tagSet.add(t.tag)
-  } catch { /* non-critical */ }
-  for (const t of allKnownTags.value) tagSet.add(t)
-
-  const matches = [...tagSet].filter((t) => !currentTags.includes(t))
-  const prefix = matches.filter((t) => t.toLowerCase().startsWith(q))
-  const substring = matches.filter(
-    (t) => !t.toLowerCase().startsWith(q) && t.toLowerCase().includes(q),
-  )
-  tagAutocompleteResults.value = [...prefix, ...substring].slice(0, 8)
-  tagAutocompleteVisible.value = tagAutocompleteResults.value.length > 0
-  tagSelectedIndex.value = -1
-}
-
-watch(tagInputValue, () => {
-  clearTimeout(tagDebounceTimer)
-  tagDebounceTimer = setTimeout(updateTagAutocomplete, 100)
-})
 
 // ── Classification and ignore controls ──
 function setClassification(index: number, cls: 'recurring' | 'once-off') {
@@ -430,14 +382,9 @@ const filteredTransactions = computed(() => {
     .filter(({ tx }) => tx.description.toLowerCase().includes(q))
 })
 
-const totalPages = computed(() => Math.max(1, Math.ceil(filteredTransactions.value.length / PAGE_SIZE)))
-const paginatedTransactions = computed(() => {
-  const start = (currentPage.value - 1) * PAGE_SIZE
-  return filteredTransactions.value.slice(start, start + PAGE_SIZE)
-})
+const { currentPage, totalPages, paginatedItems: paginatedTransactions, resetPage } = usePagination(filteredTransactions)
 
-// Reset to page 1 when search changes
-watch(search, () => { currentPage.value = 1 })
+watch(search, () => { resetPage() })
 
 // ── Summary ──
 const summary = computed(() => {
@@ -550,7 +497,7 @@ function handleImport() {
           v-model="search"
           type="text"
           placeholder="Search descriptions..."
-          class="input text-sm py-1.5 px-3 w-48"
+          class="input-field text-sm py-1.5 px-3 w-48"
         />
         <button
           class="text-xs text-gray-500 hover:text-gray-700 underline"
@@ -607,14 +554,16 @@ function handleImport() {
                 <span
                   v-for="tag in tx.tags"
                   :key="tag"
-                  class="inline-flex items-center gap-0.5 text-xs bg-gray-100 text-gray-600 rounded px-1.5 py-0.5"
+                  class="tag-pill inline-flex items-center gap-0.5"
                 >
                   {{ tag }}
                   <button
-                    class="i-lucide-x text-[10px] opacity-50 hover:opacity-100 ml-0.5"
-                    :title="`Remove ${tag}`"
+                    class="opacity-50 hover:opacity-100 ml-0.5"
+                    :aria-label="`Remove ${tag}`"
                     @click="removeTag(originalIndex, tag)"
-                  />
+                  >
+                    <X :size="10" />
+                  </button>
                 </span>
               </div>
 
@@ -641,7 +590,7 @@ function handleImport() {
                     v-model="tagInputValue"
                     type="text"
                     placeholder="Type a tag..."
-                    class="input text-xs w-full py-1.5 px-2"
+                    class="input-field text-xs w-full py-1.5 px-2"
                     role="combobox"
                     :aria-expanded="tagAutocompleteVisible"
                     aria-autocomplete="list"

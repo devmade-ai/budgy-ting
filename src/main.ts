@@ -5,8 +5,7 @@ import { debugLog } from './debug/debugLog'
 import { seedDemoWorkspace } from './db/demoData'
 import { pruneStaleTagCache } from './composables/useTagAutocomplete'
 
-import '@unocss/reset/tailwind.css'
-import 'virtual:uno.css'
+import './index.css'
 
 debugLog('boot', 'info', 'Application starting')
 

@@ -11,46 +11,48 @@
  */
 
 import { ref, computed } from 'vue'
+import type { Component } from 'vue'
 import { useDialogA11y } from '@/composables/useDialogA11y'
+import { HandHeart, Wallet, Upload, Repeat, TrendingUp, PiggyBank, X } from 'lucide-vue-next'
 
 const emit = defineEmits<{
   close: []
 }>()
 
 interface TutorialStep {
-  icon: string
+  icon: Component
   title: string
   description: string
 }
 
 const steps: TutorialStep[] = [
   {
-    icon: 'i-lucide-hand-heart',
+    icon: HandHeart,
     title: 'Welcome to budgy-ting',
     description: 'A simple tool to track your spending and forecast your cashflow. Everything stays on your device — no accounts, no cloud.',
   },
   {
-    icon: 'i-lucide-wallet',
+    icon: Wallet,
     title: 'Create a workspace',
     description: 'Start by creating a workspace. Give it a name, pick a time period (monthly or custom dates), and choose your currency.',
   },
   {
-    icon: 'i-lucide-upload',
+    icon: Upload,
     title: 'Import your transactions',
     description: 'Upload your bank statement (CSV or JSON file). The app groups similar transactions and lets you classify them as recurring or once-off.',
   },
   {
-    icon: 'i-lucide-repeat',
+    icon: Repeat,
     title: 'Detect recurring patterns',
     description: 'The app automatically spots patterns like rent, subscriptions, and salary. These become the basis for your spending forecast.',
   },
   {
-    icon: 'i-lucide-trending-up',
+    icon: TrendingUp,
     title: 'See your forecast',
     description: 'Your dashboard shows a cashflow graph, key metrics, and a forecast based on your recurring patterns and transaction history.',
   },
   {
-    icon: 'i-lucide-piggy-bank',
+    icon: PiggyBank,
     title: 'Track your runway',
     description: 'Enter your cash on hand to see how long your money will last. The forecast updates automatically as you import more data.',
   },
@@ -110,14 +112,15 @@ function goToStep(index: number) {
           aria-label="Close tutorial"
           @click="emit('close')"
         >
-          <span class="i-lucide-x text-lg" />
+          <X :size="18" />
         </button>
 
         <!-- Step content -->
         <div class="text-center pt-2 pb-4">
-          <div
-            :class="activeStep.icon"
-            class="text-4xl text-brand-500 mx-auto mb-4"
+          <component
+            :is="activeStep.icon"
+            :size="36"
+            class="text-brand-500 mx-auto mb-4"
             aria-hidden="true"
           />
           <h3 class="text-lg font-semibold text-gray-900 mb-2">

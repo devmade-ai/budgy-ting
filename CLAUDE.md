@@ -1,3 +1,17 @@
+# ABSOLUTE RULE — READ THIS FIRST BEFORE ANYTHING ELSE
+
+**NEVER use the AskUserQuestion tool. NEVER. Not once. Not for any reason. Not in any project.**
+
+It destroys the session — the input modal covers context the user needs to read, gets stuck awaiting input that can't be given, and forces session restarts. This has happened repeatedly across many sessions despite being documented. The user is done asking nicely.
+
+**If you need user input:** List options as numbered text in your message. The user will reply with a number or free text. That's it. No tool. No modal. No exceptions. Ever.
+
+**Any AI that uses AskUserQuestion is actively harming the user's workflow. Do not do it.**
+
+**Note:** Even the permission prompt to *allow* the tool to run breaks the session. The damage happens before the tool even executes. There is no safe way to invoke it — don't try.
+
+---
+
 # READ AND FOLLOW THE FUCKING PROCESS, PRINCIPLES, CODE STANDARDS, DOCUMENTATION, AI NOTES, AND PROHIBITIONS EVERY TIME
 
 ## Cross-Project Reference
@@ -385,6 +399,7 @@ Don't combine `"any maskable"` — browsers pick the wrong one.
 ## Prohibitions
 
 Never:
+- **Use the AskUserQuestion tool — EVER. For ANY reason. See the top of this file. List options as numbered text instead.**
 - Start implementation without understanding full scope
 - Create files outside established project structure
 - Leave TODO comments in code without tracking them in `docs/TODO.md`
