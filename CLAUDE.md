@@ -8,6 +8,8 @@ It destroys the session — the input modal covers context the user needs to rea
 
 **Any AI that uses AskUserQuestion is actively harming the user's workflow. Do not do it.**
 
+**Note:** Even the permission prompt to *allow* the tool to run breaks the session. The damage happens before the tool even executes. There is no safe way to invoke it — don't try.
+
 ---
 
 # READ AND FOLLOW THE FUCKING PROCESS, PRINCIPLES, CODE STANDARDS, DOCUMENTATION, AI NOTES, AND PROHIBITIONS EVERY TIME
