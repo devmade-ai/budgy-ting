@@ -12,7 +12,7 @@ It destroys the session — the input modal covers context the user needs to rea
 
 ---
 
-# READ AND FOLLOW THE FUCKING PROCESS, PRINCIPLES, CODE STANDARDS, DOCUMENTATION, AI NOTES, AND PROHIBITIONS EVERY TIME
+# READ AND FOLLOW THE FUCKING PROCESS, PRINCIPLES, CODE STANDARDS, DOCUMENTATION, AI NOTES, TRIGGERS, AND PROHIBITIONS EVERY TIME
 
 ## Cross-Project Reference
 
@@ -277,6 +277,10 @@ These footers are required on every commit. No exceptions.
 - **NEVER use the AskUserQuestion tool.** It breaks the session UI — the input modal covers context, gets stuck awaiting input, and disrupts workflow. If you need user input, list options as numbered text in your response and let the user reply with a number or text. This is a hard rule with zero exceptions.
 - **Development phase:** App is pre-release with zero users. Features added now are provisional and will be changed or removed later. Don't over-polish or over-engineer — keep things easy to swap out. Don't push back on feature ideas based on "users don't need this" — there are no users yet, and the goal is exploration.
 - **Check build tools before building.** Run `npm install` or verify `node_modules/.bin/vite` exists before attempting `npm run build`. The `sharp` package may not be installed (used by prebuild icon generation), so use `./node_modules/.bin/vite build` directly to skip the prebuild step if sharp fails.
+- **Claude Code mobile/web — accessing sibling repos:**
+  - Use `GITHUB_ALL_REPO_TOKEN` with the GitHub API (`api.github.com/repos/devmade-ai/{repo}/contents/{path}`) to read files from other devmade-ai repos
+  - Use `$(printenv GITHUB_ALL_REPO_TOKEN)` not `$GITHUB_ALL_REPO_TOKEN` to avoid shell expansion issues
+  - Never clone sibling repos — use the API instead
 
 ### REMINDER: READ AND FOLLOW THE FUCKING AI NOTES EVERY TIME
 
@@ -384,10 +388,12 @@ Single SVG source file (`public/icon.svg`), Sharp converts to all needed PNG siz
 
 **SVG design rules:**
 - Canvas must be square (`viewBox="0 0 512 512"`)
+- Add `shape-rendering="geometricPrecision"` to the root `<svg>` element — tells the rasterizer to prioritize accurate geometry over speed
 - Use paths, not text — avoid font rendering inconsistencies across OS/CI
 - Background fills entire canvas (no transparency)
 - Important content stays within inner 80% (safe zone for maskable crop)
 - Design must be legible at 32px (favicon) — avoid fine details
+- **400 DPI rasterization** — Sharp renders the SVG at ~5.5x the default 72 DPI before downscaling, so edges are anti-aliased from high-res source data. The 192px PWA icon benefits most.
 
 **PWA manifest icons** (configured in `vite.config.ts` via vite-plugin-pwa):
 - 192x192 with `purpose: 'any'`
@@ -395,6 +401,55 @@ Single SVG source file (`public/icon.svg`), Sharp converts to all needed PNG siz
 - 512x512 with `purpose: 'maskable'` (separate entry)
 
 Don't combine `"any maskable"` — browsers pick the wrong one.
+
+### Download as PDF (via `window.print()`)
+
+Zero-dependency PDF download using the browser's native print dialog. No PDF libraries needed — the user selects "Save as PDF" from their system print dialog.
+
+#### How It Works
+
+Three pieces: a trigger button, a `no-print` utility class, and print-friendly CSS overrides.
+
+**1. Trigger Button** — A simple button that calls `window.print()`. Place in the page header or wherever the user expects a download action. The button itself should be hidden during print (see `no-print` class).
+
+**2. The `no-print` Utility Class** — Hide interactive or irrelevant elements when printing/saving as PDF:
+
+```css
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}
+```
+
+Apply to: navigation bars, action buttons, footers with interactive links, modals, tooltips, forms, debug overlays.
+
+**3. Print-Friendly CSS Overrides** — Override dark themes, fix link visibility, prevent content splitting:
+
+```css
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  a {
+    color: black !important;
+    text-decoration: underline !important;
+  }
+  section {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
+```
+
+#### Key Lessons
+
+1. **No library needed** — `window.print()` opens the system print dialog, which includes "Save as PDF" on all major browsers and operating systems.
+2. **`!important` is justified here** — print overrides must win against inline styles, CSS-in-JS, and dark mode classes.
+3. **Test in print preview** — use Ctrl/Cmd+P to verify layout. Check for: hidden elements, color contrast, page breaks, readability.
+4. **`break-inside: avoid` on sections** — prevents awkward mid-section page breaks.
+5. **Hide the download button itself** — the button that triggers `window.print()` should be inside a `no-print` container.
 
 ## Prohibitions
 
@@ -409,5 +464,47 @@ Never:
 - Skip error handling "for now"
 - Remove features during "cleanup" without checking if they're documented as intentional (see AI_MISTAKES.md)
 - Proceed with assumptions when a single clarifying question would prevent a wrong commit
+- Use interactive input prompts or selection UIs — list options as numbered text instead
 
 ### REMINDER: READ AND FOLLOW THE FUCKING PROHIBITIONS EVERY TIME
+
+## Triggers
+
+Single-word commands that invoke focused analysis passes. Each trigger has a short alias. Type the word or alias to activate.
+
+| # | Trigger | Alias | What it does |
+|---|---------|-------|--------------|
+| 1 | `review` | `rev` | Code review — bugs, UI, UX, simplification |
+| 2 | `audit` | `aud` | Code quality — hacks, anti-patterns, latent bugs, race conditions |
+| 3 | `docs` | `doc` | Documentation accuracy vs actual code |
+| 4 | `mobile` | `tap` | Mobile UX — touch targets, viewport, safe areas |
+| 5 | `clean` | `cln` | Hygiene — duplication, refactor candidates, dead code |
+| 6 | `performance` | `perf` | Re-renders, expensive ops, bundle size, DB/API, memory |
+| 7 | `security` | `sec` | Injection, auth gaps, data exposure, insecure defaults, CVEs |
+| 8 | `debug` | `dbg` | Debug pill coverage — missing logs, noise |
+| 9 | `improve` | `imp` | Open-ended — architecture, DX, anything else |
+| 10 | `start` | `go` | Sequential sweep of all 9 above, one at a time |
+
+### Trigger behavior
+
+- Each trigger runs a single focused pass and reports findings.
+- Findings are listed as numbered text — never interactive prompts or selection UIs.
+- One trigger per response. Never combine multiple triggers in a single response.
+
+### `start` / `go` behavior
+
+Runs all 9 triggers in priority sequence, one at a time:
+
+`rev` → `aud` → `doc` → `tap` → `cln` → `perf` → `sec` → `dbg` → `imp`
+
+After each trigger completes and findings are presented, the user responds with one of:
+1. `fix` — apply the suggested fixes, then move to the next trigger
+2. `skip` — skip this trigger's findings and move to the next trigger
+3. `stop` — end the sweep entirely
+
+Rules:
+- Always pause after each trigger — never auto-advance to the next one.
+- Never run multiple triggers in one response.
+- Wait for the user's explicit `fix`, `skip`, or `stop` before proceeding.
+
+### REMINDER: READ AND FOLLOW THE FUCKING TRIGGERS EVERY TIME
