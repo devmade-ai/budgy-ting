@@ -4,30 +4,24 @@
 
 ## Worked on
 
-Code quality audit — fixing race conditions, memory leaks, math errors, and validation gaps identified by `audit` trigger.
+Code quality + documentation audit sweep (triggers `aud` and `doc` from a `start` sweep).
 
 ## Accomplished
 
-- **Fixed 13 audit findings** across 10 files:
-  - RAF leak in `useDialogA11y.ts` (cancelled on unmount)
-  - HMR interval leak in `usePWAUpdate.ts` (tracked for module reload)
-  - Cosine similarity div-by-zero in `ImportStepReview.vue`
-  - `waitForModel()` polling interval leak in `useTagSuggestions.ts`
-  - Hardcoded array indices in `matching.ts` (now named lookups)
-  - FileReader lifecycle leak in `ImportStepUpload.vue` (abort on unmount)
-  - Non-null assertion on `descCounts.get()` in `ImportStepReview.vue`
-  - Division by zero in `patterns.ts` confidence calculation
-  - 5s diagnostic timeout firing on non-Chromium browsers in `usePWAInstall.ts`
-  - Silent DB failure in `useTagAutocomplete.ts` (added debugLog)
-  - NaN guard in `forecast.ts` `initHolt()`
-  - Full-scan import validation in `exportImport.ts` (was spot-check first only)
-  - Timeout cleanup in `useTagInput.ts` standardised to Set-based tracking
+- **Audit (`aud`):** Fixed 13 code quality issues — race conditions, memory leaks, math errors, validation gaps across 10 source files
+- **Docs (`doc`):** Fixed 10 documentation discrepancies across CLAUDE.md, README.md, USER_GUIDE.md, TESTING_GUIDE.md:
+  - Added Project Status section to CLAUDE.md (was required but missing)
+  - Fixed README tech stack (UnoCSS → Tailwind v4), added 12 missing files to structure
+  - Rewrote import wizard docs from 3-step to 2-step flow
+  - Added "Check for updates" to menu docs and test scenarios
 
 ## Current state
 
-All fixes applied. 106 tests pass, type-check clean.
+All fixes applied. 106 tests pass, type-check clean. Both commits pushed to `claude/fetch-claudemd-changes-0792x`.
 
 ## Key context
 
-- Audit was part of a `start`/`go` trigger sweep — `aud` is the second trigger
-- Next trigger in sweep: `doc` (documentation accuracy)
+- Running a `start` sweep: completed `rev` → `aud` → `doc`, next trigger is `tap` (mobile UX)
+- Import wizard is 2 steps: Upload → Review & Import (not 3 steps)
+- DB schema is v8 (embedding cache added in v8)
+- CSS framework is Tailwind v4 (not UnoCSS)

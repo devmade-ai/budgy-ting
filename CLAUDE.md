@@ -43,6 +43,32 @@ Check this periodically for new Suggested Implementations, AI Notes, or process 
 
 ### REMINDER: READ AND FOLLOW THE FUCKING PRINCIPLES EVERY TIME
 
+## Project Status
+
+Current working features:
+
+- Workspace CRUD with monthly or custom date ranges
+- Demo workspace auto-seeded on first visit
+- 2-step import wizard (Upload → Review & Import) for CSV/JSON bank statements
+- Per-transaction review with ML tag suggestions (zero-shot classification)
+- Embedding-based fuzzy pattern matching (cosine similarity)
+- Recurring pattern detection (daily/weekly/biweekly/monthly/quarterly/annually/irregular)
+- Variable recurring expenses (fixed/variable/irregular variability)
+- Holt's double exponential smoothing forecasting with day-of-week seasonality
+- Cash runway calculation with confidence bands (optimistic/expected/pessimistic)
+- Prediction accuracy metrics (MAE, RMSE, bias, WMAPE, hit rate)
+- Single-screen dashboard (cashflow graph, metrics grid, transaction table)
+- Transaction edit modal with read-only view mode
+- Export/import/restore workspace data as JSON
+- PWA: offline-first, installable, service worker update prompt, manual update check
+- Debug pill (alpha): floating diagnostic panel with log + environment tabs
+- Tag autocomplete from tagCache + pattern tags + ML suggestions
+- Duplicate detection on import (date + amount + description)
+- Pull-to-refresh, haptic feedback, bottom sheet modal
+
+**Database:** Schema v8 (8 tables: workspaces, transactions, patterns, importBatches, tagCache, embeddingCache + 2 legacy)
+**Tech stack:** Vue 3 + TypeScript + Tailwind CSS v4 + Dexie.js + vite-plugin-pwa + ApexCharts + simple-statistics + Transformers.js (Web Worker)
+
 ## Code Standards
 
 ### Code Organization

@@ -4,6 +4,12 @@
 
 ## 2026-03-13
 
+- **Documentation Accuracy Audit — 10 Fixes Across CLAUDE.md, README.md, USER_GUIDE.md, TESTING_GUIDE.md:**
+  - CLAUDE.md: Added Project Status section with current features, schema v8, and tech stack
+  - README.md: Fixed CSS framework (UnoCSS → Tailwind CSS v4), added 5 missing components, 6 missing composables, 1 missing engine file, corrected schema v6→v8, fixed import wizard 3→2 steps
+  - USER_GUIDE.md: Rewrote import wizard section from 3-step (Upload/Classify/Confirm) to 2-step (Upload/Review & Import), added "Check for updates" to help menu list
+  - TESTING_GUIDE.md: Fixed menu item count (5→6), corrected import wizard step count, rewrote Step 2/3 test scenarios to match per-transaction review flow, added "Check for updates" test scenario (5.3)
+
 - **Code Quality Audit — 13 Fixes Across Race Conditions, Math Errors, Leaks, and Validation:**
 
   **Critical (Memory Leaks / Race Conditions):**

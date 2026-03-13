@@ -96,7 +96,7 @@ A list of all transactions in the workspace, showing date, description, amount, 
 
 ## Importing Transactions
 
-The import wizard lets you upload your bank statement and classify transactions. It's a 3-step process.
+The import wizard lets you upload your bank statement and review transactions before importing. It's a 2-step process.
 
 For details on file format, supported columns, and a ready-to-copy AI prompt for converting bank statements, open **Import Format** from the menu. A **Sample CSV** is also available there to test with.
 
@@ -107,32 +107,26 @@ For details on file format, supported columns, and a ready-to-copy AI prompt for
 3. The app reads your file and auto-detects which columns contain dates, amounts, and descriptions
 4. A preview table shows the first few rows
 5. Select the correct columns if auto-detection was wrong
-6. Click **Continue**
+6. Choose the correct date format if auto-detection was wrong
+7. Click **Continue to classify**
 
 Duplicate transactions (matching date, amount, and description) are automatically skipped.
 
-### Step 2: Classify Transactions
+### Step 2: Review & Import
 
-The app groups similar transactions together and lets you classify each group:
+Each transaction is shown individually in a paginated list. For each one you can:
 
-- **Recurring** — This is a regular payment (rent, salary, subscription). A recurring pattern will be created or updated, and these transactions will feed the forecast engine.
-- **Once-off** — A one-time transaction (doesn't repeat). Still imported, but not used for pattern-based forecasting.
-- **Ignore** — Skip this group entirely (won't be imported).
+- **Classify** as Recurring or Once-off (transactions matching existing patterns are auto-classified)
+- **Add tags** with autocomplete from your existing tag vocabulary
+- **See ML tag suggestions** — the app suggests relevant tags using zero-shot classification
+- **Set variability** — for recurring transactions: Fixed, Variable, or Irregular
+- **Ignore** — toggle to skip importing this transaction
 
-For each group, you can see:
-- The description and number of occurrences
-- The average amount and detected frequency
-- Whether it matches an existing recurring pattern
+Transactions that match existing recurring patterns (by exact description or fuzzy similarity) are highlighted with the matched pattern name.
 
-Click **Continue** when you've classified all groups.
+Use **Mark all unmatched as once-off** to quickly classify remaining transactions.
 
-### Step 3: Confirm & Import
-
-A summary shows:
-- How many recurring groups and once-off transactions will be imported
-- Total transaction count
-
-Click **Import transactions** to save everything. You'll be redirected back to the workspace dashboard.
+When ready, click **Import transactions** to save. You'll be redirected back to the workspace dashboard.
 
 ---
 
@@ -164,3 +158,4 @@ Click the **menu** icon (hamburger) in the top-right corner to access:
 - **Test Scenarios** — Opens the manual testing checklist in a slide-out panel
 - **Import Format** — Shows what your import file should look like, with examples and an AI conversion prompt
 - **Sample CSV** — A ready-to-use sample import file you can copy
+- **Check for updates** — Manually check for a new app version

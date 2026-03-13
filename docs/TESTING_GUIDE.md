@@ -13,17 +13,18 @@ Run through this checklist after any change to verify nothing is broken:
 - [ ] Can create a new workspace (both monthly and custom period types)
 - [ ] Can open a workspace and see single-screen dashboard (graph, metrics, transactions)
 - [ ] Cash on hand input shows runway result on dashboard
-- [ ] Can import a CSV file through the 3-step wizard (upload, classify, confirm)
+- [ ] Can import a CSV file through the 2-step wizard (upload, review & import)
 - [ ] Transactions appear in the table after import
 - [ ] Can export a workspace as JSON
 - [ ] Can restore a workspace from exported JSON
 - [ ] Can delete a workspace (confirm dialog appears)
-- [ ] Menu opens via hamburger icon, shows 5 items (with divider)
+- [ ] Menu opens via hamburger icon, shows 6 items (with dividers)
 - [ ] Tutorial opens via menu → "How it works"
 - [ ] User Guide drawer opens via menu → "User Guide"
 - [ ] Test Scenarios drawer opens via menu → "Test Scenarios"
 - [ ] Import Format drawer opens via menu → "Import Format"
 - [ ] Sample CSV drawer opens via menu → "Sample CSV"
+- [ ] Check for updates button triggers SW update check
 - [ ] Build passes: `npm run build`
 - [ ] Type-check passes: `npm run type-check`
 - [ ] Unit tests pass: `npm run test`
@@ -281,51 +282,58 @@ Run through this checklist after any change to verify nothing is broken:
 - Duplicate rows are skipped
 - Message shows how many rows were skipped as duplicates
 
-#### 3.6 Step 2 — Classify Transactions
+#### 3.6 Step 2 — Review & Import
 
 **Steps:**
 1. After uploading, proceed to Step 2
-2. Review the grouped transactions
+2. Review the per-transaction list
 
 **Expected:**
-- Similar transactions grouped together
-- Each group shows description, occurrence count, average amount, detected frequency
-- Classification options: Recurring, Once-off, Ignore
-- Groups matching existing patterns are highlighted
+- Each transaction shown individually with description, amount, date
+- Classification toggle: Recurring / Once-off
+- Tag input with autocomplete
+- ML tag suggestions shown inline (when model loaded)
+- Transactions matching existing patterns auto-classified and highlighted
+- Variability selector shown for recurring transactions (Fixed/Variable/Irregular)
+- Ignore toggle per transaction
+- Pagination for large imports (25 per page)
 
 #### 3.7 Step 2 — Change Classification
 
 **Steps:**
-1. Change a group from Recurring to Once-off (or vice versa)
+1. Change a transaction from Recurring to Once-off (or vice versa)
 
 **Expected:**
 - Classification updates immediately
-- Summary counts update
+- Variability selector appears/disappears based on classification
 
-#### 3.8 Step 3 — Confirm & Import
+#### 3.8 Step 2 — Bulk Actions
 
 **Steps:**
-1. After classifying, proceed to Step 3
-2. Review the summary
+1. Click **Mark all unmatched as once-off**
 
 **Expected:**
-- Shows recurring group count, once-off transaction count, and total
-- Click **Import transactions** to save
+- All unmatched transactions classified as once-off
+- Already-matched transactions unchanged
+
+#### 3.9 Step 2 — Import
+
+**Steps:**
+1. After reviewing, click **Import transactions**
+
+**Expected:**
+- Transactions saved to database
+- Recurring patterns created for recurring transactions
 - Redirected to workspace dashboard
 - New transactions visible in the transaction table
 
-#### 3.9 Step Navigation — Back Button
+#### 3.10 Step Navigation — Back Button
 
 **Steps:**
 1. On Step 2, click **Back** (or the back arrow)
 
 **Expected:**
 - Returns to Step 1 with file still loaded
-
-2. On Step 3, click **Back**
-
-**Expected:**
-- Returns to Step 2 with classifications preserved
 
 ---
 
@@ -358,7 +366,7 @@ Run through this checklist after any change to verify nothing is broken:
 1. Click the **hamburger menu** icon in the top-right corner
 
 **Expected:**
-- Dropdown shows 5 items with a divider: "How it works", "User Guide", "Test Scenarios" | "Import Format", "Sample CSV"
+- Dropdown shows 6 items with dividers: "How it works", "User Guide", "Test Scenarios" | "Import Format", "Sample CSV" | "Check for updates"
 - Clicking outside the dropdown closes it
 
 **Steps (Tutorial):**
@@ -443,7 +451,18 @@ Run through this checklist after any change to verify nothing is broken:
 - Banner appears: "A new version is available"
 - Click **Update now** reloads the app
 
-#### 5.3 Offline Use
+#### 5.3 Check for Updates (Manual)
+
+**Steps:**
+1. Open the hamburger menu
+2. Click **Check for updates**
+
+**Expected:**
+- Button text changes to "Checking..." briefly
+- Returns to "Check for updates" when done
+- If an update is available, the update banner appears
+
+#### 5.4 Offline Use
 
 **Steps:**
 1. Load the app while online
