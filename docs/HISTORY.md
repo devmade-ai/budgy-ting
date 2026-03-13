@@ -2,6 +2,37 @@
 
 <!-- Changelog and record of completed work. Organized by date. -->
 
+## 2026-03-13
+
+- **Code Review Sweep — Bug Fixes, UX Improvements, and New Features:**
+
+  **Synced CLAUDE.md from external glow-props:**
+  - Added Triggers section (10 analysis triggers with aliases and sweep protocol)
+  - Added AI Note for sibling repo access via GitHub API
+  - Added Prohibition for interactive input prompts
+  - Added Download as PDF suggested implementation
+  - Added SVG design rules (400 DPI, shape-rendering)
+
+  **UX Fixes:**
+  - Kebab menu hint auto-dismisses after 6s (was pulsing forever until tapped)
+  - Pull-to-refresh shows visual progress bar + color change at threshold
+  - Import wizard shows transaction count when on step 2 (pagination depth awareness)
+  - Import upload gives specific errors: empty file vs headers-only vs parse failure
+  - Tag autocomplete shows "No matching tags — press Enter to create" hint
+
+  **ML Model Recovery:**
+  - Both ML composables (useTagSuggestions, useEmbeddings) expose `retryModel()` for download failure recovery
+  - Import review shows "Retry download" button when models fail to load
+
+  **New Feature — Transaction Deletion:**
+  - Delete button in TransactionEditModal with inline confirmation
+  - Wired through TransactionTable → WorkspaceDashboard with DB cleanup
+  - Optimistic local state update for immediate UI feedback
+
+  **TODO Cleanup:**
+  - Removed completed items: Phase 2 (import wizard), Phase 4 (single-screen UI), legacy view migration, legacy type removal
+  - Added deferred review findings: shared worker extraction, embedding clustering for import patterns, import history view, virtual scrolling detail
+
 ## 2026-03-09
 
 - **Import Flow Refactor — Per-Transaction Review:**
