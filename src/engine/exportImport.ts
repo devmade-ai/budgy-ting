@@ -101,24 +101,26 @@ export function validateImport(data: unknown): { valid: boolean; error?: string;
   }
 
   // Requirement: Validate field types to catch corrupted/tampered import files
-  // Approach: Spot-check first transaction AND first pattern for required field types.
+  // Approach: Validate ALL transactions and first pattern for required field types.
+  //   Full scan catches corruption anywhere in the file (not just the first entry).
   // Alternatives:
   //   - Full Zod schema: Rejected — adds a dependency for a pre-release app
   //   - Trust the data: Rejected — corrupted files could inject invalid data into IndexedDB
+  //   - Spot-check first only: Rejected — a valid first entry with corrupt later entries passes
   const txns = obj['transactions'] as Record<string, unknown>[]
-  if (txns.length > 0) {
-    const sample = txns[0]!
+  for (let ti = 0; ti < txns.length; ti++) {
+    const sample = txns[ti]!
     if (typeof sample['id'] !== 'string' || typeof sample['date'] !== 'string' || typeof sample['amount'] !== 'number') {
-      return { valid: false, error: 'Transaction data is malformed (missing id, date, or amount)' }
+      return { valid: false, error: `Transaction ${ti + 1} is malformed (missing id, date, or amount)` }
     }
     if (typeof sample['description'] !== 'string') {
-      return { valid: false, error: 'Transaction data is malformed (missing description)' }
+      return { valid: false, error: `Transaction ${ti + 1} is malformed (missing description)` }
     }
     if (!Array.isArray(sample['tags'])) {
-      return { valid: false, error: 'Transaction data is malformed (tags must be an array)' }
+      return { valid: false, error: `Transaction ${ti + 1} is malformed (tags must be an array)` }
     }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(sample['date'] as string)) {
-      return { valid: false, error: 'Transaction date format is invalid (expected YYYY-MM-DD)' }
+      return { valid: false, error: `Transaction ${ti + 1} date format is invalid (expected YYYY-MM-DD)` }
     }
   }
 

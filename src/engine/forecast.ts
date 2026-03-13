@@ -74,11 +74,13 @@ export function initHolt(
   }
 
   if (dailyAmounts.length === 1) {
-    return { level: dailyAmounts[0]!, trend: 0, alpha, beta }
+    const val = dailyAmounts[0]!
+    return { level: Number.isFinite(val) ? val : 0, trend: 0, alpha, beta }
   }
 
-  // Initial level: first observation
-  const level = dailyAmounts[0]!
+  // Initial level: first observation (guard against NaN/Infinity from upstream)
+  const rawLevel = dailyAmounts[0]!
+  const level = Number.isFinite(rawLevel) ? rawLevel : 0
 
   // Initial trend: average change over the first min(7, n) points
   const trendWindow = Math.min(7, dailyAmounts.length)

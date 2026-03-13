@@ -12,6 +12,7 @@
 
 import { db } from '@/db'
 import { nowISO } from '@/composables/useTimestamp'
+import { debugLog } from '@/debug/debugLog'
 
 /** Tags unused for this many months are pruned from autocomplete */
 const STALE_TAG_MONTHS = 6
@@ -50,7 +51,8 @@ export async function pruneStaleTagCache(): Promise<number> {
       await db.tagCache.bulkDelete(stale.map((t) => t.tag))
     }
     return stale.length
-  } catch {
+  } catch (e) {
+    debugLog('db', 'warn', 'Tag cache prune failed', { error: String(e) })
     return 0
   }
 }

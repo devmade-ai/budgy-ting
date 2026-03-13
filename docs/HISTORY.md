@@ -4,6 +4,31 @@
 
 ## 2026-03-13
 
+- **Code Quality Audit — 13 Fixes Across Race Conditions, Math Errors, Leaks, and Validation:**
+
+  **Critical (Memory Leaks / Race Conditions):**
+  - `useDialogA11y.ts`: Track and cancel `requestAnimationFrame` on unmount (was accessing stale DOM)
+  - `usePWAUpdate.ts`: Track periodic update interval so HMR module reload doesn't duplicate it
+
+  **High (Math Errors / Lifecycle Issues):**
+  - `ImportStepReview.vue`: Guard `cosineSimilarity()` against zero-norm vectors (returns 0 instead of NaN)
+  - `useTagSuggestions.ts`: Prevent `waitForModel()` polling interval from running after safety-net timeout fires
+  - `matching.ts`: Replace hardcoded `DATE_FORMATS[1]!`/`[2]!` with named lookups by label (refactor-safe)
+  - `ImportStepUpload.vue`: Abort FileReader on unmount to prevent stale reactive state updates
+
+  **Medium (Division-by-Zero / Unnecessary Work):**
+  - `ImportStepReview.vue`: Replace non-null assertion `descCounts.get()!` with nullish coalescing
+  - `patterns.ts`: Guard `detectFrequency()` confidence calc against `expectedInterval === 0`
+  - `usePWAInstall.ts`: Only run 5s diagnostic timeout on Chromium browsers (was firing on Safari/Firefox where `beforeinstallprompt` never exists)
+  - `useTagAutocomplete.ts`: Add `debugLog` to silent catch in `pruneStaleTagCache()`
+
+  **Low (Validation / NaN Guards / Pattern Consistency):**
+  - `forecast.ts`: Guard `initHolt()` against NaN/Infinity input values
+  - `exportImport.ts`: Validate ALL transactions in import file, not just the first (catches mid-file corruption)
+  - `useTagInput.ts`: Standardise timeout cleanup to Set-based tracked pattern (matches ML composables)
+
+  **Verification:** 106 tests pass, type-check clean.
+
 - **Code Review Sweep — Bug Fixes, UX Improvements, and New Features:**
 
   **Synced CLAUDE.md from external glow-props:**

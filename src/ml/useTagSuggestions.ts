@@ -216,18 +216,24 @@ function waitForModel(): Promise<boolean> {
   if (modelError.value) return Promise.resolve(false)
 
   return new Promise<boolean>((resolve) => {
+    let resolved = false
     const check = setInterval(() => {
+      if (resolved) return
       if (modelReady.value) {
+        resolved = true
         clearInterval(check)
         resolve(true)
       } else if (modelError.value || (!modelLoading.value && !modelReady.value)) {
+        resolved = true
         clearInterval(check)
         resolve(false)
       }
     }, 100)
 
-    // Safety net — don't hang forever
+    // Safety net — don't hang forever. Also clears the polling interval.
     trackTimeout(() => {
+      if (resolved) return
+      resolved = true
       clearInterval(check)
       resolve(modelReady.value)
     }, MODEL_LOAD_TIMEOUT_MS + 5_000)

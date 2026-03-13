@@ -99,7 +99,9 @@ function cosineSimilarity(a: Float32Array, b: Float32Array): number {
     normA += a[i]! * a[i]!
     normB += b[i]! * b[i]!
   }
-  return dot / (Math.sqrt(normA) * Math.sqrt(normB))
+  const denom = Math.sqrt(normA) * Math.sqrt(normB)
+  // Guard: zero-norm vectors (e.g. model bug) → return 0 instead of NaN
+  return denom === 0 ? 0 : dot / denom
 }
 
 onMounted(async () => {
@@ -141,7 +143,7 @@ onMounted(async () => {
     descCounts.set(key, (descCounts.get(key) ?? 0) + 1)
   }
   for (const tx of transactions.value) {
-    if (!tx.matchedPatternId && descCounts.get(tx.description.toLowerCase())! > 1) {
+    if (!tx.matchedPatternId && (descCounts.get(tx.description.toLowerCase()) ?? 0) > 1) {
       tx.classification = 'recurring'
     }
   }
