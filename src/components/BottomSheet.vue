@@ -8,7 +8,7 @@
  *   - Full-screen modal: Rejected — too heavy for a simple menu
  */
 
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { useDialogA11y } from '@/composables/useDialogA11y'
 
 defineProps<{
@@ -25,6 +25,40 @@ useDialogA11y(sheetRef, () => emit('close'))
 function handleBackdropClick() {
   emit('close')
 }
+
+// Mobile UX: Swipe-to-close gesture on the drag handle
+// Tracks touch start/move/end and closes the sheet when swiped down 80px+
+const dragOffset = ref(0)
+const isDragging = ref(false)
+let startY = 0
+
+function onTouchStart(e: TouchEvent) {
+  startY = e.touches[0]!.clientY
+  isDragging.value = true
+  dragOffset.value = 0
+}
+
+function onTouchMove(e: TouchEvent) {
+  if (!isDragging.value) return
+  const dy = e.touches[0]!.clientY - startY
+  // Only allow downward drag (positive dy)
+  dragOffset.value = Math.max(0, dy)
+}
+
+function onTouchEnd() {
+  if (!isDragging.value) return
+  isDragging.value = false
+  if (dragOffset.value > 80) {
+    emit('close')
+  }
+  dragOffset.value = 0
+}
+
+// Reset drag state when sheet closes
+watch(() => sheetRef.value, () => {
+  dragOffset.value = 0
+  isDragging.value = false
+})
 </script>
 
 <template>
@@ -47,9 +81,15 @@ function handleBackdropClick() {
                  max-h-[70vh] overflow-y-auto pb-safe
                  sm:bottom-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2
                  sm:rounded-xl sm:max-w-sm sm:w-full"
+          :style="dragOffset > 0 ? { transform: `translateY(${dragOffset}px)`, transition: isDragging ? 'none' : '' } : {}"
         >
-          <!-- Drag handle (mobile only) -->
-          <div class="flex justify-center pt-3 pb-2 sm:hidden">
+          <!-- Drag handle (mobile only) — swipe down to close -->
+          <div
+            class="flex justify-center pt-3 pb-2 sm:hidden cursor-grab active:cursor-grabbing touch-none"
+            @touchstart="onTouchStart"
+            @touchmove="onTouchMove"
+            @touchend="onTouchEnd"
+          >
             <div class="w-10 h-1 bg-gray-300 rounded-full" />
           </div>
 

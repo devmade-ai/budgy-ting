@@ -16,7 +16,8 @@ defineProps<{
 
 <template>
   <div class="bg-white rounded-lg border border-gray-200 p-4">
-    <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">{{ label }}</p>
+    <!-- Mobile UX: text-sm for readable labels on small screens (was text-xs) -->
+    <p class="text-sm text-gray-500 uppercase tracking-wide mb-1">{{ label }}</p>
     <p
       class="text-lg font-semibold"
       :class="{

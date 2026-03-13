@@ -4,6 +4,33 @@
 
 ## 2026-03-13
 
+- **Mobile UX Audit — 20 Fixes Across 12 Components:**
+
+  **CRITICAL (Touch Targets):**
+  - `TransactionEditModal.vue`: Close button → 40x40px with hover bg (was 18px icon)
+  - `TransactionEditModal.vue`: Tag removal buttons → 20x20px with hover bg (was 10px icon)
+  - `ToastNotification.vue`: Dismiss button → 32x32px with 18px icon (was 14px icon)
+  - `TransactionEditModal.vue`: Modal padding responsive `p-4 sm:p-5`, max-width clamp for small phones
+
+  **MEDIUM (iOS Zoom, Text Sizes, Layout):**
+  - `index.css`: `input-field` → `text-base` (16px) to prevent iOS Safari auto-zoom on focus
+  - Removed redundant `text-sm` from all `input-field` uses (6 files)
+  - `MetricCard.vue`: Label → `text-sm` (was `text-xs`)
+  - `TransactionTable.vue`: Table headers → `text-sm` (was `text-xs`)
+  - `ClassificationBadge.vue`: Responsive `text-xs sm:text-sm`
+  - `TagSuggestions.vue`: Dismiss buttons → 20x20px touch targets (was 10px)
+  - `HelpDrawer.vue`: Responsive width `w-[calc(100%-1rem)] sm:w-[calc(100%-2rem)]`
+  - `AppLayout.vue`: Menu dropdown `max-w-[calc(100vw-1rem)]` + 44px min-height on all items
+  - `TransactionEditModal.vue`: Autocomplete dropdown renders upward (`bottom-full`) to avoid modal clip
+  - `ToastNotification.vue`: Safe area inset on bottom position for iOS notch/home indicator
+
+  **LOW (Polish):**
+  - `TransactionTable.vue`: Pagination buttons → `px-4 py-2.5 min-w-[44px]`
+  - `InstallPrompt.vue`: Stack vertically on mobile (`flex-col sm:flex-row`)
+  - `BottomSheet.vue`: Swipe-to-close gesture on drag handle (80px threshold)
+
+  **Verification:** 106 tests pass, type-check clean.
+
 - **Documentation Accuracy Audit — 10 Fixes Across CLAUDE.md, README.md, USER_GUIDE.md, TESTING_GUIDE.md:**
   - CLAUDE.md: Added Project Status section with current features, schema v8, and tech stack
   - README.md: Fixed CSS framework (UnoCSS → Tailwind CSS v4), added 5 missing components, 6 missing composables, 1 missing engine file, corrected schema v6→v8, fixed import wizard 3→2 steps

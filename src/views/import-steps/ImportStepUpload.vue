@@ -217,7 +217,7 @@ function handleContinue() {
         <label class="text-sm text-gray-600">Date format:</label>
         <select
           v-model.number="dateFormatIndex"
-          class="input-field text-sm w-auto min-h-[44px]"
+          class="input-field w-auto min-h-[44px]"
         >
           <option
             v-for="(fmt, i) in DATE_FORMATS"

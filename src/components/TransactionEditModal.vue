@@ -143,11 +143,12 @@ function acceptAllSuggestions() {
         role="dialog"
         :aria-label="editing ? 'Edit transaction' : 'Transaction details'"
         aria-modal="true"
-        class="relative bg-white rounded-xl shadow-xl max-w-md w-full p-5 max-h-[90vh] overflow-y-auto"
+        class="relative bg-white rounded-xl shadow-xl max-w-md w-full p-4 sm:p-5 max-w-[calc(100%-1rem)] sm:max-w-md max-h-[90vh] overflow-y-auto"
       >
         <!-- Close button -->
+        <!-- Mobile UX: 40x40px touch target for close button (was 18px icon with no padding) -->
         <button
-          class="absolute top-3 right-3 text-gray-400 hover:text-gray-600 transition-colors"
+          class="absolute top-2 right-2 w-10 h-10 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
           aria-label="Close"
           @click="emit('close')"
         >
@@ -252,7 +253,7 @@ function acceptAllSuggestions() {
                 :id="`${uid}-desc`"
                 v-model="localDescription"
                 type="text"
-                class="input-field text-sm w-full min-h-[44px]"
+                class="input-field w-full min-h-[44px]"
               />
             </div>
 
@@ -263,7 +264,7 @@ function acceptAllSuggestions() {
                 :id="`${uid}-date`"
                 v-model="localDate"
                 type="date"
-                class="input-field text-sm w-full min-h-[44px]"
+                class="input-field w-full min-h-[44px]"
               />
             </div>
 
@@ -277,7 +278,7 @@ function acceptAllSuggestions() {
                   type="number"
                   min="0"
                   step="0.01"
-                  class="input-field text-sm w-full min-h-[44px]"
+                  class="input-field w-full min-h-[44px]"
                 />
               </div>
               <div class="w-32">
@@ -285,7 +286,7 @@ function acceptAllSuggestions() {
                 <select
                   :id="`${uid}-dir`"
                   v-model="localIsIncome"
-                  class="input-field text-sm w-full min-h-[44px]"
+                  class="input-field w-full min-h-[44px]"
                 >
                   <option :value="false">Expense</option>
                   <option :value="true">Income</option>
@@ -299,7 +300,7 @@ function acceptAllSuggestions() {
               <select
                 :id="`${uid}-type`"
                 v-model="localClassification"
-                class="input-field text-sm w-full min-h-[44px]"
+                class="input-field w-full min-h-[44px]"
               >
                 <option value="recurring">Recurring</option>
                 <option value="once-off">Once-off</option>
@@ -316,12 +317,13 @@ function acceptAllSuggestions() {
                   class="inline-flex items-center gap-0.5 text-xs bg-blue-50 text-blue-700 rounded px-1.5 py-0.5"
                 >
                   {{ tag }}
+                  <!-- Mobile UX: 20x20px touch target for tag removal (was 10px icon) -->
                   <button
-                    class="opacity-60 hover:opacity-100 ml-0.5"
+                    class="w-5 h-5 flex items-center justify-center opacity-60 hover:opacity-100 ml-0.5 rounded-full hover:bg-blue-100 transition-colors"
                     :aria-label="`Remove ${tag}`"
                     @click="removeTag(tag)"
                   >
-                    <X :size="10" />
+                    <X :size="12" />
                   </button>
                 </span>
                 <span v-if="localTags.length === 0" class="text-xs text-gray-400 italic">
@@ -349,7 +351,7 @@ function acceptAllSuggestions() {
                   v-model="tagInput"
                   type="text"
                   placeholder="Add a tag..."
-                  class="input-field text-sm w-full min-h-[44px]"
+                  class="input-field w-full min-h-[44px]"
                   role="combobox"
                   :aria-expanded="showAutocomplete"
                   aria-autocomplete="list"
@@ -357,10 +359,11 @@ function acceptAllSuggestions() {
                   @blur="handleBlur"
                   @focus="updateAutocomplete"
                 />
+                <!-- Mobile UX: Render upward (bottom-full) to avoid being clipped by modal overflow -->
                 <ul
                   v-if="showAutocomplete"
                   role="listbox"
-                  class="absolute z-10 left-0 right-0 mt-0.5 bg-white border border-gray-200 rounded shadow-lg max-h-40 overflow-y-auto"
+                  class="absolute z-10 left-0 right-0 bottom-full mb-0.5 bg-white border border-gray-200 rounded shadow-lg max-h-40 overflow-y-auto"
                 >
                   <li
                     v-for="(result, i) in autocompleteResults"

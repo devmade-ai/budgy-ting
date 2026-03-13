@@ -137,11 +137,12 @@ function handleCheckForUpdate() {
           <!-- Dropdown menu -->
           <div
             v-if="menuOpen"
-            class="absolute right-0 top-full mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20"
+            class="absolute right-0 top-full mt-1 w-48 max-w-[calc(100vw-1rem)] bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20"
             role="menu"
           >
+            <!-- Mobile UX: min-h-[44px] touch targets on all menu items -->
             <button
-              class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+              class="w-full text-left px-4 py-2 min-h-[44px] text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
               role="menuitem"
               @click="handleTutorial"
             >
@@ -149,7 +150,7 @@ function handleCheckForUpdate() {
               How it works
             </button>
             <button
-              class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+              class="w-full text-left px-4 py-2 min-h-[44px] text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
               role="menuitem"
               @click="openDrawer('user-guide')"
             >
@@ -157,7 +158,7 @@ function handleCheckForUpdate() {
               User Guide
             </button>
             <button
-              class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+              class="w-full text-left px-4 py-2 min-h-[44px] text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
               role="menuitem"
               @click="openDrawer('testing-guide')"
             >
@@ -166,7 +167,7 @@ function handleCheckForUpdate() {
             </button>
             <div class="border-t border-gray-100 my-1" role="separator" />
             <button
-              class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+              class="w-full text-left px-4 py-2 min-h-[44px] text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
               role="menuitem"
               @click="openDrawer('import-format')"
             >
@@ -174,7 +175,7 @@ function handleCheckForUpdate() {
               Import Format
             </button>
             <button
-              class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+              class="w-full text-left px-4 py-2 min-h-[44px] text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
               role="menuitem"
               @click="openDrawer('sample-csv')"
             >
@@ -183,7 +184,7 @@ function handleCheckForUpdate() {
             </button>
             <div class="border-t border-gray-100 my-1" role="separator" />
             <button
-              class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+              class="w-full text-left px-4 py-2 min-h-[44px] text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
               role="menuitem"
               :disabled="checking"
               @click="handleCheckForUpdate"

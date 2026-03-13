@@ -4,24 +4,28 @@
 
 ## Worked on
 
-Code quality + documentation audit sweep (triggers `aud` and `doc` from a `start` sweep).
+`start` sweep: `rev` → `aud` → `doc` → `tap` (mobile UX audit + fixes).
 
 ## Accomplished
 
-- **Audit (`aud`):** Fixed 13 code quality issues — race conditions, memory leaks, math errors, validation gaps across 10 source files
-- **Docs (`doc`):** Fixed 10 documentation discrepancies across CLAUDE.md, README.md, USER_GUIDE.md, TESTING_GUIDE.md:
-  - Added Project Status section to CLAUDE.md (was required but missing)
-  - Fixed README tech stack (UnoCSS → Tailwind v4), added 12 missing files to structure
-  - Rewrote import wizard docs from 3-step to 2-step flow
-  - Added "Check for updates" to menu docs and test scenarios
+- **Audit (`aud`):** Fixed 13 code quality issues — race conditions, memory leaks, math errors, validation gaps
+- **Docs (`doc`):** Fixed 10 documentation discrepancies across 4 doc files
+- **Mobile (`tap`):** Fixed 20 mobile UX issues across 12 components:
+  - 4 CRITICAL: Touch targets (close buttons, tag removal, toast dismiss) all ≥44px
+  - iOS zoom fix: `input-field` → `text-base` (16px) globally, removed all `text-sm` overrides
+  - Safe area insets on ToastNotification
+  - BottomSheet swipe-to-close gesture
+  - MetricCard, TransactionTable, ClassificationBadge text sizes increased
+  - Menu dropdown max-width clamp, 44px menu items, HelpDrawer responsive width
+  - Autocomplete dropdown renders upward to avoid modal clip
+  - InstallPrompt stacks vertically on mobile, pagination buttons enlarged
 
 ## Current state
 
-All fixes applied. 106 tests pass, type-check clean. Both commits pushed to `claude/fetch-claudemd-changes-0792x`.
+All fixes applied. 106 tests pass, type-check clean. Commits pushed to `claude/fetch-claudemd-changes-0792x`.
 
 ## Key context
 
-- Running a `start` sweep: completed `rev` → `aud` → `doc`, next trigger is `tap` (mobile UX)
-- Import wizard is 2 steps: Upload → Review & Import (not 3 steps)
-- DB schema is v8 (embedding cache added in v8)
-- CSS framework is Tailwind v4 (not UnoCSS)
+- Running a `start` sweep: completed `rev` → `aud` → `doc` → `tap`, next trigger is `cln` (cleanup)
+- `input-field` class now uses `text-base` (16px) — do NOT add `text-sm` to inputs
+- BottomSheet has swipe-to-close on drag handle (80px threshold)

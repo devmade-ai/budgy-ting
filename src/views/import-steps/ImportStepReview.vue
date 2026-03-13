@@ -509,7 +509,7 @@ function handleImport() {
           v-model="search"
           type="text"
           placeholder="Search descriptions..."
-          class="input-field text-sm py-1.5 px-3 w-48"
+          class="input-field py-1.5 px-3 w-48 min-h-[44px]"
         />
         <button
           class="text-xs text-gray-500 hover:text-gray-700 underline"

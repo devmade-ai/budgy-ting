@@ -14,7 +14,7 @@ defineProps<{
 
 <template>
   <span
-    class="text-xs px-1.5 py-0.5 rounded"
+    class="text-xs sm:text-sm px-1.5 py-0.5 rounded"
     :class="classification === 'recurring'
       ? 'bg-blue-50 text-blue-600'
       : 'bg-gray-50 text-gray-500'"

@@ -37,12 +37,13 @@ const emit = defineEmits<{
       >
         {{ s.tag }}
       </button>
+      <!-- Mobile UX: 20x20px touch target for dismiss (was 10px icon) -->
       <button
-        class="opacity-50 hover:opacity-100 ml-0.5"
+        class="w-5 h-5 flex items-center justify-center opacity-50 hover:opacity-100 ml-0.5 rounded-full"
         :aria-label="`Dismiss ${s.tag}`"
         @click="emit('dismiss', s.tag)"
       >
-        <X :size="10" />
+        <X :size="12" />
       </button>
     </span>
     <button
