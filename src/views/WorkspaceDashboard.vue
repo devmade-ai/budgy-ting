@@ -132,6 +132,16 @@ async function handleUpdateTransaction(id: string, fields: Partial<Transaction>)
   }
 }
 
+// Handle transaction deletion
+async function handleDeleteTransaction(id: string) {
+  try {
+    await db.transactions.delete(id)
+    transactions.value = transactions.value.filter((t) => t.id !== id)
+  } catch {
+    error.value = 'Couldn\'t delete the transaction. Please try again.'
+  }
+}
+
 // Request ML suggestions for a specific transaction
 async function handleRequestSuggestions(id: string, description: string) {
   if (tagSuggestions.value.has(id)) return
@@ -205,6 +215,7 @@ async function handleRequestSuggestions(id: string, description: string) {
         :tag-suggestions="tagSuggestions"
         :suggestions-loading="inferring"
         @update-transaction="handleUpdateTransaction"
+        @delete-transaction="handleDeleteTransaction"
         @request-suggestions="handleRequestSuggestions"
       />
     </div>

@@ -30,6 +30,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update-transaction': [id: string, fields: Partial<Transaction>]
+  'delete-transaction': [id: string]
   /** Emitted when a row is selected — parent can trigger ML suggestion for this transaction */
   'request-suggestions': [id: string, description: string]
 }>()
@@ -86,6 +87,13 @@ function openEdit(txn: Transaction) {
 function handleSave(fields: Partial<Transaction>) {
   if (editingTransaction.value) {
     emit('update-transaction', editingTransaction.value.id, fields)
+  }
+  editingTransaction.value = null
+}
+
+function handleDelete() {
+  if (editingTransaction.value) {
+    emit('delete-transaction', editingTransaction.value.id)
   }
   editingTransaction.value = null
 }
@@ -256,6 +264,7 @@ function getSuggestions(id: string): TagSuggestion[] {
       :currency-label="currencyLabel"
       :known-tags="allTags"
       @save="handleSave"
+      @delete="handleDelete"
       @close="editingTransaction = null"
     />
   </div>

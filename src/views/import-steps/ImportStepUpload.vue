@@ -65,7 +65,12 @@ function handleFileSelect(event: Event) {
     parsedData.value = isJSON ? parseJSONImport(content) : parseCSV(content)
 
     if (parsedData.value.rows.length === 0) {
-      fileError.value = parsedData.value.errors[0] || 'No data found in file'
+      if (parsedData.value.headers.length === 0) {
+        fileError.value = 'The file appears to be empty. Check that it contains data rows.'
+      } else {
+        fileError.value = parsedData.value.errors[0]
+          || `Found ${parsedData.value.headers.length} column headers but no data rows. Check that the file has data below the header row.`
+      }
       parsedData.value = null
       return
     }

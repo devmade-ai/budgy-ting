@@ -33,8 +33,11 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   save: [fields: Partial<Transaction>]
+  delete: []
   close: []
 }>()
+
+const showDeleteConfirm = ref(false)
 
 const dialogRef = ref<HTMLElement | null>(null)
 useDialogA11y(dialogRef, () => emit('close'))
@@ -216,6 +219,25 @@ function acceptAllSuggestions() {
               Edit
             </button>
           </div>
+          <button
+            class="w-full mt-2 text-xs text-gray-400 hover:text-red-500 transition-colors py-1"
+            @click="showDeleteConfirm = true"
+          >
+            Delete transaction
+          </button>
+          <!-- Inline delete confirmation -->
+          <div v-if="showDeleteConfirm" class="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <p class="text-sm text-red-700 mb-2">Delete this transaction? This can't be undone.</p>
+            <div class="flex gap-2">
+              <button class="btn-secondary text-xs flex-1" @click="showDeleteConfirm = false">Cancel</button>
+              <button
+                class="text-xs flex-1 px-3 py-1.5 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+                @click="emit('delete')"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
         </template>
 
         <!-- ── Edit mode ── -->
@@ -352,6 +374,12 @@ function acceptAllSuggestions() {
                     {{ result }}
                   </li>
                 </ul>
+                <p
+                  v-else-if="tagInput.length > 0 && autocompleteResults.length === 0"
+                  class="text-xs text-gray-400 mt-1"
+                >
+                  No matching tags — press Enter to create "{{ tagInput }}"
+                </p>
               </div>
             </div>
           </div>

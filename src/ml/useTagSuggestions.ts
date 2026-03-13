@@ -253,6 +253,16 @@ function preloadModel() {
 }
 
 /**
+ * Retry loading the model after a failure. Clears error state and re-triggers load.
+ */
+function retryModel() {
+  modelError.value = null
+  modelLoading.value = false
+  modelReady.value = false
+  preloadModel()
+}
+
+/**
  * Suggest tags for a single description.
  * Returns suggestions above the confidence threshold, sorted by confidence desc.
  */
@@ -384,6 +394,7 @@ export function useTagSuggestions() {
     inferring,
     confidenceThreshold,
     preloadModel,
+    retryModel,
     waitForModel,
     suggestTags,
     suggestTagsBatch,

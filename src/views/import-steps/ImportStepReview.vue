@@ -64,6 +64,7 @@ const {
   modelProgress: tagModelProgress,
   modelError: tagModelError,
   waitForModel: waitForTagModel,
+  retryModel: retryTagModel,
   suggestTagsBatch,
   dispose: disposeTagSuggestions,
 } = useTagSuggestions()
@@ -76,6 +77,7 @@ const {
   modelError: embeddingError,
   embedTexts,
   waitForModel: waitForEmbeddings,
+  retryModel: retryEmbeddingModel,
   dispose: disposeEmbeddings,
 } = useEmbeddings()
 
@@ -466,8 +468,16 @@ function handleImport() {
           <template v-if="embeddingLoading || tagModelLoading">
             Downloading models for first use — this only happens once
           </template>
-          <template v-else-if="embeddingError && tagModelError">
-            Models unavailable — continuing with basic matching
+          <template v-else-if="embeddingError || tagModelError">
+            <span v-if="embeddingError && tagModelError">Models unavailable — continuing with basic matching</span>
+            <span v-else-if="embeddingError">Pattern matching unavailable</span>
+            <span v-else>Tag suggestions unavailable</span>
+            <button
+              class="block mx-auto mt-2 text-brand-600 hover:text-brand-700 underline"
+              @click="embeddingError ? retryEmbeddingModel() : retryTagModel()"
+            >
+              Retry download
+            </button>
           </template>
           <template v-else>
             Analysing transactions...

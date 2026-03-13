@@ -30,7 +30,7 @@ const workspaces = ref<Workspace[]>([])
 const loading = ref(true)
 
 // Pull-to-refresh for mobile
-const { pulling, pullDistance, refreshing } = usePullToRefresh(refreshList)
+const { pulling, pullDistance, pullProgress, canRelease, refreshing } = usePullToRefresh(refreshList)
 
 // Summary data per workspace (transaction count + monthly spend estimate)
 const workspaceSummaries = ref<Record<string, { count: number; monthlyTotal: number }>>({})
@@ -213,13 +213,22 @@ const { showInstallReminder, checkInstallReminder, dismissInstallReminder } = us
     <ErrorAlert v-if="error" :message="error" @dismiss="error = ''" />
     <ErrorAlert v-if="importError" :message="importError" @dismiss="importError = ''" />
 
-    <!-- Pull-to-refresh indicator -->
+    <!-- Pull-to-refresh indicator with visual progress -->
     <div
       v-if="pulling || refreshing"
-      class="flex justify-center py-2 text-xs text-gray-400 transition-all"
-      :style="{ height: `${Math.max(pullDistance, refreshing ? 32 : 0)}px` }"
+      class="flex flex-col items-center py-2 text-xs transition-all"
+      :style="{ height: `${Math.max(pullDistance, refreshing ? 40 : 0)}px` }"
     >
-      {{ refreshing ? 'Refreshing...' : pullDistance >= 80 ? 'Release to refresh' : 'Pull to refresh' }}
+      <div class="w-8 h-1 bg-gray-200 rounded-full overflow-hidden mb-1">
+        <div
+          class="h-full rounded-full transition-colors"
+          :class="canRelease ? 'bg-brand-500' : 'bg-gray-400'"
+          :style="{ width: refreshing ? '100%' : `${pullProgress * 100}%` }"
+        />
+      </div>
+      <span :class="canRelease ? 'text-brand-600 font-medium' : 'text-gray-400'">
+        {{ refreshing ? 'Refreshing...' : canRelease ? 'Release to refresh' : 'Pull to refresh' }}
+      </span>
     </div>
 
     <SkeletonLoader v-if="loading" variant="list" />

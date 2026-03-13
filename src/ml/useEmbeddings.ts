@@ -188,6 +188,16 @@ function waitForModel(): Promise<boolean> {
   })
 }
 
+/**
+ * Retry loading the model after a failure. Clears error state and re-triggers load.
+ */
+function retryModel() {
+  modelError.value = null
+  modelLoading.value = false
+  modelReady.value = false
+  preloadModel()
+}
+
 function preloadModel() {
   if (modelReady.value || modelLoading.value) return
   postToWorker({ type: 'load-model' })
@@ -317,6 +327,7 @@ export function useEmbeddings() {
     modelProgress,
     computing,
     preloadModel,
+    retryModel,
     waitForModel,
     embedTexts,
     clusterTexts,
