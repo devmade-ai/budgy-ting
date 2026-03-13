@@ -35,7 +35,9 @@
     @apply px-4 py-2 rounded-lg font-medium transition-colors duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed bg-red-50 text-red-600 hover:bg-red-100 active:bg-red-200;
   }
   .input-field {
-    @apply w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500;
+    /* Mobile UX: text-base (16px) prevents iOS Safari auto-zoom on input focus.
+       text-sm (14px) triggers zoom — causes jarring layout shift on every focus. */
+    @apply w-full px-3 py-2 border border-gray-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500;
   }
   .card {
     @apply bg-white rounded-xl border border-gray-200 p-4 shadow-sm;

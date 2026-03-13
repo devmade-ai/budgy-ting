@@ -17,6 +17,7 @@ export function useDialogA11y(
   onClose: () => void,
 ) {
   let previouslyFocused: HTMLElement | null = null
+  let rafId: number | null = null
 
   function handleKeydown(e: KeyboardEvent) {
     if (e.key === 'Escape') {
@@ -59,8 +60,10 @@ export function useDialogA11y(
     previouslyFocused = document.activeElement as HTMLElement | null
     document.addEventListener('keydown', handleKeydown)
 
-    // Focus the first focusable element in the dialog
-    requestAnimationFrame(() => {
+    // Focus the first focusable element in the dialog.
+    // Track RAF ID so it can be cancelled if the component unmounts before it fires.
+    rafId = requestAnimationFrame(() => {
+      rafId = null
       const dialog = dialogRef.value
       if (!dialog) return
       const first = dialog.querySelector<HTMLElement>(FOCUSABLE_SELECTOR)
@@ -69,6 +72,7 @@ export function useDialogA11y(
   })
 
   onUnmounted(() => {
+    if (rafId !== null) cancelAnimationFrame(rafId)
     document.removeEventListener('keydown', handleKeydown)
     // Restore focus to the element that was focused before the dialog opened
     previouslyFocused?.focus()

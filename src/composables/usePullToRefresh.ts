@@ -9,7 +9,7 @@
  *   - Browser built-in: Not available cross-browser for PWAs
  */
 
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 
 const THRESHOLD = 80
 
@@ -17,6 +17,10 @@ export function usePullToRefresh(onRefresh: () => Promise<void>) {
   const pulling = ref(false)
   const pullDistance = ref(0)
   const refreshing = ref(false)
+  /** 0-1 progress toward the release threshold */
+  const pullProgress = computed(() => Math.min(1, pullDistance.value / THRESHOLD))
+  /** True when user has pulled past the threshold and can release */
+  const canRelease = computed(() => pullDistance.value >= THRESHOLD)
 
   let startY = 0
   let isPulling = false
@@ -71,5 +75,5 @@ export function usePullToRefresh(onRefresh: () => Promise<void>) {
     document.removeEventListener('touchend', handleTouchEnd)
   })
 
-  return { pulling, pullDistance, refreshing }
+  return { pulling, pullDistance, pullProgress, canRelease, refreshing }
 }

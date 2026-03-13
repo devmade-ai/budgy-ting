@@ -35,7 +35,7 @@ function handleShowInstructions() {
 <template>
   <div
     v-if="showInstallPrompt"
-    class="bg-brand-50 border-b border-brand-200 px-4 py-2.5 flex items-center justify-between gap-3"
+    class="bg-brand-50 border-b border-brand-200 px-4 py-2.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-3"
   >
     <div class="flex items-center gap-2 min-w-0">
       <Smartphone :size="16" class="text-brand-600 shrink-0" />

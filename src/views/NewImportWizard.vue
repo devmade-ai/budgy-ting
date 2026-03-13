@@ -380,7 +380,12 @@ function goBack() {
           />
         </template>
       </div>
-      <p class="text-xs text-gray-400 mb-4">Step {{ step }} of 2</p>
+      <p class="text-xs text-gray-400 mb-4">
+        Step {{ step }} of 2
+        <span v-if="step === 2 && parsedRows.length > 10">
+          &middot; {{ parsedRows.length }} transactions to review
+        </span>
+      </p>
 
       <!-- Step 1: Upload & Map -->
       <ImportStepUpload

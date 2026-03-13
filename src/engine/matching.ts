@@ -63,6 +63,10 @@ export function detectDateFormat(samples: string[]): typeof DATE_FORMATS[number]
  * ever > 12, it's month-first (MM/DD). If all values fit either, default
  * to DD/MM (international convention).
  */
+// Named format references — avoids hardcoded array indices that break on refactor
+const DD_MM_YYYY = DATE_FORMATS.find((f) => f.label === 'DD/MM/YYYY')!
+const MM_DD_YYYY = DATE_FORMATS.find((f) => f.label === 'MM/DD/YYYY')!
+
 function disambiguateSlashFormat(samples: string[]): typeof DATE_FORMATS[number] {
   let firstOver12 = false
   let secondOver12 = false
@@ -78,11 +82,11 @@ function disambiguateSlashFormat(samples: string[]): typeof DATE_FORMATS[number]
   }
 
   // First segment has values > 12 → must be DD (DD/MM/YYYY)
-  if (firstOver12 && !secondOver12) return DATE_FORMATS[1]! // DD/MM/YYYY
+  if (firstOver12 && !secondOver12) return DD_MM_YYYY
   // Second segment has values > 12 → must be MM (MM/DD/YYYY)
-  if (secondOver12 && !firstOver12) return DATE_FORMATS[2]! // MM/DD/YYYY
+  if (secondOver12 && !firstOver12) return MM_DD_YYYY
   // Both or neither > 12 — default to DD/MM (more common internationally)
-  return DATE_FORMATS[1]! // DD/MM/YYYY
+  return DD_MM_YYYY
 }
 
 /**

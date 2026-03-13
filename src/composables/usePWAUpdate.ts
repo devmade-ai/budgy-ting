@@ -23,6 +23,7 @@ const checking = ref(false)
 
 // Stored at module level so checkForUpdate() can access it outside the callback
 let swRegistration: ServiceWorkerRegistration | undefined
+let updateCheckInterval: ReturnType<typeof setInterval> | undefined
 
 const {
   needRefresh: hasUpdate,
@@ -33,10 +34,11 @@ const {
     debugLog('pwa', 'info', 'Service worker registered', { swUrl })
     swRegistration = registration
 
-    // Periodic update checks — intentionally app-lifetime, no cleanup needed.
-    // The interval runs as long as the app is open (single-page app, never unmounts).
+    // Periodic update checks — app-lifetime interval.
+    // Tracked so HMR module replacement doesn't leak duplicate intervals.
     if (registration) {
-      setInterval(() => {
+      if (updateCheckInterval !== undefined) clearInterval(updateCheckInterval)
+      updateCheckInterval = setInterval(() => {
         debugLog('pwa', 'info', 'Periodic SW update check')
         registration.update()
       }, CHECK_INTERVAL_MS)

@@ -8,7 +8,7 @@ All data lives on-device using IndexedDB. No authentication, no server. Exportab
 
 - **Workspace management** — Create, edit, delete workspaces with monthly or custom date ranges
 - **Demo workspace** — Auto-seeded realistic household data on first visit to explore features immediately
-- **Transaction import** — Upload CSV/JSON bank statements with a 3-step wizard (upload, classify, confirm)
+- **Transaction import** — Upload CSV/JSON bank statements with a 2-step wizard (upload, review & import)
 - **Recurring pattern detection** — Automatically groups similar transactions and detects frequency (daily, weekly, biweekly, monthly, quarterly, annually)
 - **Statistical forecasting** — Holt's double exponential smoothing with seasonal adjustments and confidence bands
 - **Cash runway** — Enter cash on hand to see how long it lasts with optimistic/expected/pessimistic scenarios
@@ -43,7 +43,7 @@ npm run test
 
 - **Vue 3** (Composition API) + **Vite**
 - **TypeScript**
-- **UnoCSS** (Tailwind-compatible)
+- **Tailwind CSS v4** (with Vite integration)
 - **Dexie.js** (IndexedDB)
 - **vite-plugin-pwa** (Workbox)
 - **ApexCharts** + **vue3-apexcharts** (cashflow graph)
@@ -56,7 +56,9 @@ npm run test
 src/
 ├── components/         # Reusable UI components
 │   ├── AppLayout.vue              # App shell (header, burger menu, PWA prompts)
+│   ├── BottomSheet.vue              # Mobile-friendly bottom sheet modal
 │   ├── CashflowGraph.vue         # ApexCharts daily cashflow line chart
+│   ├── ClassificationBadge.vue    # Recurring/once-off classification pill
 │   ├── ConfirmDialog.vue          # Destructive action confirmation modal
 │   ├── DateInput.vue              # Native date input with calendar icon
 │   ├── EmptyState.vue             # Reusable empty state (icon + text + slot)
@@ -68,7 +70,10 @@ src/
 │   ├── LoadingSpinner.vue         # Centered loading indicator
 │   ├── MetricCard.vue             # Single metric display card
 │   ├── MetricsGrid.vue            # Grid of forecast/accuracy/runway metrics
+│   ├── SkeletonLoader.vue         # Placeholder loading skeleton
+│   ├── TagSuggestions.vue         # ML-powered tag suggestion chips
 │   ├── ToastNotification.vue      # Auto-dismiss toast (success/error/warning)
+│   ├── TransactionEditModal.vue   # View/edit transaction details modal
 │   ├── TransactionTable.vue       # Transaction list with filtering/sorting
 │   ├── TutorialModal.vue          # 6-step first-visit walkthrough carousel
 │   └── WorkspaceForm.vue          # Create/edit workspace form
@@ -76,15 +81,21 @@ src/
 │   ├── useDialogA11y.ts           # Focus trapping + Escape key for modals
 │   ├── useFormValidation.ts       # Shared validation rules (required, dateAfter)
 │   ├── useFormat.ts               # formatAmount() number formatting
+│   ├── useHaptic.ts               # Haptic feedback for touch interactions
 │   ├── useId.ts                   # generateId() UUID generation
+│   ├── useInstallReminder.ts      # Delayed PWA install re-prompt
+│   ├── usePagination.ts           # Paginated list state management
 │   ├── usePWAInstall.ts           # PWA install detection + browser-specific flows
 │   ├── usePWAUpdate.ts            # Service worker update prompt (60-min check)
+│   ├── usePullToRefresh.ts        # Pull-to-refresh gesture handling
+│   ├── useSafeStorage.ts          # Safe localStorage wrapper (quota/privacy)
 │   ├── useTagAutocomplete.ts      # touchTags() — update tag cache on use
+│   ├── useTagInput.ts             # Tag chip input with autocomplete + keyboard nav
 │   ├── useTimestamp.ts            # ISO timestamp helpers
 │   ├── useToast.ts                # Singleton toast state management
 │   └── useTutorial.ts             # First-visit tutorial state (localStorage)
 ├── db/                 # Dexie.js database setup
-│   ├── index.ts                   # Schema v6 definition with 6 migrations
+│   ├── index.ts                   # Schema v8 definition with 8 migrations
 │   └── demoData.ts                # Demo workspace seeding on first visit
 ├── debug/              # Alpha-phase diagnostic tools
 │   ├── debugLog.ts                # In-memory event store (200-entry circular buffer)
@@ -97,7 +108,8 @@ src/
 │   ├── forecast.ts                # Holt's double exponential smoothing forecasting
 │   ├── matching.ts                # Date/amount parsing, duplicate detection
 │   ├── patterns.ts                # Recurring pattern detection + projection
-│   └── runway.ts                  # Cash runway calculation with confidence bands
+│   ├── runway.ts                  # Cash runway calculation with confidence bands
+│   └── transactionMath.ts         # Transaction calculation helpers
 ├── router/             # Vue Router configuration
 │   └── index.ts                   # All routes (lazy-loaded)
 ├── types/              # TypeScript type definitions

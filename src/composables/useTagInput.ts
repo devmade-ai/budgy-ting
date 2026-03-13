@@ -29,12 +29,23 @@ export function useTagInput(options: UseTagInputOptions) {
   const showAutocomplete = ref(false)
   const selectedIndex = ref(-1)
 
+  // Track all timeouts in a Set for robust cleanup (matches ML composable pattern)
+  const activeTimeouts = new Set<ReturnType<typeof setTimeout>>()
+  function tracked(fn: () => void, ms: number): ReturnType<typeof setTimeout> {
+    const id = setTimeout(() => {
+      activeTimeouts.delete(id)
+      fn()
+    }, ms)
+    activeTimeouts.add(id)
+    return id
+  }
+
   let blurTimer: ReturnType<typeof setTimeout> | undefined
   let debounceTimer: ReturnType<typeof setTimeout> | undefined
 
   onUnmounted(() => {
-    clearTimeout(blurTimer)
-    clearTimeout(debounceTimer)
+    for (const id of activeTimeouts) clearTimeout(id)
+    activeTimeouts.clear()
   })
 
   function getKnownTags(): string[] {
@@ -82,8 +93,8 @@ export function useTagInput(options: UseTagInputOptions) {
   }
 
   function handleBlur() {
-    clearTimeout(blurTimer)
-    blurTimer = setTimeout(() => { showAutocomplete.value = false }, 150)
+    if (blurTimer) { clearTimeout(blurTimer); activeTimeouts.delete(blurTimer) }
+    blurTimer = tracked(() => { showAutocomplete.value = false }, 150)
   }
 
   // Requirement: Autocomplete should always show results when the user has tags
@@ -119,8 +130,8 @@ export function useTagInput(options: UseTagInputOptions) {
   }
 
   watch(tagInput, () => {
-    clearTimeout(debounceTimer)
-    debounceTimer = setTimeout(updateAutocomplete, 100)
+    if (debounceTimer) { clearTimeout(debounceTimer); activeTimeouts.delete(debounceTimer) }
+    debounceTimer = tracked(updateAutocomplete, 100)
   })
 
   return {

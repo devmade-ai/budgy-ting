@@ -88,8 +88,11 @@ export function detectFrequency(
       const expectedInterval = (range.min + range.max) / 2
       const deviations = intervals.map((i) => Math.abs(i - expectedInterval))
       const avgDeviation = deviations.length > 0 ? mean(deviations) : 0
-      // Normalize: 0 deviation → confidence 1.0, deviation = expectedInterval → confidence 0
-      const confidence = Math.max(0, 1 - avgDeviation / expectedInterval)
+      // Normalize: 0 deviation → confidence 1.0, deviation = expectedInterval → confidence 0.
+      // Guard: expectedInterval of 0 (daily range 0–2) → use 1.0 confidence when avgDeviation is 0.
+      const confidence = expectedInterval > 0
+        ? Math.max(0, 1 - avgDeviation / expectedInterval)
+        : (avgDeviation === 0 ? 1 : 0)
 
       return { frequency: range.frequency, confidence }
     }

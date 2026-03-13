@@ -64,6 +64,7 @@ const {
   modelProgress: tagModelProgress,
   modelError: tagModelError,
   waitForModel: waitForTagModel,
+  retryModel: retryTagModel,
   suggestTagsBatch,
   dispose: disposeTagSuggestions,
 } = useTagSuggestions()
@@ -76,6 +77,7 @@ const {
   modelError: embeddingError,
   embedTexts,
   waitForModel: waitForEmbeddings,
+  retryModel: retryEmbeddingModel,
   dispose: disposeEmbeddings,
 } = useEmbeddings()
 
@@ -97,7 +99,9 @@ function cosineSimilarity(a: Float32Array, b: Float32Array): number {
     normA += a[i]! * a[i]!
     normB += b[i]! * b[i]!
   }
-  return dot / (Math.sqrt(normA) * Math.sqrt(normB))
+  const denom = Math.sqrt(normA) * Math.sqrt(normB)
+  // Guard: zero-norm vectors (e.g. model bug) → return 0 instead of NaN
+  return denom === 0 ? 0 : dot / denom
 }
 
 onMounted(async () => {
@@ -139,7 +143,7 @@ onMounted(async () => {
     descCounts.set(key, (descCounts.get(key) ?? 0) + 1)
   }
   for (const tx of transactions.value) {
-    if (!tx.matchedPatternId && descCounts.get(tx.description.toLowerCase())! > 1) {
+    if (!tx.matchedPatternId && (descCounts.get(tx.description.toLowerCase()) ?? 0) > 1) {
       tx.classification = 'recurring'
     }
   }
@@ -466,8 +470,16 @@ function handleImport() {
           <template v-if="embeddingLoading || tagModelLoading">
             Downloading models for first use — this only happens once
           </template>
-          <template v-else-if="embeddingError && tagModelError">
-            Models unavailable — continuing with basic matching
+          <template v-else-if="embeddingError || tagModelError">
+            <span v-if="embeddingError && tagModelError">Models unavailable — continuing with basic matching</span>
+            <span v-else-if="embeddingError">Pattern matching unavailable</span>
+            <span v-else>Tag suggestions unavailable</span>
+            <button
+              class="block mx-auto mt-2 text-brand-600 hover:text-brand-700 underline"
+              @click="embeddingError ? retryEmbeddingModel() : retryTagModel()"
+            >
+              Retry download
+            </button>
           </template>
           <template v-else>
             Analysing transactions...
@@ -497,7 +509,7 @@ function handleImport() {
           v-model="search"
           type="text"
           placeholder="Search descriptions..."
-          class="input-field text-sm py-1.5 px-3 w-48"
+          class="input-field py-1.5 px-3 w-48 min-h-[44px]"
         />
         <button
           class="text-xs text-gray-500 hover:text-gray-700 underline"

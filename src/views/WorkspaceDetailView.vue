@@ -41,12 +41,14 @@ const actionsMenuRef = ref<HTMLElement | null>(null)
 // Approach: One-time subtle pulse animation on the kebab button. Persisted in localStorage.
 const KEBAB_HINT_KEY = 'budgy-ting:kebab-hint-seen'
 const showKebabHint = ref(false)
+let kebabHintTimeout: ReturnType<typeof setTimeout> | null = null
 
 function toggleActionsMenu() {
   actionsMenuOpen.value = !actionsMenuOpen.value
   // Dismiss the hint once user taps the menu
   if (showKebabHint.value) {
     showKebabHint.value = false
+    if (kebabHintTimeout) { clearTimeout(kebabHintTimeout); kebabHintTimeout = null }
     try { localStorage.setItem(KEBAB_HINT_KEY, 'true') } catch { /* ignore */ }
   }
 }
@@ -60,10 +62,14 @@ function handleActionsOutsideClick(e: MouseEvent) {
 onMounted(async () => {
   document.addEventListener('click', handleActionsOutsideClick)
 
-  // Show kebab hint if never seen
+  // Show kebab hint if never seen — auto-dismiss after 6s if not tapped
   try {
     if (!localStorage.getItem(KEBAB_HINT_KEY)) {
       showKebabHint.value = true
+      kebabHintTimeout = setTimeout(() => {
+        showKebabHint.value = false
+        try { localStorage.setItem(KEBAB_HINT_KEY, 'true') } catch { /* ignore */ }
+      }, 6000)
     }
   } catch { /* ignore */ }
 
@@ -83,6 +89,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   document.removeEventListener('click', handleActionsOutsideClick)
+  if (kebabHintTimeout) clearTimeout(kebabHintTimeout)
 })
 
 function editWorkspace() {

@@ -4,7 +4,7 @@
  * Approach: Extracted from ImportWizardView to reduce component size
  */
 
-import { ref } from 'vue'
+import { ref, onUnmounted } from 'vue'
 import { Upload, File } from 'lucide-vue-next'
 import { parseCSV, parseJSONImport } from '@/engine/csvParser'
 import { DATE_FORMATS, detectDateFormat } from '@/engine/matching'
@@ -24,6 +24,15 @@ const parsedData = ref<ParsedCSV | null>(null)
 const fileError = ref('')
 const selectedFile = ref<{ name: string; size: string } | null>(null)
 const parsing = ref(false)
+let activeReader: FileReader | null = null
+
+// Abort FileReader if component unmounts mid-parse (prevents stale state updates)
+onUnmounted(() => {
+  if (activeReader) {
+    activeReader.abort()
+    activeReader = null
+  }
+})
 
 // Column auto-detection results
 const dateColumn = ref('')
@@ -53,7 +62,9 @@ function handleFileSelect(event: Event) {
 
   parsing.value = true
   const reader = new FileReader()
+  activeReader = reader
   reader.onload = (e) => {
+    activeReader = null
     parsing.value = false
     const content = e.target?.result as string
     if (!content) {
@@ -65,7 +76,12 @@ function handleFileSelect(event: Event) {
     parsedData.value = isJSON ? parseJSONImport(content) : parseCSV(content)
 
     if (parsedData.value.rows.length === 0) {
-      fileError.value = parsedData.value.errors[0] || 'No data found in file'
+      if (parsedData.value.headers.length === 0) {
+        fileError.value = 'The file appears to be empty. Check that it contains data rows.'
+      } else {
+        fileError.value = parsedData.value.errors[0]
+          || `Found ${parsedData.value.headers.length} column headers but no data rows. Check that the file has data below the header row.`
+      }
       parsedData.value = null
       return
     }
@@ -73,6 +89,7 @@ function handleFileSelect(event: Event) {
     autoDetectColumns()
   }
   reader.onerror = () => {
+    activeReader = null
     parsing.value = false
     fileError.value = 'Failed to read file'
   }
@@ -200,7 +217,7 @@ function handleContinue() {
         <label class="text-sm text-gray-600">Date format:</label>
         <select
           v-model.number="dateFormatIndex"
-          class="input-field text-sm w-auto min-h-[44px]"
+          class="input-field w-auto min-h-[44px]"
         >
           <option
             v-for="(fmt, i) in DATE_FORMATS"

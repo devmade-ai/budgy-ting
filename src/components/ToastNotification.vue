@@ -39,19 +39,21 @@ const variantIcons: Record<string, Component> = {
     >
       <div
         v-if="state.visible"
-        class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] px-4 py-2.5 rounded-lg shadow-lg flex items-center gap-2 text-sm font-medium max-w-sm"
+        class="fixed left-1/2 -translate-x-1/2 z-[100] px-4 py-2.5 rounded-lg shadow-lg flex items-center gap-2 text-sm font-medium max-w-sm"
+        style="bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px))"
         :class="variantClasses[state.variant]"
         role="status"
         aria-live="polite"
       >
         <component :is="variantIcons[state.variant]" :size="16" aria-hidden="true" />
         <span>{{ state.message }}</span>
+        <!-- Mobile UX: 32x32px touch target for dismiss (was 14px icon) -->
         <button
-          class="ml-2 opacity-70 hover:opacity-100 transition-opacity"
+          class="ml-2 w-8 h-8 flex items-center justify-center opacity-70 hover:opacity-100 transition-opacity rounded-full"
           aria-label="Dismiss"
           @click="dismiss"
         >
-          <X :size="14" aria-hidden="true" />
+          <X :size="18" aria-hidden="true" />
         </button>
       </div>
     </Transition>

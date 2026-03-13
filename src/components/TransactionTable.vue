@@ -30,6 +30,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update-transaction': [id: string, fields: Partial<Transaction>]
+  'delete-transaction': [id: string]
   /** Emitted when a row is selected — parent can trigger ML suggestion for this transaction */
   'request-suggestions': [id: string, description: string]
 }>()
@@ -90,6 +91,13 @@ function handleSave(fields: Partial<Transaction>) {
   editingTransaction.value = null
 }
 
+function handleDelete() {
+  if (editingTransaction.value) {
+    emit('delete-transaction', editingTransaction.value.id)
+  }
+  editingTransaction.value = null
+}
+
 function handleRowKeydown(e: KeyboardEvent, txn: Transaction) {
   if (e.key === 'Enter' || e.key === ' ') {
     e.preventDefault()
@@ -110,18 +118,18 @@ function getSuggestions(id: string): TagSuggestion[] {
         v-model="search"
         type="text"
         placeholder="Search transactions..."
-        class="input-field text-sm flex-1 min-w-48 min-h-[44px]"
+        class="input-field flex-1 min-w-48 min-h-[44px]"
       />
       <select
         v-model="filterTag"
-        class="input-field text-sm w-auto min-h-[44px]"
+        class="input-field w-auto min-h-[44px]"
       >
         <option value="">All tags</option>
         <option v-for="tag in allTags" :key="tag" :value="tag">{{ tag }}</option>
       </select>
       <select
         v-model="filterClassification"
-        class="input-field text-sm w-auto min-h-[44px]"
+        class="input-field w-auto min-h-[44px]"
       >
         <option value="">All types</option>
         <option value="recurring">Recurring</option>
@@ -174,7 +182,8 @@ function getSuggestions(id: string): TagSuggestion[] {
     <div class="hidden sm:block overflow-x-auto">
       <table class="w-full text-sm">
         <thead>
-          <tr class="border-b border-gray-200 text-left text-xs text-gray-500 uppercase tracking-wide">
+          <!-- Mobile UX: text-sm for readable table headers (was text-xs) -->
+          <tr class="border-b border-gray-200 text-left text-sm text-gray-500 uppercase tracking-wide">
             <th class="py-2 pr-3">Date</th>
             <th class="py-2 pr-3">Description</th>
             <th class="py-2 pr-3">Tags</th>
@@ -230,7 +239,7 @@ function getSuggestions(id: string): TagSuggestion[] {
       <span>{{ filtered.length }} transaction{{ filtered.length === 1 ? '' : 's' }}</span>
       <div class="flex gap-1">
         <button
-          class="px-3 py-2 min-h-[44px] rounded border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
+          class="px-4 py-2.5 min-h-[44px] min-w-[44px] rounded border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
           :disabled="currentPage <= 1"
           @click="currentPage--"
         >
@@ -238,7 +247,7 @@ function getSuggestions(id: string): TagSuggestion[] {
         </button>
         <span class="px-3 py-2">{{ currentPage }} / {{ totalPages }}</span>
         <button
-          class="px-3 py-2 min-h-[44px] rounded border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
+          class="px-4 py-2.5 min-h-[44px] min-w-[44px] rounded border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
           :disabled="currentPage >= totalPages"
           @click="currentPage++"
         >
@@ -256,6 +265,7 @@ function getSuggestions(id: string): TagSuggestion[] {
       :currency-label="currencyLabel"
       :known-tags="allTags"
       @save="handleSave"
+      @delete="handleDelete"
       @close="editingTransaction = null"
     />
   </div>

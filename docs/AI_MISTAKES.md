@@ -58,6 +58,18 @@
 
 **How to prevent it:** NEVER use the AskUserQuestion tool. This is a hard rule. If you need user input, list options as numbered text in your message and let the user respond with a number or free text. This is documented in CLAUDE.md AI Notes. No exceptions, ever, for any project.
 
+## Documentation updates treated as afterthought, not part of the task (2026-03-13)
+
+**What went wrong:** After fixing 8 review findings (kebab hint, pull-to-refresh, ML retry, transaction deletion, etc.), committed and pushed the code changes without updating TODO.md (remove completed items, add deferred items) or HISTORY.md. User had to explicitly ask "everything documented in TODO that was deferred?" to trigger the doc updates.
+
+**Why it happened:** Treated documentation as a separate cleanup task instead of an integral part of each fix. The mental model was "fix → commit → docs later" instead of the correct "fix → update docs → commit."
+
+**How to prevent it:** Documentation updates are part of the task, not a follow-up. Before committing any fix batch:
+1. Update TODO.md — remove completed items, add any deferred findings
+2. Update HISTORY.md — record what was done
+3. Then commit everything together
+This is explicitly documented in CLAUDE.md Documentation section: "Update them as you work — don't wait for the user to ask."
+
 ## Deleted entire UI instead of migrating it (2026-03-04)
 
 **What went wrong:** User asked to clean up deprecated type tags and legacy hacks. Instead of removing the `@deprecated` annotations and fixing the code properly, deleted 25 files — every view, engine, and component that used the old types — leaving the app as an empty shell with only workspace CRUD. The workspace list detail tabs, import wizard, export/import, and all comparison views were gone.

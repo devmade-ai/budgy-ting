@@ -216,18 +216,24 @@ function waitForModel(): Promise<boolean> {
   if (modelError.value) return Promise.resolve(false)
 
   return new Promise<boolean>((resolve) => {
+    let resolved = false
     const check = setInterval(() => {
+      if (resolved) return
       if (modelReady.value) {
+        resolved = true
         clearInterval(check)
         resolve(true)
       } else if (modelError.value || (!modelLoading.value && !modelReady.value)) {
+        resolved = true
         clearInterval(check)
         resolve(false)
       }
     }, 100)
 
-    // Safety net — don't hang forever
+    // Safety net — don't hang forever. Also clears the polling interval.
     trackTimeout(() => {
+      if (resolved) return
+      resolved = true
       clearInterval(check)
       resolve(modelReady.value)
     }, MODEL_LOAD_TIMEOUT_MS + 5_000)
@@ -250,6 +256,16 @@ function preloadModel() {
       debugLog('ml', 'warn', 'Model load timed out after 30s')
     }
   }, MODEL_LOAD_TIMEOUT_MS)
+}
+
+/**
+ * Retry loading the model after a failure. Clears error state and re-triggers load.
+ */
+function retryModel() {
+  modelError.value = null
+  modelLoading.value = false
+  modelReady.value = false
+  preloadModel()
 }
 
 /**
@@ -384,6 +400,7 @@ export function useTagSuggestions() {
     inferring,
     confidenceThreshold,
     preloadModel,
+    retryModel,
     waitForModel,
     suggestTags,
     suggestTagsBatch,

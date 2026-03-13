@@ -2,6 +2,95 @@
 
 <!-- Changelog and record of completed work. Organized by date. -->
 
+## 2026-03-13
+
+- **Mobile UX Audit — 20 Fixes Across 12 Components:**
+
+  **CRITICAL (Touch Targets):**
+  - `TransactionEditModal.vue`: Close button → 40x40px with hover bg (was 18px icon)
+  - `TransactionEditModal.vue`: Tag removal buttons → 20x20px with hover bg (was 10px icon)
+  - `ToastNotification.vue`: Dismiss button → 32x32px with 18px icon (was 14px icon)
+  - `TransactionEditModal.vue`: Modal padding responsive `p-4 sm:p-5`, max-width clamp for small phones
+
+  **MEDIUM (iOS Zoom, Text Sizes, Layout):**
+  - `index.css`: `input-field` → `text-base` (16px) to prevent iOS Safari auto-zoom on focus
+  - Removed redundant `text-sm` from all `input-field` uses (6 files)
+  - `MetricCard.vue`: Label → `text-sm` (was `text-xs`)
+  - `TransactionTable.vue`: Table headers → `text-sm` (was `text-xs`)
+  - `ClassificationBadge.vue`: Responsive `text-xs sm:text-sm`
+  - `TagSuggestions.vue`: Dismiss buttons → 20x20px touch targets (was 10px)
+  - `HelpDrawer.vue`: Responsive width `w-[calc(100%-1rem)] sm:w-[calc(100%-2rem)]`
+  - `AppLayout.vue`: Menu dropdown `max-w-[calc(100vw-1rem)]` + 44px min-height on all items
+  - `TransactionEditModal.vue`: Autocomplete dropdown renders upward (`bottom-full`) to avoid modal clip
+  - `ToastNotification.vue`: Safe area inset on bottom position for iOS notch/home indicator
+
+  **LOW (Polish):**
+  - `TransactionTable.vue`: Pagination buttons → `px-4 py-2.5 min-w-[44px]`
+  - `InstallPrompt.vue`: Stack vertically on mobile (`flex-col sm:flex-row`)
+  - `BottomSheet.vue`: Swipe-to-close gesture on drag handle (80px threshold)
+
+  **Verification:** 106 tests pass, type-check clean.
+
+- **Documentation Accuracy Audit — 10 Fixes Across CLAUDE.md, README.md, USER_GUIDE.md, TESTING_GUIDE.md:**
+  - CLAUDE.md: Added Project Status section with current features, schema v8, and tech stack
+  - README.md: Fixed CSS framework (UnoCSS → Tailwind CSS v4), added 5 missing components, 6 missing composables, 1 missing engine file, corrected schema v6→v8, fixed import wizard 3→2 steps
+  - USER_GUIDE.md: Rewrote import wizard section from 3-step (Upload/Classify/Confirm) to 2-step (Upload/Review & Import), added "Check for updates" to help menu list
+  - TESTING_GUIDE.md: Fixed menu item count (5→6), corrected import wizard step count, rewrote Step 2/3 test scenarios to match per-transaction review flow, added "Check for updates" test scenario (5.3)
+
+- **Code Quality Audit — 13 Fixes Across Race Conditions, Math Errors, Leaks, and Validation:**
+
+  **Critical (Memory Leaks / Race Conditions):**
+  - `useDialogA11y.ts`: Track and cancel `requestAnimationFrame` on unmount (was accessing stale DOM)
+  - `usePWAUpdate.ts`: Track periodic update interval so HMR module reload doesn't duplicate it
+
+  **High (Math Errors / Lifecycle Issues):**
+  - `ImportStepReview.vue`: Guard `cosineSimilarity()` against zero-norm vectors (returns 0 instead of NaN)
+  - `useTagSuggestions.ts`: Prevent `waitForModel()` polling interval from running after safety-net timeout fires
+  - `matching.ts`: Replace hardcoded `DATE_FORMATS[1]!`/`[2]!` with named lookups by label (refactor-safe)
+  - `ImportStepUpload.vue`: Abort FileReader on unmount to prevent stale reactive state updates
+
+  **Medium (Division-by-Zero / Unnecessary Work):**
+  - `ImportStepReview.vue`: Replace non-null assertion `descCounts.get()!` with nullish coalescing
+  - `patterns.ts`: Guard `detectFrequency()` confidence calc against `expectedInterval === 0`
+  - `usePWAInstall.ts`: Only run 5s diagnostic timeout on Chromium browsers (was firing on Safari/Firefox where `beforeinstallprompt` never exists)
+  - `useTagAutocomplete.ts`: Add `debugLog` to silent catch in `pruneStaleTagCache()`
+
+  **Low (Validation / NaN Guards / Pattern Consistency):**
+  - `forecast.ts`: Guard `initHolt()` against NaN/Infinity input values
+  - `exportImport.ts`: Validate ALL transactions in import file, not just the first (catches mid-file corruption)
+  - `useTagInput.ts`: Standardise timeout cleanup to Set-based tracked pattern (matches ML composables)
+
+  **Verification:** 106 tests pass, type-check clean.
+
+- **Code Review Sweep — Bug Fixes, UX Improvements, and New Features:**
+
+  **Synced CLAUDE.md from external glow-props:**
+  - Added Triggers section (10 analysis triggers with aliases and sweep protocol)
+  - Added AI Note for sibling repo access via GitHub API
+  - Added Prohibition for interactive input prompts
+  - Added Download as PDF suggested implementation
+  - Added SVG design rules (400 DPI, shape-rendering)
+
+  **UX Fixes:**
+  - Kebab menu hint auto-dismisses after 6s (was pulsing forever until tapped)
+  - Pull-to-refresh shows visual progress bar + color change at threshold
+  - Import wizard shows transaction count when on step 2 (pagination depth awareness)
+  - Import upload gives specific errors: empty file vs headers-only vs parse failure
+  - Tag autocomplete shows "No matching tags — press Enter to create" hint
+
+  **ML Model Recovery:**
+  - Both ML composables (useTagSuggestions, useEmbeddings) expose `retryModel()` for download failure recovery
+  - Import review shows "Retry download" button when models fail to load
+
+  **New Feature — Transaction Deletion:**
+  - Delete button in TransactionEditModal with inline confirmation
+  - Wired through TransactionTable → WorkspaceDashboard with DB cleanup
+  - Optimistic local state update for immediate UI feedback
+
+  **TODO Cleanup:**
+  - Removed completed items: Phase 2 (import wizard), Phase 4 (single-screen UI), legacy view migration, legacy type removal
+  - Added deferred review findings: shared worker extraction, embedding clustering for import patterns, import history view, virtual scrolling detail
+
 ## 2026-03-09
 
 - **Import Flow Refactor — Per-Transaction Review:**

@@ -171,24 +171,26 @@ if (typeof window !== 'undefined') {
   // Diagnostic: Log installability state after Chrome's engagement heuristic
   // window has had time to evaluate. Helps debug why beforeinstallprompt
   // may not fire on certain devices/browsers.
-  const diagTimeout = setTimeout(() => {
-    if (!canNativeInstall.value && !installed.value) {
-      debugLog('pwa', 'warn', 'No beforeinstallprompt after 5s', {
-        browser: browser.value,
-        standalone: installed.value,
-        dismissed: dismissed.value,
-        hasManifestLink: !!document.querySelector('link[rel="manifest"]'),
-        swControlled: !!navigator.serviceWorker?.controller,
-      })
-    }
-  }, 5000)
-  // Cleanup array not needed — single fire-and-forget at boot
-  // But clear if prompt arrives early to avoid noise
-  window.addEventListener(
-    'beforeinstallprompt',
-    () => clearTimeout(diagTimeout),
-    { once: true },
-  )
+  // Only runs on browsers that could fire the prompt (Chromium-based).
+  if (['chrome', 'edge', 'brave'].includes(browser.value)) {
+    const diagTimeout = setTimeout(() => {
+      if (!canNativeInstall.value && !installed.value) {
+        debugLog('pwa', 'warn', 'No beforeinstallprompt after 5s', {
+          browser: browser.value,
+          standalone: installed.value,
+          dismissed: dismissed.value,
+          hasManifestLink: !!document.querySelector('link[rel="manifest"]'),
+          swControlled: !!navigator.serviceWorker?.controller,
+        })
+      }
+    }, 5000)
+    // Clear if prompt arrives early to avoid noise
+    window.addEventListener(
+      'beforeinstallprompt',
+      () => clearTimeout(diagTimeout),
+      { once: true },
+    )
+  }
 }
 
 export function usePWAInstall() {

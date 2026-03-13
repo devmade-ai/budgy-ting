@@ -4,27 +4,28 @@
 
 ## Worked on
 
-Import flow refactor — replaced group-based classification with per-transaction review.
+`start` sweep: `rev` → `aud` → `doc` → `tap` (mobile UX audit + fixes).
 
 ## Accomplished
 
-- **Replaced ImportStepClassify with ImportStepReview** — new component shows each transaction individually with inline classification (recurring/once-off), tag input with autocomplete, ML tag suggestions, ignore toggle, and variability selector
-- **Embeddings kept for fuzzy pattern matching** — instead of clustering into groups, embeddings now fuzzy-match each transaction against existing `RecurringPattern` descriptions. Exact match + fuzzy match (cosine similarity ≥ 0.75) both auto-fill classification, variability, and tags from matched pattern
-- **Simplified wizard to 2 steps** — Upload → Review (no separate Confirm step). Import button lives at bottom of review step
-- **Save logic adapted** — recurring patterns created at save time by grouping transactions marked "recurring" with same description. Per-transaction tags preserved (not group-level)
-- **Deleted ImportStepClassify.vue** — no longer needed
-- **Fixed TransactionEditModal** — read-only view mode with edit toggle (from earlier in session)
-- **Fixed chart gap** — forecast line now connects to last actual data point
-- **Fixed ML tag suggestions** — lowered confidence threshold from 0.5 to 0.15, added knownTags fallback for empty tagCache
+- **Audit (`aud`):** Fixed 13 code quality issues — race conditions, memory leaks, math errors, validation gaps
+- **Docs (`doc`):** Fixed 10 documentation discrepancies across 4 doc files
+- **Mobile (`tap`):** Fixed 20 mobile UX issues across 12 components:
+  - 4 CRITICAL: Touch targets (close buttons, tag removal, toast dismiss) all ≥44px
+  - iOS zoom fix: `input-field` → `text-base` (16px) globally, removed all `text-sm` overrides
+  - Safe area insets on ToastNotification
+  - BottomSheet swipe-to-close gesture
+  - MetricCard, TransactionTable, ClassificationBadge text sizes increased
+  - Menu dropdown max-width clamp, 44px menu items, HelpDrawer responsive width
+  - Autocomplete dropdown renders upward to avoid modal clip
+  - InstallPrompt stacks vertically on mobile, pagination buttons enlarged
 
 ## Current state
 
-Build passes, type-check clean. Import flow fully refactored. Branch `claude/fix-transaction-ui-gaps-ihbB4` has all changes — not yet merged to main.
+All fixes applied. 106 tests pass, type-check clean. Commits pushed to `claude/fetch-claudemd-changes-0792x`.
 
 ## Key context
 
-- `src/views/import-steps/ImportStepReview.vue` — new per-transaction review step with ML enrichment
-- `src/views/NewImportWizard.vue` — 2-step wizard (Upload → Review), save logic builds patterns from recurring transactions at save time
-- Embeddings used for fuzzy pattern matching (cosine ≥ 0.75), not grouping
-- Tag suggestions batch-requested on mount, deduped by description
-- `TransactionGroup` type no longer used — replaced by `ReviewTransaction`
+- Running a `start` sweep: completed `rev` → `aud` → `doc` → `tap`, next trigger is `cln` (cleanup)
+- `input-field` class now uses `text-base` (16px) — do NOT add `text-sm` to inputs
+- BottomSheet has swipe-to-close on drag handle (80px threshold)
