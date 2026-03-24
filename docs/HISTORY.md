@@ -2,6 +2,14 @@
 
 <!-- Changelog and record of completed work. Organized by date. -->
 
+## 2026-03-23
+
+- **Documentation Fixes — 4 issues from cross-repo audit:**
+  - `src/router/index.ts`: Fixed stale comment "3-step" → "2-step" import wizard
+  - `README.md`: Added `@huggingface/transformers` to Tech Stack section
+  - `README.md`: Added `src/ml/` directory (6 files) to Project Structure
+  - `README.md`: Added `EmbeddingCache` to models.ts description in Project Structure
+
 ## 2026-03-13
 
 - **Mobile UX Audit — 20 Fixes Across 12 Components:**

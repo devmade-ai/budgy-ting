@@ -4,28 +4,22 @@
 
 ## Worked on
 
-`start` sweep: `rev` → `aud` → `doc` → `tap` (mobile UX audit + fixes).
+Documentation fixes from cross-repo audit of all 14 devmade-ai repos.
 
 ## Accomplished
 
-- **Audit (`aud`):** Fixed 13 code quality issues — race conditions, memory leaks, math errors, validation gaps
-- **Docs (`doc`):** Fixed 10 documentation discrepancies across 4 doc files
-- **Mobile (`tap`):** Fixed 20 mobile UX issues across 12 components:
-  - 4 CRITICAL: Touch targets (close buttons, tag removal, toast dismiss) all ≥44px
-  - iOS zoom fix: `input-field` → `text-base` (16px) globally, removed all `text-sm` overrides
-  - Safe area insets on ToastNotification
-  - BottomSheet swipe-to-close gesture
-  - MetricCard, TransactionTable, ClassificationBadge text sizes increased
-  - Menu dropdown max-width clamp, 44px menu items, HelpDrawer responsive width
-  - Autocomplete dropdown renders upward to avoid modal clip
-  - InstallPrompt stacks vertically on mobile, pagination buttons enlarged
+- Fixed 4 documentation issues in budgy-ting identified by the audit:
+  - Router comment: "3-step" → "2-step" import wizard
+  - README Tech Stack: Added `@huggingface/transformers` (Transformers.js)
+  - README Project Structure: Added `src/ml/` directory (6 files)
+  - README models.ts description: Added `EmbeddingCache`
 
 ## Current state
 
-All fixes applied. 106 tests pass, type-check clean. Commits pushed to `claude/fetch-claudemd-changes-0792x`.
+All fixes applied. Code + docs committed and pushed.
 
 ## Key context
 
-- Running a `start` sweep: completed `rev` → `aud` → `doc` → `tap`, next trigger is `cln` (cleanup)
-- `input-field` class now uses `text-base` (16px) — do NOT add `text-sm` to inputs
+- The audit covered all 14 devmade-ai repos; only budgy-ting issues were fixed here
+- `input-field` class uses `text-base` (16px) — do NOT add `text-sm` to inputs
 - BottomSheet has swipe-to-close on drag handle (80px threshold)

@@ -48,6 +48,7 @@ npm run test
 - **vite-plugin-pwa** (Workbox)
 - **ApexCharts** + **vue3-apexcharts** (cashflow graph)
 - **simple-statistics** (mean, median, stddev, regression)
+- **Transformers.js** (`@huggingface/transformers`) — zero-shot classification + embeddings via Web Worker
 - **marked** (markdown rendering in help drawers)
 
 ## Project Structure
@@ -100,6 +101,13 @@ src/
 ├── debug/              # Alpha-phase diagnostic tools
 │   ├── debugLog.ts                # In-memory event store (200-entry circular buffer)
 │   └── DebugPill.vue              # Floating debug panel (Log + Environment tabs)
+├── ml/                 # ML/AI features (Web Worker-based)
+│   ├── embeddingWorker.ts           # Web Worker: text embeddings (all-MiniLM-L6-v2)
+│   ├── tagSuggestionWorker.ts       # Web Worker: zero-shot tag classification
+│   ├── types.ts                     # Shared ML type definitions
+│   ├── useEmbeddings.ts             # Composable: embedding generation + caching
+│   ├── useTagSuggestions.ts         # Composable: ML tag suggestion lifecycle
+│   └── workerTimeout.ts             # Worker timeout + cleanup utilities
 ├── engine/             # Pure TypeScript calculation engines
 │   ├── accuracy.ts                # Prediction accuracy (MAE, RMSE, bias, WMAPE, hit rate)
 │   ├── csvParser.ts               # CSV/JSON file parsing
@@ -113,7 +121,7 @@ src/
 ├── router/             # Vue Router configuration
 │   └── index.ts                   # All routes (lazy-loaded)
 ├── types/              # TypeScript type definitions
-│   └── models.ts                  # Workspace, Transaction, RecurringPattern, ImportBatch, TagCache
+│   └── models.ts                  # Workspace, Transaction, RecurringPattern, ImportBatch, TagCache, EmbeddingCache
 ├── views/              # Page-level view components
 │   ├── WorkspaceListView.vue      # Home: workspace list + restore + clear
 │   ├── WorkspaceCreateView.vue    # New workspace form

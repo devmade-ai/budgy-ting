@@ -13,7 +13,7 @@
  *   /workspace/new — Create workspace
  *   /workspace/:id — Workspace detail (single-screen dashboard)
  *   /workspace/:id/edit — Edit workspace
- *   /workspace/:id/import — Import actuals wizard (3-step)
+ *   /workspace/:id/import — Import actuals wizard (2-step)
  */
 
 import { createRouter, createWebHistory } from 'vue-router'
