@@ -4,6 +4,25 @@
 
 ## 2026-03-30
 
+- **Burger Menu Hardening — Extracted BurgerMenu.vue (glow-props sync):**
+  - Extracted standalone `BurgerMenu.vue` from inline menu in `AppLayout.vue`
+  - Disclosure pattern: `aria-expanded`, `aria-controls`, `<nav>` with `<ul>/<li>` (not `role="menu"`)
+  - Escape key handler (registered only while open, cleaned up on close)
+  - `cursor-pointer` on backdrop overlay (iOS Safari fix — empty divs don't fire click events)
+  - `overscroll-contain` on dropdown (prevents scroll chaining behind menu)
+  - Focus management: first item focused on open, trigger focused on close (with `hasBeenOpen` guard)
+  - `focus-visible:ring-2` on menu items for keyboard navigation visibility
+  - `no-print` class on menu container
+  - AppLayout simplified: menu items defined as computed data array, BurgerMenu handles all interaction
+
+- **Z-Index Scale — Formalized (glow-props sync):**
+  - Added Z-Index Scale table to CLAUDE.md (0→80 range)
+  - Normalized debug pill: `z-[9999]` → `z-[80]`
+  - Normalized toast: `z-[100]` → `z-[70]`
+
+- **CLAUDE.md Sync:**
+  - Added "Discontinued repos" AI note (skip `plant-fur` and `coin-zapp`)
+
 - **Dark Mode — Full Implementation (glow-props sync):**
 
   **Foundation:**

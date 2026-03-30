@@ -39,7 +39,7 @@ const variantIcons: Record<string, Component> = {
     >
       <div
         v-if="state.visible"
-        class="fixed left-1/2 -translate-x-1/2 z-[100] px-4 py-2.5 rounded-lg shadow-lg flex items-center gap-2 text-sm font-medium max-w-sm"
+        class="fixed left-1/2 -translate-x-1/2 z-[70] px-4 py-2.5 rounded-lg shadow-lg flex items-center gap-2 text-sm font-medium max-w-sm"
         style="bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px))"
         :class="variantClasses[state.variant]"
         role="status"

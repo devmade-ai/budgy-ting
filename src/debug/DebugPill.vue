@@ -147,7 +147,8 @@ function toggle() {
 </script>
 
 <template>
-  <div class="fixed bottom-4 right-4 z-[9999]">
+  <!-- z-[80] per Z-Index Scale in CLAUDE.md — highest layer, debug must be visible above all UI -->
+  <div class="fixed bottom-4 right-4 z-[80]">
     <!-- Collapsed pill -->
     <button
       v-if="!expanded"

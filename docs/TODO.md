@@ -14,15 +14,6 @@
 
 - [ ] Print trigger — "Download as PDF" button in dashboard header or burger menu, calls `window.print()`
 
-## UX — Burger Menu Hardening (glow-props sync)
-
-- [ ] Add `aria-expanded` and `aria-controls` to the menu trigger button (disclosure pattern)
-- [ ] Add Escape key handler to close the menu
-- [ ] Add `cursor-pointer` on backdrop overlay — iOS Safari fix (empty divs don't receive click events without it)
-- [ ] Add `overscroll-contain` on the dropdown to prevent scroll chaining behind the menu
-- [ ] Add focus management — focus first item on open, return focus to trigger on close
-- [ ] Consider extracting to standalone `BurgerMenu.vue` component (keeps AppLayout cleaner)
-
 ## UX
 
 - [ ] Virtual scrolling for long transaction lists (vue-virtual-scroller) — current pagination filters full array on every change, 10K+ transactions will lag
@@ -31,12 +22,6 @@
 ## Technical — Icon Generation (glow-props sync)
 
 - [ ] Generate dedicated 1024x1024 maskable icon with proper safe-zone padding — glow-props recommends separate large maskable icon; budgy-ting only has 512x512 for maskable purpose
-
-## Technical — CLAUDE.md Sync (glow-props sync)
-
-- [ ] Add Z-Index Scale table to CLAUDE.md — formalize current ad-hoc values (header z-10, dropdown z-20, modals z-50, toasts z-[100], debug pill z-[9999]) into a documented scale
-- [ ] Normalize debug pill z-index from `z-[9999]` to match the documented scale
-- [ ] Add "Discontinued repos" AI note — skip `plant-fur` and `coin-zapp` in cross-project operations
 
 ## Technical
 
