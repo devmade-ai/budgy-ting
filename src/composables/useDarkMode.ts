@@ -10,7 +10,7 @@
  * Reference: glow-props CLAUDE.md "Theme & Dark Mode"
  */
 
-import { ref, watch, onUnmounted } from 'vue'
+import { ref, watch } from 'vue'
 import { safeGetItem, safeSetItem } from '@/composables/useSafeStorage'
 import { debugLog } from '@/debug/debugLog'
 
