@@ -2,6 +2,25 @@
 
 <!-- Changelog and record of completed work. Organized by date. -->
 
+## 2026-03-30
+
+- **Dark Mode — Full Implementation (glow-props sync):**
+
+  **Foundation:**
+  - `src/index.css`: Semantic CSS variable palette (`:root` light + `.dark` dark tokens), `@custom-variant dark` for Tailwind v4, `color-scheme: dark` on `html.dark`, `@media print` overrides
+  - `src/composables/useDarkMode.ts`: Module-level singleton composable — localStorage persistence, `matchMedia` system preference fallback, cross-tab sync via `storage` event, dynamic `<meta name="theme-color">` update
+  - `index.html`: Flash prevention inline `<script>` (applies `.dark` before first paint), dual `<meta name="theme-color">` tags with `media` queries
+
+  **Component class dark variants (`dark:` prefix) — 30 files:**
+  - Component classes in `index.css`: btn-primary, btn-secondary, btn-danger, input-field, card, page-title, tag-pill
+  - AppLayout.vue: Header, burger menu, banners + "Dark / Light mode" toggle with Sun/Moon icons
+  - CashflowGraph.vue: ApexCharts theme-aware config (axis labels, grid, tooltip, legend)
+  - All 17 components + 8 views updated with dark mode variants
+  - DebugPill.vue: Intentionally NOT updated — uses hardcoded dark theme by design (alpha diagnostic)
+
+  **Completed TODO items moved here:**
+  - CSS variable palette, useDarkMode composable, flash prevention, meta theme-color tags, Tailwind v4 dark variant, color-scheme: dark, menu toggle, @media print CSS
+
 ## 2026-03-23
 
 - **Documentation Fixes — 4 issues from cross-repo audit:**

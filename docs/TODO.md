@@ -10,19 +10,8 @@
 - [ ] Import history view — show importBatches table data (already stored, never displayed)
 - [ ] Transaction deletion from import review step (currently only available on dashboard)
 
-## Features — Dark Mode (glow-props sync)
-
-- [ ] CSS variable palette — `:root` light tokens + `.dark` dark tokens, adapted to budgy-ting brand colors (`--color-brand-*` etc.)
-- [ ] `useDarkMode.ts` composable — localStorage persistence, `matchMedia` system preference fallback, cross-tab sync via `storage` event, dynamic `<meta name="theme-color">` update
-- [ ] Flash prevention inline `<script>` in `index.html` `<head>` — apply `.dark` class before first paint (same early-capture pattern as PWA beforeinstallprompt)
-- [ ] Two `<meta name="theme-color">` tags with `media` queries in `index.html` (light + dark)
-- [ ] Tailwind v4 dark variant — add `@custom-variant dark (&:where(.dark, .dark *));` to main CSS
-- [ ] `color-scheme: dark` on `html.dark` — fixes native form inputs, select dropdowns, scrollbars staying light in dark mode
-- [ ] "Dark / Light mode" toggle item in burger menu
-
 ## Features — Download as PDF (glow-props sync)
 
-- [ ] `@media print` CSS — `no-print` utility class, white background/black text overrides, `break-inside: avoid` on dashboard sections
 - [ ] Print trigger — "Download as PDF" button in dashboard header or burger menu, calls `window.print()`
 
 ## UX — Burger Menu Hardening (glow-props sync)

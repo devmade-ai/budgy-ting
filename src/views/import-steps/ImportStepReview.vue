@@ -428,19 +428,19 @@ function handleImport() {
 
     <!-- Loading state while ML models load -->
     <template v-if="preparing">
-      <p class="text-sm text-gray-500 mb-4">
+      <p class="text-sm text-gray-500 dark:text-zinc-400 mb-4">
         Preparing tag suggestions and pattern matching...
       </p>
       <div class="max-w-sm mx-auto mt-8 mb-8 space-y-4">
         <!-- Embedding model (fuzzy pattern matching) -->
         <div>
-          <div class="flex items-center justify-between text-xs text-gray-500 mb-1">
+          <div class="flex items-center justify-between text-xs text-gray-500 dark:text-zinc-400 mb-1">
             <span>Pattern matching</span>
-            <span v-if="embeddingError" class="text-amber-500">Unavailable</span>
+            <span v-if="embeddingError" class="text-amber-500 dark:text-amber-400">Unavailable</span>
             <span v-else-if="!embeddingLoading && !embeddingError">Ready</span>
             <span v-else-if="embeddingProgress > 0">{{ Math.round(embeddingProgress) }}%</span>
           </div>
-          <div class="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+          <div class="h-1.5 bg-gray-100 dark:bg-zinc-800 rounded-full overflow-hidden">
             <div
               class="h-full rounded-full transition-all duration-300"
               :class="embeddingError ? 'bg-amber-400' : 'bg-brand-500'"
@@ -451,13 +451,13 @@ function handleImport() {
 
         <!-- Tag suggestion model -->
         <div>
-          <div class="flex items-center justify-between text-xs text-gray-500 mb-1">
+          <div class="flex items-center justify-between text-xs text-gray-500 dark:text-zinc-400 mb-1">
             <span>Tag suggestions</span>
-            <span v-if="tagModelError" class="text-amber-500">Unavailable</span>
+            <span v-if="tagModelError" class="text-amber-500 dark:text-amber-400">Unavailable</span>
             <span v-else-if="!tagModelLoading && !tagModelError">Ready</span>
             <span v-else-if="tagModelProgress > 0">{{ Math.round(tagModelProgress) }}%</span>
           </div>
-          <div class="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+          <div class="h-1.5 bg-gray-100 dark:bg-zinc-800 rounded-full overflow-hidden">
             <div
               class="h-full rounded-full transition-all duration-300"
               :class="tagModelError ? 'bg-amber-400' : 'bg-brand-500'"
@@ -466,7 +466,7 @@ function handleImport() {
           </div>
         </div>
 
-        <p class="text-xs text-gray-400 text-center">
+        <p class="text-xs text-gray-400 dark:text-zinc-500 text-center">
           <template v-if="embeddingLoading || tagModelLoading">
             Downloading models for first use — this only happens once
           </template>
@@ -475,7 +475,7 @@ function handleImport() {
             <span v-else-if="embeddingError">Pattern matching unavailable</span>
             <span v-else>Tag suggestions unavailable</span>
             <button
-              class="block mx-auto mt-2 text-brand-600 hover:text-brand-700 underline"
+              class="block mx-auto mt-2 text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 underline"
               @click="embeddingError ? retryEmbeddingModel() : retryTagModel()"
             >
               Retry download
@@ -490,17 +490,17 @@ function handleImport() {
 
     <!-- Main review UI -->
     <template v-else>
-      <p class="text-sm text-gray-500 mb-4">
+      <p class="text-sm text-gray-500 dark:text-zinc-400 mb-4">
         Review each transaction. Set as recurring or once-off, add tags, or ignore.
         {{ summary.autoMatched > 0 ? `${summary.autoMatched} auto-matched from your patterns.` : '' }}
       </p>
 
       <!-- Summary bar -->
       <div class="flex flex-wrap gap-3 mb-4 text-sm">
-        <span class="text-blue-600">{{ summary.recurring }} recurring</span>
-        <span class="text-gray-600">{{ summary.onceOff }} once-off</span>
-        <span class="text-gray-400">{{ summary.ignored }} ignored</span>
-        <span class="ml-auto text-gray-500">{{ summary.active }} of {{ summary.total }} will be imported</span>
+        <span class="text-blue-600 dark:text-blue-400">{{ summary.recurring }} recurring</span>
+        <span class="text-gray-600 dark:text-zinc-300">{{ summary.onceOff }} once-off</span>
+        <span class="text-gray-400 dark:text-zinc-500">{{ summary.ignored }} ignored</span>
+        <span class="ml-auto text-gray-500 dark:text-zinc-400">{{ summary.active }} of {{ summary.total }} will be imported</span>
       </div>
 
       <!-- Search + bulk actions -->
@@ -512,12 +512,12 @@ function handleImport() {
           class="input-field py-1.5 px-3 w-48 min-h-[44px]"
         />
         <button
-          class="text-xs text-gray-500 hover:text-gray-700 underline"
+          class="text-xs text-gray-500 dark:text-zinc-400 hover:text-gray-700 dark:hover:text-zinc-200 underline"
           @click="markAllOnceOff"
         >
           Mark all unmatched as once-off
         </button>
-        <span v-if="tagModelLoading" class="text-xs text-gray-400 italic">
+        <span v-if="tagModelLoading" class="text-xs text-gray-400 dark:text-zinc-500 italic">
           Loading tag suggestions...
         </span>
       </div>
@@ -529,34 +529,34 @@ function handleImport() {
           :key="originalIndex"
           class="border rounded-lg p-3"
           :class="{
-            'border-blue-200 bg-blue-50/30': !tx.ignored && tx.classification === 'recurring',
-            'border-gray-200': !tx.ignored && tx.classification === 'once-off',
-            'border-gray-100 bg-gray-50 opacity-60': tx.ignored,
+            'border-blue-200 dark:border-blue-800 bg-blue-50/30 dark:bg-blue-900/20': !tx.ignored && tx.classification === 'recurring',
+            'border-gray-200 dark:border-zinc-700': !tx.ignored && tx.classification === 'once-off',
+            'border-gray-100 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-800 opacity-60': tx.ignored,
           }"
         >
           <div class="flex flex-wrap items-start gap-2">
             <!-- Transaction info -->
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2">
-                <p class="font-medium text-gray-900 truncate text-sm">{{ tx.description }}</p>
+                <p class="font-medium text-gray-900 dark:text-zinc-100 truncate text-sm">{{ tx.description }}</p>
                 <span
                   v-if="tx.matchedPatternId && !tx.fuzzyMatchHint"
-                  class="text-[10px] text-blue-500 whitespace-nowrap"
+                  class="text-[10px] text-blue-500 dark:text-blue-400 whitespace-nowrap"
                 >
                   auto-matched
                 </span>
                 <span
                   v-else-if="tx.fuzzyMatchHint"
-                  class="text-[10px] text-amber-500 whitespace-nowrap"
+                  class="text-[10px] text-amber-500 dark:text-amber-400 whitespace-nowrap"
                   :title="`Similar to pattern: ${tx.fuzzyMatchHint}`"
                 >
                   similar to "{{ tx.fuzzyMatchHint }}"
                 </span>
               </div>
-              <p class="text-xs text-gray-500 mt-0.5">
+              <p class="text-xs text-gray-500 dark:text-zinc-400 mt-0.5">
                 {{ tx.date }}
                 &middot;
-                <span :class="isIncome(tx.amount) ? 'text-green-600' : 'text-red-600'">
+                <span :class="isIncome(tx.amount) ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">
                   {{ isIncome(tx.amount) ? '+' : '-' }}{{ currencyLabel }}{{ formatAmount(Math.abs(tx.amount)) }}
                 </span>
               </p>
@@ -592,7 +592,7 @@ function handleImport() {
               <div v-if="!tx.ignored" class="mt-1.5">
                 <button
                   v-if="tagInputIndex !== originalIndex"
-                  class="text-xs text-gray-400 hover:text-blue-500 transition-colors"
+                  class="text-xs text-gray-400 dark:text-zinc-500 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
                   @click="toggleTagInput(originalIndex)"
                 >
                   + Tag
@@ -613,15 +613,15 @@ function handleImport() {
                   <ul
                     v-if="tagAutocompleteVisible"
                     role="listbox"
-                    class="absolute z-10 left-0 right-0 mt-0.5 bg-white border border-gray-200 rounded shadow-lg max-h-32 overflow-y-auto"
+                    class="absolute z-10 left-0 right-0 mt-0.5 bg-white dark:bg-[var(--color-surface-elevated)] border border-gray-200 dark:border-zinc-700 rounded shadow-lg dark:shadow-none max-h-32 overflow-y-auto"
                   >
                     <li
                       v-for="(result, ri) in tagAutocompleteResults"
                       :key="result"
                       role="option"
                       :aria-selected="ri === tagSelectedIndex"
-                      class="text-xs px-2.5 py-1.5 hover:bg-blue-50 cursor-pointer"
-                      :class="{ 'bg-blue-50': ri === tagSelectedIndex }"
+                      class="text-xs px-2.5 py-1.5 hover:bg-blue-50 dark:hover:bg-blue-900/30 cursor-pointer"
+                      :class="{ 'bg-blue-50 dark:bg-blue-900/30': ri === tagSelectedIndex }"
                       @mousedown.prevent="addTag(originalIndex, result)"
                     >
                       {{ result }}
@@ -633,15 +633,15 @@ function handleImport() {
               <!-- Variability selector (recurring only) -->
               <div
                 v-if="!tx.ignored && tx.classification === 'recurring'"
-                class="mt-2 pt-2 border-t border-blue-100"
+                class="mt-2 pt-2 border-t border-blue-100 dark:border-blue-900"
               >
-                <p class="text-xs text-gray-500 mb-1.5">How does the amount work?</p>
+                <p class="text-xs text-gray-500 dark:text-zinc-400 mb-1.5">How does the amount work?</p>
                 <div class="flex gap-1">
                   <button
                     class="text-xs px-2 py-1 rounded border transition-colors"
                     :class="tx.variability === 'fixed'
-                      ? 'bg-blue-100 text-blue-700 border-blue-300'
-                      : 'bg-white text-gray-500 border-gray-200 hover:border-blue-200'"
+                      ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700'
+                      : 'bg-white dark:bg-[var(--color-surface-elevated)] text-gray-500 dark:text-zinc-400 border-gray-200 dark:border-zinc-700 hover:border-blue-200 dark:hover:border-blue-800'"
                     @click="setVariability(originalIndex, 'fixed')"
                     :title="isIncome(tx.amount)
                       ? 'Same amount every time (e.g. salary, fixed retainer)'
@@ -652,8 +652,8 @@ function handleImport() {
                   <button
                     class="text-xs px-2 py-1 rounded border transition-colors"
                     :class="tx.variability === 'variable'
-                      ? 'bg-blue-100 text-blue-700 border-blue-300'
-                      : 'bg-white text-gray-500 border-gray-200 hover:border-blue-200'"
+                      ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700'
+                      : 'bg-white dark:bg-[var(--color-surface-elevated)] text-gray-500 dark:text-zinc-400 border-gray-200 dark:border-zinc-700 hover:border-blue-200 dark:hover:border-blue-800'"
                     @click="setVariability(originalIndex, 'variable')"
                     :title="isIncome(tx.amount)
                       ? 'Comes at regular times but the amount changes (e.g. commission)'
@@ -664,8 +664,8 @@ function handleImport() {
                   <button
                     class="text-xs px-2 py-1 rounded border transition-colors"
                     :class="tx.variability === 'irregular'
-                      ? 'bg-blue-100 text-blue-700 border-blue-300'
-                      : 'bg-white text-gray-500 border-gray-200 hover:border-blue-200'"
+                      ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700'
+                      : 'bg-white dark:bg-[var(--color-surface-elevated)] text-gray-500 dark:text-zinc-400 border-gray-200 dark:border-zinc-700 hover:border-blue-200 dark:hover:border-blue-800'"
                     @click="setVariability(originalIndex, 'irregular')"
                     :title="isIncome(tx.amount)
                       ? 'No fixed schedule (e.g. freelance gigs)'
@@ -684,7 +684,7 @@ function handleImport() {
                   class="text-xs px-2.5 py-1.5 rounded border transition-colors"
                   :class="!tx.ignored && tx.classification === 'recurring'
                     ? 'bg-blue-500 text-white border-blue-500'
-                    : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300'"
+                    : 'bg-white dark:bg-[var(--color-surface-elevated)] text-gray-600 dark:text-zinc-300 border-gray-200 dark:border-zinc-700 hover:border-blue-300 dark:hover:border-blue-700'"
                   :disabled="tx.ignored"
                   @click="setClassification(originalIndex, 'recurring')"
                 >
@@ -693,8 +693,8 @@ function handleImport() {
                 <button
                   class="text-xs px-2.5 py-1.5 rounded border transition-colors"
                   :class="!tx.ignored && tx.classification === 'once-off'
-                    ? 'bg-gray-700 text-white border-gray-700'
-                    : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'"
+                    ? 'bg-gray-700 dark:bg-zinc-600 text-white border-gray-700 dark:border-zinc-600'
+                    : 'bg-white dark:bg-[var(--color-surface-elevated)] text-gray-600 dark:text-zinc-300 border-gray-200 dark:border-zinc-700 hover:border-gray-400 dark:hover:border-zinc-500'"
                   :disabled="tx.ignored"
                   @click="setClassification(originalIndex, 'once-off')"
                 >
@@ -704,8 +704,8 @@ function handleImport() {
               <button
                 class="text-xs px-2 py-1 transition-colors"
                 :class="tx.ignored
-                  ? 'text-red-500 hover:text-red-700 font-medium'
-                  : 'text-gray-400 hover:text-gray-600'"
+                  ? 'text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-medium'
+                  : 'text-gray-400 dark:text-zinc-500 hover:text-gray-600 dark:hover:text-zinc-300'"
                 @click="toggleIgnore(originalIndex)"
               >
                 {{ tx.ignored ? 'Ignored — undo' : 'Ignore' }}
@@ -718,17 +718,17 @@ function handleImport() {
       <!-- Pagination -->
       <div v-if="totalPages > 1" class="flex items-center justify-center gap-2 mb-4">
         <button
-          class="text-xs px-2 py-1 rounded border border-gray-200 hover:bg-gray-50 disabled:opacity-30"
+          class="text-xs px-2 py-1 rounded border border-gray-200 dark:border-zinc-700 hover:bg-gray-50 dark:hover:bg-[var(--color-surface-hover)] disabled:opacity-30"
           :disabled="currentPage === 1"
           @click="currentPage--"
         >
           Previous
         </button>
-        <span class="text-xs text-gray-500">
+        <span class="text-xs text-gray-500 dark:text-zinc-400">
           Page {{ currentPage }} of {{ totalPages }}
         </span>
         <button
-          class="text-xs px-2 py-1 rounded border border-gray-200 hover:bg-gray-50 disabled:opacity-30"
+          class="text-xs px-2 py-1 rounded border border-gray-200 dark:border-zinc-700 hover:bg-gray-50 dark:hover:bg-[var(--color-surface-hover)] disabled:opacity-30"
           :disabled="currentPage === totalPages"
           @click="currentPage++"
         >

@@ -96,9 +96,9 @@ const instructions = computed<{ title: string; steps: InstructionStep[] }>(() =>
         role="dialog"
         :aria-label="instructions.title"
         aria-modal="true"
-        class="relative bg-white rounded-xl shadow-xl max-w-sm w-full p-6"
+        class="relative bg-white dark:bg-[var(--color-surface-elevated)] rounded-xl shadow-xl dark:shadow-none max-w-sm w-full p-6"
       >
-        <h3 class="text-lg font-semibold text-gray-900 mb-4">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-zinc-100 mb-4">
           {{ instructions.title }}
         </h3>
 
@@ -109,12 +109,12 @@ const instructions = computed<{ title: string; steps: InstructionStep[] }>(() =>
             class="flex items-start gap-3"
           >
             <span
-              class="w-6 h-6 rounded-full bg-brand-100 text-brand-700 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5"
+              class="w-6 h-6 rounded-full bg-brand-100 dark:bg-brand-900/40 text-brand-700 dark:text-brand-300 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5"
             >
               {{ step.step }}
             </span>
-            <div class="flex items-center gap-2 text-sm text-gray-700">
-              <component v-if="step.icon" :is="step.icon" :size="16" class="text-gray-400 shrink-0" aria-hidden="true" />
+            <div class="flex items-center gap-2 text-sm text-gray-700 dark:text-zinc-300">
+              <component v-if="step.icon" :is="step.icon" :size="16" class="text-gray-400 dark:text-zinc-500 shrink-0" aria-hidden="true" />
               <span>{{ step.text }}</span>
             </div>
           </li>

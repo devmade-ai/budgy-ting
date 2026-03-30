@@ -13,12 +13,13 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePWAUpdate } from '@/composables/usePWAUpdate'
 import { useTutorial } from '@/composables/useTutorial'
+import { useDarkMode } from '@/composables/useDarkMode'
 import InstallPrompt from '@/components/InstallPrompt.vue'
 import InstallInstructionsModal from '@/components/InstallInstructionsModal.vue'
 import TutorialModal from '@/components/TutorialModal.vue'
 import HelpDrawer from '@/components/HelpDrawer.vue'
 import ToastNotification from '@/components/ToastNotification.vue'
-import { Menu, CircleHelp, BookOpen, TestTubes, FileText, FileSpreadsheet, RefreshCw } from 'lucide-vue-next'
+import { Menu, CircleHelp, BookOpen, TestTubes, FileText, FileSpreadsheet, RefreshCw, Sun, Moon } from 'lucide-vue-next'
 
 // Build-time markdown imports — bundled as strings, no runtime fetch
 import userGuideMd from '../../docs/USER_GUIDE.md?raw'
@@ -32,6 +33,7 @@ const sampleCsvMd = 'Copy this sample data to test the import wizard, or use it 
 const router = useRouter()
 const { hasUpdate, offlineReady, checking, updateApp, checkForUpdate } = usePWAUpdate()
 const { showTutorial, showIfFirstVisit, openTutorial, dismissTutorial } = useTutorial()
+const { isDark, toggle: toggleDarkMode } = useDarkMode()
 
 const showInstructions = ref(false)
 const menuOpen = ref(false)
@@ -82,10 +84,15 @@ function handleCheckForUpdate() {
   menuOpen.value = false
   checkForUpdate()
 }
+
+function handleToggleDarkMode() {
+  menuOpen.value = false
+  toggleDarkMode()
+}
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50">
+  <div class="min-h-screen bg-gray-50 dark:bg-[var(--color-surface-page)]">
     <!-- Update banner -->
     <div
       v-if="hasUpdate"
@@ -112,10 +119,10 @@ function handleCheckForUpdate() {
     <InstallPrompt @show-instructions="showInstructions = true" />
 
     <!-- Header -->
-    <header class="bg-white border-b border-gray-200 sticky top-0 z-10">
+    <header class="bg-white dark:bg-[var(--color-surface)] border-b border-gray-200 dark:border-zinc-700 sticky top-0 z-10">
       <div class="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
         <button
-          class="text-lg font-bold text-brand-600 hover:text-brand-700 transition-colors"
+          class="text-lg font-bold text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 transition-colors"
           @click="goHome"
         >
           budgy-ting
@@ -124,7 +131,7 @@ function handleCheckForUpdate() {
         <!-- Menu button + dropdown -->
         <div ref="menuRef" class="relative">
           <button
-            class="w-10 h-10 rounded-full flex items-center justify-center text-gray-400 hover:text-brand-600 hover:bg-brand-50 transition-colors"
+            class="w-10 h-10 rounded-full flex items-center justify-center text-gray-400 dark:text-zinc-400 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/30 transition-colors"
             title="Menu"
             aria-label="Menu"
             aria-haspopup="true"
@@ -137,59 +144,68 @@ function handleCheckForUpdate() {
           <!-- Dropdown menu -->
           <div
             v-if="menuOpen"
-            class="absolute right-0 top-full mt-1 w-48 max-w-[calc(100vw-1rem)] bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20"
+            class="absolute right-0 top-full mt-1 w-48 max-w-[calc(100vw-1rem)] bg-white dark:bg-[var(--color-surface-elevated)] rounded-lg shadow-lg dark:shadow-none border border-gray-200 dark:border-zinc-700 py-1 z-20"
             role="menu"
           >
             <!-- Mobile UX: min-h-[44px] touch targets on all menu items -->
             <button
-              class="w-full text-left px-4 py-2 min-h-[44px] text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+              class="w-full text-left px-4 py-2 min-h-[44px] text-sm text-gray-700 dark:text-zinc-200 hover:bg-gray-50 dark:hover:bg-[var(--color-surface-hover)] flex items-center gap-2"
               role="menuitem"
               @click="handleTutorial"
             >
-              <CircleHelp :size="16" class="text-gray-400" aria-hidden="true" />
+              <CircleHelp :size="16" class="text-gray-400 dark:text-zinc-500" aria-hidden="true" />
               How it works
             </button>
             <button
-              class="w-full text-left px-4 py-2 min-h-[44px] text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+              class="w-full text-left px-4 py-2 min-h-[44px] text-sm text-gray-700 dark:text-zinc-200 hover:bg-gray-50 dark:hover:bg-[var(--color-surface-hover)] flex items-center gap-2"
               role="menuitem"
               @click="openDrawer('user-guide')"
             >
-              <BookOpen :size="16" class="text-gray-400" aria-hidden="true" />
+              <BookOpen :size="16" class="text-gray-400 dark:text-zinc-500" aria-hidden="true" />
               User Guide
             </button>
             <button
-              class="w-full text-left px-4 py-2 min-h-[44px] text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+              class="w-full text-left px-4 py-2 min-h-[44px] text-sm text-gray-700 dark:text-zinc-200 hover:bg-gray-50 dark:hover:bg-[var(--color-surface-hover)] flex items-center gap-2"
               role="menuitem"
               @click="openDrawer('testing-guide')"
             >
-              <TestTubes :size="16" class="text-gray-400" aria-hidden="true" />
+              <TestTubes :size="16" class="text-gray-400 dark:text-zinc-500" aria-hidden="true" />
               Test Scenarios
             </button>
-            <div class="border-t border-gray-100 my-1" role="separator" />
+            <div class="border-t border-gray-100 dark:border-zinc-700 my-1" role="separator" />
             <button
-              class="w-full text-left px-4 py-2 min-h-[44px] text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+              class="w-full text-left px-4 py-2 min-h-[44px] text-sm text-gray-700 dark:text-zinc-200 hover:bg-gray-50 dark:hover:bg-[var(--color-surface-hover)] flex items-center gap-2"
               role="menuitem"
               @click="openDrawer('import-format')"
             >
-              <FileText :size="16" class="text-gray-400" aria-hidden="true" />
+              <FileText :size="16" class="text-gray-400 dark:text-zinc-500" aria-hidden="true" />
               Import Format
             </button>
             <button
-              class="w-full text-left px-4 py-2 min-h-[44px] text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+              class="w-full text-left px-4 py-2 min-h-[44px] text-sm text-gray-700 dark:text-zinc-200 hover:bg-gray-50 dark:hover:bg-[var(--color-surface-hover)] flex items-center gap-2"
               role="menuitem"
               @click="openDrawer('sample-csv')"
             >
-              <FileSpreadsheet :size="16" class="text-gray-400" aria-hidden="true" />
+              <FileSpreadsheet :size="16" class="text-gray-400 dark:text-zinc-500" aria-hidden="true" />
               Sample CSV
             </button>
-            <div class="border-t border-gray-100 my-1" role="separator" />
+            <div class="border-t border-gray-100 dark:border-zinc-700 my-1" role="separator" />
             <button
-              class="w-full text-left px-4 py-2 min-h-[44px] text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+              class="w-full text-left px-4 py-2 min-h-[44px] text-sm text-gray-700 dark:text-zinc-200 hover:bg-gray-50 dark:hover:bg-[var(--color-surface-hover)] flex items-center gap-2"
+              role="menuitem"
+              @click="handleToggleDarkMode"
+            >
+              <Sun v-if="isDark" :size="16" class="text-amber-400" aria-hidden="true" />
+              <Moon v-else :size="16" class="text-gray-400" aria-hidden="true" />
+              {{ isDark ? 'Light mode' : 'Dark mode' }}
+            </button>
+            <button
+              class="w-full text-left px-4 py-2 min-h-[44px] text-sm text-gray-700 dark:text-zinc-200 hover:bg-gray-50 dark:hover:bg-[var(--color-surface-hover)] flex items-center gap-2"
               role="menuitem"
               :disabled="checking"
               @click="handleCheckForUpdate"
             >
-              <RefreshCw :size="16" class="text-gray-400" :class="{ 'animate-spin': checking }" aria-hidden="true" />
+              <RefreshCw :size="16" class="text-gray-400 dark:text-zinc-500" :class="{ 'animate-spin': checking }" aria-hidden="true" />
               {{ checking ? 'Checking...' : 'Check for updates' }}
             </button>
           </div>

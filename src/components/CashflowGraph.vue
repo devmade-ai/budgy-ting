@@ -11,6 +11,7 @@
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import VueApexCharts from 'vue3-apexcharts'
 import { LineChart } from 'lucide-vue-next'
+import { useDarkMode } from '@/composables/useDarkMode'
 import type { Transaction } from '@/types/models'
 import type { DailyForecastPoint } from '@/engine/forecast'
 import type { RunwayResult } from '@/engine/runway'
@@ -23,6 +24,7 @@ const props = defineProps<{
 }>()
 
 const chartMode = ref<'cumulative' | 'daily'>('cumulative')
+const { isDark } = useDarkMode()
 
 // Requirement: Responsive chart height — smaller on mobile, larger on desktop
 // Approach: Track window width and compute height from breakpoints.
@@ -135,6 +137,14 @@ const chartOptions = computed(() => {
     return '#6b7280'
   })
 
+  // Chart colors adapt to dark mode — hardcoded hex values required by ApexCharts
+  // (it doesn't support CSS variables in config objects)
+  const labelColor = isDark.value ? '#a1a1aa' : '#9ca3af'
+  const titleColor = isDark.value ? '#a1a1aa' : '#6b7280'
+  const gridColor = isDark.value ? '#27272a' : '#f3f4f6'
+  const tooltipTheme = isDark.value ? 'dark' : 'light'
+  const legendColor = isDark.value ? '#d4d4d8' : undefined
+
   return {
     chart: {
       id: 'cashflow-graph',
@@ -143,7 +153,9 @@ const chartOptions = computed(() => {
       toolbar: { show: true, tools: { download: true, zoom: true, pan: true, reset: true } },
       zoom: { enabled: true },
       fontFamily: 'inherit',
+      background: 'transparent',
     },
+    theme: { mode: isDark.value ? 'dark' as const : 'light' as const },
     stroke: {
       width: strokeWidths,
       dashArray,
@@ -154,21 +166,22 @@ const chartOptions = computed(() => {
       type: 'datetime' as const,
       labels: {
         format: 'dd MMM',
-        style: { fontSize: '11px', colors: '#9ca3af' },
+        style: { fontSize: '11px', colors: labelColor },
       },
     },
     yaxis: {
       labels: {
         formatter: (val: number) => `${props.currencyLabel}${val.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
-        style: { fontSize: '11px', colors: '#9ca3af' },
+        style: { fontSize: '11px', colors: labelColor },
       },
       title: {
         text: chartMode.value === 'cumulative' ? 'Cumulative' : 'Daily Net',
-        style: { fontSize: '12px', color: '#6b7280' },
+        style: { fontSize: '12px', color: titleColor },
       },
     },
     tooltip: {
       shared: true,
+      theme: tooltipTheme,
       x: { format: 'dd MMM yyyy' },
       y: {
         formatter: (val: number) =>
@@ -176,17 +189,18 @@ const chartOptions = computed(() => {
       },
     },
     grid: {
-      borderColor: '#f3f4f6',
+      borderColor: gridColor,
       strokeDashArray: 4,
     },
     legend: {
       position: 'top' as const,
       horizontalAlign: 'left' as const,
       fontSize: '12px',
+      labels: { colors: legendColor },
     },
     noData: {
       text: 'No data for selected period',
-      style: { fontSize: '14px', color: '#9ca3af' },
+      style: { fontSize: '14px', color: labelColor },
     },
   }
 })
@@ -202,8 +216,8 @@ const hasData = computed(() => actualPoints.value.length > 0 || props.forecastPo
         <button
           class="btn text-xs px-3 py-1.5 rounded"
           :class="chartMode === 'cumulative'
-            ? 'bg-brand-50 text-brand-700 border border-brand-300'
-            : 'bg-gray-50 text-gray-600 border border-gray-200'"
+            ? 'bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 border border-brand-300 dark:border-brand-700'
+            : 'bg-gray-50 dark:bg-zinc-800 text-gray-600 dark:text-zinc-300 border border-gray-200 dark:border-zinc-700'"
           @click="chartMode = 'cumulative'"
         >
           Cumulative
@@ -211,8 +225,8 @@ const hasData = computed(() => actualPoints.value.length > 0 || props.forecastPo
         <button
           class="btn text-xs px-3 py-1.5 rounded"
           :class="chartMode === 'daily'
-            ? 'bg-brand-50 text-brand-700 border border-brand-300'
-            : 'bg-gray-50 text-gray-600 border border-gray-200'"
+            ? 'bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 border border-brand-300 dark:border-brand-700'
+            : 'bg-gray-50 dark:bg-zinc-800 text-gray-600 dark:text-zinc-300 border border-gray-200 dark:border-zinc-700'"
           @click="chartMode = 'daily'"
         >
           Daily net
@@ -223,7 +237,7 @@ const hasData = computed(() => actualPoints.value.length > 0 || props.forecastPo
     <!-- Chart -->
     <div v-if="hasData">
       <VueApexCharts
-        :key="`${chartMode}-${chartHeight}`"
+        :key="`${chartMode}-${chartHeight}-${isDark}`"
         type="line"
         :height="chartHeight"
         :options="chartOptions"
@@ -231,9 +245,9 @@ const hasData = computed(() => actualPoints.value.length > 0 || props.forecastPo
       />
     </div>
     <div v-else class="text-center py-12">
-      <LineChart :size="36" class="text-gray-300 mx-auto mb-3" />
-      <p class="text-gray-500">No data to chart</p>
-      <p class="text-gray-400 text-sm mt-1">Import transactions to see your cashflow</p>
+      <LineChart :size="36" class="text-gray-300 dark:text-zinc-600 mx-auto mb-3" />
+      <p class="text-gray-500 dark:text-zinc-400">No data to chart</p>
+      <p class="text-gray-400 dark:text-zinc-500 text-sm mt-1">Import transactions to see your cashflow</p>
     </div>
   </div>
 </template>

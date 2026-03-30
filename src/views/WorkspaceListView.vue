@@ -196,14 +196,14 @@ const { showInstallReminder, checkInstallReminder, dismissInstallReminder } = us
     <!-- Install reminder for repeat users -->
     <div
       v-if="showInstallReminder"
-      class="bg-brand-50 border border-brand-200 rounded-lg p-3 mb-4 flex items-center justify-between text-sm"
+      class="bg-brand-50 dark:bg-brand-900/20 border border-brand-200 dark:border-brand-800 rounded-lg p-3 mb-4 flex items-center justify-between text-sm"
     >
-      <div class="flex items-center gap-2 text-brand-700">
+      <div class="flex items-center gap-2 text-brand-700 dark:text-brand-300">
         <Smartphone :size="18" />
         <span>Add budgy-ting to your home screen for quick access</span>
       </div>
       <button
-        class="text-brand-400 hover:text-brand-600 text-xs ml-2 whitespace-nowrap"
+        class="text-brand-400 dark:text-brand-500 hover:text-brand-600 text-xs ml-2 whitespace-nowrap"
         @click="dismissInstallReminder"
       >
         Dismiss
@@ -219,14 +219,14 @@ const { showInstallReminder, checkInstallReminder, dismissInstallReminder } = us
       class="flex flex-col items-center py-2 text-xs transition-all"
       :style="{ height: `${Math.max(pullDistance, refreshing ? 40 : 0)}px` }"
     >
-      <div class="w-8 h-1 bg-gray-200 rounded-full overflow-hidden mb-1">
+      <div class="w-8 h-1 bg-gray-200 dark:bg-zinc-700 rounded-full overflow-hidden mb-1">
         <div
           class="h-full rounded-full transition-colors"
           :class="canRelease ? 'bg-brand-500' : 'bg-gray-400'"
           :style="{ width: refreshing ? '100%' : `${pullProgress * 100}%` }"
         />
       </div>
-      <span :class="canRelease ? 'text-brand-600 font-medium' : 'text-gray-400'">
+      <span :class="canRelease ? 'text-brand-600 dark:text-brand-400 font-medium' : 'text-gray-400 dark:text-zinc-500'">
         {{ refreshing ? 'Refreshing...' : canRelease ? 'Release to refresh' : 'Pull to refresh' }}
       </span>
     </div>
@@ -261,13 +261,13 @@ const { showInstallReminder, checkInstallReminder, dismissInstallReminder } = us
         <button
           v-for="ws in workspaces"
           :key="ws.id"
-          class="card w-full text-left hover:border-brand-300 transition-colors cursor-pointer"
+          class="card w-full text-left hover:border-brand-300 dark:hover:border-brand-700 transition-colors cursor-pointer"
           @click="openWorkspace(ws.id)"
         >
           <div class="flex items-center justify-between">
             <div class="min-w-0">
-              <h2 class="font-semibold text-gray-900 truncate">{{ ws.name }}</h2>
-              <p class="text-sm text-gray-500 mt-0.5">
+              <h2 class="font-semibold text-gray-900 dark:text-zinc-100 truncate">{{ ws.name }}</h2>
+              <p class="text-sm text-gray-500 dark:text-zinc-400 mt-0.5">
                 {{ ws.periodType === 'monthly' ? 'Monthly' : 'Custom period' }}
                 <span v-if="ws.currencyLabel" class="ml-1">
                   &middot; {{ ws.currencyLabel }}
@@ -280,15 +280,15 @@ const { showInstallReminder, checkInstallReminder, dismissInstallReminder } = us
                 </template>
               </p>
             </div>
-            <ChevronRight :size="16" class="text-gray-400" />
+            <ChevronRight :size="16" class="text-gray-400 dark:text-zinc-500" />
           </div>
         </button>
       </div>
 
       <!-- Data management -->
-      <div class="mt-8 pt-6 border-t border-gray-200">
+      <div class="mt-8 pt-6 border-t border-gray-200 dark:border-zinc-700">
         <button
-          class="text-xs text-gray-400 hover:text-red-500 transition-colors"
+          class="text-xs text-gray-400 dark:text-zinc-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"
           @click="showClearConfirm = true"
         >
           Clear all data

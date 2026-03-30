@@ -67,7 +67,7 @@ function handleSubmit() {
   <form class="space-y-5" @submit.prevent="handleSubmit">
     <!-- Workspace name -->
     <div>
-      <label class="block text-sm font-medium text-gray-700 mb-1" for="workspace-name">
+      <label class="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1" for="workspace-name">
         Workspace name
       </label>
       <input
@@ -78,12 +78,12 @@ function handleSubmit() {
         placeholder="e.g. Household, Side Hustle, Wedding"
         autofocus
       />
-      <p v-if="errors['name']" class="text-sm text-red-500 mt-1">{{ errors['name'] }}</p>
+      <p v-if="errors['name']" class="text-sm text-red-500 dark:text-red-400 mt-1">{{ errors['name'] }}</p>
     </div>
 
     <!-- Currency label -->
     <div>
-      <label class="block text-sm font-medium text-gray-700 mb-1" for="currency-label">
+      <label class="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1" for="currency-label">
         Currency symbol
       </label>
       <input
@@ -94,12 +94,12 @@ function handleSubmit() {
         placeholder="R"
         maxlength="5"
       />
-      <p class="text-sm text-gray-400 mt-1">Display only — shown next to amounts</p>
+      <p class="text-sm text-gray-400 dark:text-zinc-500 mt-1">Display only — shown next to amounts</p>
     </div>
 
     <!-- Period type -->
     <div>
-      <label class="block text-sm font-medium text-gray-700 mb-2">
+      <label class="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-2">
         Period
       </label>
       <div class="flex gap-2">
@@ -107,8 +107,8 @@ function handleSubmit() {
           type="button"
           class="btn flex-1"
           :class="periodType === 'monthly'
-            ? 'bg-brand-50 text-brand-700 border border-brand-300'
-            : 'bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100'"
+            ? 'bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 border border-brand-300 dark:border-brand-700'
+            : 'bg-gray-50 dark:bg-zinc-800 text-gray-600 dark:text-zinc-300 border border-gray-200 dark:border-zinc-700 hover:bg-gray-100 dark:hover:bg-zinc-700'"
           @click="periodType = 'monthly'"
         >
           Monthly
@@ -117,8 +117,8 @@ function handleSubmit() {
           type="button"
           class="btn flex-1"
           :class="periodType === 'custom'
-            ? 'bg-brand-50 text-brand-700 border border-brand-300'
-            : 'bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100'"
+            ? 'bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 border border-brand-300 dark:border-brand-700'
+            : 'bg-gray-50 dark:bg-zinc-800 text-gray-600 dark:text-zinc-300 border border-gray-200 dark:border-zinc-700 hover:bg-gray-100 dark:hover:bg-zinc-700'"
           @click="periodType = 'custom'"
         >
           Custom dates
@@ -129,18 +129,18 @@ function handleSubmit() {
     <!-- Custom date range -->
     <div v-if="periodType === 'custom'" class="space-y-3">
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1" for="start-date">
+        <label class="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1" for="start-date">
           Start date
         </label>
         <DateInput id="start-date" v-model="startDate" />
       </div>
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1" for="end-date">
+        <label class="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1" for="end-date">
           End date
         </label>
         <DateInput id="end-date" v-model="endDate" :min="startDate" />
       </div>
-      <p v-if="errors['dates']" class="text-sm text-red-500">{{ errors['dates'] }}</p>
+      <p v-if="errors['dates']" class="text-sm text-red-500 dark:text-red-400">{{ errors['dates'] }}</p>
     </div>
 
     <!-- Actions -->

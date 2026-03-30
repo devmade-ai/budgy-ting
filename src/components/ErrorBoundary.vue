@@ -29,11 +29,11 @@ function retry() {
 <template>
   <div v-if="hasError" class="max-w-md mx-auto mt-16 text-center">
     <AlertTriangle :size="48" class="text-amber-400 mx-auto mb-4" />
-    <h2 class="text-lg font-semibold text-gray-900 mb-2">Something went wrong</h2>
-    <p class="text-gray-500 text-sm mb-1">
+    <h2 class="text-lg font-semibold text-gray-900 dark:text-zinc-100 mb-2">Something went wrong</h2>
+    <p class="text-gray-500 dark:text-zinc-400 text-sm mb-1">
       The app ran into a problem. Your data is safe.
     </p>
-    <p v-if="errorMessage" class="text-gray-400 text-xs mb-6 font-mono">
+    <p v-if="errorMessage" class="text-gray-400 dark:text-zinc-500 text-xs mb-6 font-mono">
       {{ errorMessage }}
     </p>
     <div class="flex gap-3 justify-center">

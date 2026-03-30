@@ -29,7 +29,7 @@ defineProps<{
     />
     <Calendar
       :size="16"
-      class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+      class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-zinc-500 pointer-events-none"
       aria-hidden="true"
     />
   </div>
