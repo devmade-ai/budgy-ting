@@ -35,11 +35,11 @@ function handleShowInstructions() {
 <template>
   <div
     v-if="showInstallPrompt"
-    class="bg-brand-50 border-b border-brand-200 px-4 py-2.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-3"
+    class="bg-brand-50 dark:bg-brand-900/20 border-b border-brand-200 dark:border-brand-800 px-4 py-2.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-3"
   >
     <div class="flex items-center gap-2 min-w-0">
       <Smartphone :size="16" class="text-brand-600 shrink-0" />
-      <span class="text-sm text-brand-800 truncate">
+      <span class="text-sm text-brand-800 dark:text-brand-200 truncate">
         Install budgy-ting for quick access
       </span>
     </div>

@@ -4,7 +4,15 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#10b981" />
+    <!-- Requirement: Status bar is a branding surface, not a content surface
+         Approach: Brand color (#10b981) for both light and dark meta tags.
+           A mid-tone brand color provides enough contrast for status bar text
+           (time, battery, wifi icons) in both light and dark OS modes.
+           Using page background colors causes visibility problems when the OS
+           color scheme differs from the app's theme (e.g. light text on light bg).
+         Reference: glow-props CLAUDE.md "Theme & Dark Mode — Meta Theme-Color" -->
+    <meta name="theme-color" content="#10b981" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#10b981" media="(prefers-color-scheme: dark)" />
     <meta name="description" content="Plan and track expenses against budgets" />
     <!-- Requirement: Improve iOS standalone PWA appearance
          Approach: apple-mobile-web-app meta tags for status bar, title, and splash -->
@@ -14,6 +22,24 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="apple-touch-startup-image" href="/apple-touch-icon.png" />
     <title>budgy-ting</title>
+    <!-- Requirement: Prevent white flash on dark mode page load
+         Approach: Classic (non-module) inline script reads localStorage and applies
+           .dark class before first paint. Same early-capture pattern as PWA
+           beforeinstallprompt script. Must duplicate the localStorage/matchMedia
+           logic from useDarkMode.ts — the composable runs after Vue mount, too late.
+         Why classic script: Module scripts are deferred — they run after DOM parse.
+         Reference: glow-props CLAUDE.md "Theme & Dark Mode — Flash Prevention" -->
+    <script>
+      (function() {
+        try {
+          var stored = localStorage.getItem('darkMode');
+          var isDark = stored !== null
+            ? stored === 'true'
+            : window.matchMedia('(prefers-color-scheme: dark)').matches;
+          if (isDark) document.documentElement.classList.add('dark');
+        } catch(e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="app"></div>

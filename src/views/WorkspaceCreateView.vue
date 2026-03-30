@@ -53,7 +53,7 @@ function handleCancel() {
 <template>
   <div>
     <button
-      class="text-sm text-gray-500 hover:text-gray-700 mb-4 flex items-center gap-1"
+      class="text-sm text-gray-500 dark:text-zinc-400 hover:text-gray-700 dark:hover:text-zinc-200 mb-4 flex items-center gap-1"
       @click="handleCancel"
     >
       <ArrowLeft :size="16" />

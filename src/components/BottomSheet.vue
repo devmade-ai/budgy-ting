@@ -77,7 +77,7 @@ watch(() => sheetRef.value, () => {
           ref="sheetRef"
           role="dialog"
           aria-modal="true"
-          class="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-xl
+          class="absolute bottom-0 left-0 right-0 bg-white dark:bg-[var(--color-surface-elevated)] rounded-t-2xl shadow-xl dark:shadow-none
                  max-h-[70vh] overflow-y-auto pb-safe
                  sm:bottom-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2
                  sm:rounded-xl sm:max-w-sm sm:w-full"
@@ -90,7 +90,7 @@ watch(() => sheetRef.value, () => {
             @touchmove="onTouchMove"
             @touchend="onTouchEnd"
           >
-            <div class="w-10 h-1 bg-gray-300 rounded-full" />
+            <div class="w-10 h-1 bg-gray-300 dark:bg-zinc-600 rounded-full" />
           </div>
 
           <div class="px-4 pb-4">

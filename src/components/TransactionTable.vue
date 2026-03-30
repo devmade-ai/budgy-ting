@@ -144,21 +144,21 @@ function getSuggestions(id: string): TagSuggestion[] {
         :key="txn.id"
         role="button"
         tabindex="0"
-        class="bg-white rounded-lg border border-gray-200 p-3 cursor-pointer hover:border-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400"
+        class="bg-white dark:bg-[var(--color-surface-elevated)] rounded-lg border border-gray-200 dark:border-zinc-700 p-3 cursor-pointer hover:border-gray-300 dark:hover:border-zinc-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400"
         @click="openEdit(txn)"
         @keydown="handleRowKeydown($event, txn)"
       >
         <div class="flex items-start justify-between gap-2">
           <div class="min-w-0 flex-1">
-            <p class="text-sm font-medium text-gray-900 truncate">{{ txn.description }}</p>
-            <p class="text-xs text-gray-500 mt-0.5">
+            <p class="text-sm font-medium text-gray-900 dark:text-zinc-100 truncate">{{ txn.description }}</p>
+            <p class="text-xs text-gray-500 dark:text-zinc-400 mt-0.5">
               {{ formatDateForDisplay(txn.date) }}
               <ClassificationBadge :classification="txn.classification" class="ml-1.5 inline-block" />
             </p>
           </div>
           <span
             class="text-sm font-semibold whitespace-nowrap"
-            :class="isIncome(txn.amount) ? 'text-green-600' : 'text-red-600'"
+            :class="isIncome(txn.amount) ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'"
           >
             {{ isIncome(txn.amount) ? '+' : '-' }}{{ currencyLabel }}{{ formatAmount(Math.abs(txn.amount)) }}
           </span>
@@ -173,7 +173,7 @@ function getSuggestions(id: string): TagSuggestion[] {
           </span>
         </div>
       </div>
-      <div v-if="paginatedRows.length === 0" class="py-8 text-center text-gray-400 text-sm">
+      <div v-if="paginatedRows.length === 0" class="py-8 text-center text-gray-400 dark:text-zinc-500 text-sm">
         {{ search || filterTag || filterClassification ? 'No matching transactions' : 'No transactions yet' }}
       </div>
     </div>
@@ -183,7 +183,7 @@ function getSuggestions(id: string): TagSuggestion[] {
       <table class="w-full text-sm">
         <thead>
           <!-- Mobile UX: text-sm for readable table headers (was text-xs) -->
-          <tr class="border-b border-gray-200 text-left text-sm text-gray-500 uppercase tracking-wide">
+          <tr class="border-b border-gray-200 dark:border-zinc-700 text-left text-sm text-gray-500 dark:text-zinc-400 uppercase tracking-wide">
             <th class="py-2 pr-3">Date</th>
             <th class="py-2 pr-3">Description</th>
             <th class="py-2 pr-3">Tags</th>
@@ -196,14 +196,14 @@ function getSuggestions(id: string): TagSuggestion[] {
             v-for="txn in paginatedRows"
             :key="txn.id"
             tabindex="0"
-            class="border-b border-gray-100 hover:bg-gray-50 cursor-pointer focus:outline-none focus:bg-blue-50"
+            class="border-b border-gray-100 dark:border-zinc-800 hover:bg-gray-50 dark:hover:bg-[var(--color-surface-hover)] cursor-pointer focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20"
             @click="openEdit(txn)"
             @keydown="handleRowKeydown($event, txn)"
           >
-            <td class="py-2 pr-3 whitespace-nowrap text-gray-500">
+            <td class="py-2 pr-3 whitespace-nowrap text-gray-500 dark:text-zinc-400">
               {{ formatDateForDisplay(txn.date) }}
             </td>
-            <td class="py-2 pr-3 text-gray-900 max-w-xs truncate">
+            <td class="py-2 pr-3 text-gray-900 dark:text-zinc-100 max-w-xs truncate">
               {{ txn.description }}
             </td>
             <td class="py-2 pr-3">
@@ -220,13 +220,13 @@ function getSuggestions(id: string): TagSuggestion[] {
             </td>
             <td
               class="py-2 text-right font-medium whitespace-nowrap"
-              :class="isIncome(txn.amount) ? 'text-green-600' : 'text-red-600'"
+              :class="isIncome(txn.amount) ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'"
             >
               {{ isIncome(txn.amount) ? '+' : '-' }}{{ currencyLabel }}{{ formatAmount(Math.abs(txn.amount)) }}
             </td>
           </tr>
           <tr v-if="paginatedRows.length === 0">
-            <td colspan="5" class="py-8 text-center text-gray-400">
+            <td colspan="5" class="py-8 text-center text-gray-400 dark:text-zinc-500">
               {{ search || filterTag || filterClassification ? 'No matching transactions' : 'No transactions yet' }}
             </td>
           </tr>
@@ -235,11 +235,11 @@ function getSuggestions(id: string): TagSuggestion[] {
     </div>
 
     <!-- Pagination -->
-    <div v-if="totalPages > 1" class="flex items-center justify-between mt-4 text-sm text-gray-500">
+    <div v-if="totalPages > 1" class="flex items-center justify-between mt-4 text-sm text-gray-500 dark:text-zinc-400">
       <span>{{ filtered.length }} transaction{{ filtered.length === 1 ? '' : 's' }}</span>
       <div class="flex gap-1">
         <button
-          class="px-4 py-2.5 min-h-[44px] min-w-[44px] rounded border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
+          class="px-4 py-2.5 min-h-[44px] min-w-[44px] rounded border border-gray-200 dark:border-zinc-700 hover:bg-gray-50 dark:hover:bg-[var(--color-surface-hover)] disabled:opacity-40 disabled:cursor-default dark:text-zinc-200"
           :disabled="currentPage <= 1"
           @click="currentPage--"
         >
@@ -247,7 +247,7 @@ function getSuggestions(id: string): TagSuggestion[] {
         </button>
         <span class="px-3 py-2">{{ currentPage }} / {{ totalPages }}</span>
         <button
-          class="px-4 py-2.5 min-h-[44px] min-w-[44px] rounded border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
+          class="px-4 py-2.5 min-h-[44px] min-w-[44px] rounded border border-gray-200 dark:border-zinc-700 hover:bg-gray-50 dark:hover:bg-[var(--color-surface-hover)] disabled:opacity-40 disabled:cursor-default dark:text-zinc-200"
           :disabled="currentPage >= totalPages"
           @click="currentPage++"
         >

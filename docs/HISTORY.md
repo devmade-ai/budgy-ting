@@ -2,6 +2,44 @@
 
 <!-- Changelog and record of completed work. Organized by date. -->
 
+## 2026-03-30
+
+- **Burger Menu Hardening — Extracted BurgerMenu.vue (glow-props sync):**
+  - Extracted standalone `BurgerMenu.vue` from inline menu in `AppLayout.vue`
+  - Disclosure pattern: `aria-expanded`, `aria-controls`, `<nav>` with `<ul>/<li>` (not `role="menu"`)
+  - Escape key handler (registered only while open, cleaned up on close)
+  - `cursor-pointer` on backdrop overlay (iOS Safari fix — empty divs don't fire click events)
+  - `overscroll-contain` on dropdown (prevents scroll chaining behind menu)
+  - Focus management: first item focused on open, trigger focused on close (with `hasBeenOpen` guard)
+  - `focus-visible:ring-2` on menu items for keyboard navigation visibility
+  - `no-print` class on menu container
+  - AppLayout simplified: menu items defined as computed data array, BurgerMenu handles all interaction
+
+- **Z-Index Scale — Formalized (glow-props sync):**
+  - Added Z-Index Scale table to CLAUDE.md (0→80 range)
+  - Normalized debug pill: `z-[9999]` → `z-[80]`
+  - Normalized toast: `z-[100]` → `z-[70]`
+
+- **CLAUDE.md Sync:**
+  - Added "Discontinued repos" AI note (skip `plant-fur` and `coin-zapp`)
+
+- **Dark Mode — Full Implementation (glow-props sync):**
+
+  **Foundation:**
+  - `src/index.css`: Semantic CSS variable palette (`:root` light + `.dark` dark tokens), `@custom-variant dark` for Tailwind v4, `color-scheme: dark` on `html.dark`, `@media print` overrides
+  - `src/composables/useDarkMode.ts`: Module-level singleton composable — localStorage persistence, `matchMedia` system preference fallback, cross-tab sync via `storage` event, dynamic `<meta name="theme-color">` update
+  - `index.html`: Flash prevention inline `<script>` (applies `.dark` before first paint), dual `<meta name="theme-color">` tags with `media` queries
+
+  **Component class dark variants (`dark:` prefix) — 30 files:**
+  - Component classes in `index.css`: btn-primary, btn-secondary, btn-danger, input-field, card, page-title, tag-pill
+  - AppLayout.vue: Header, burger menu, banners + "Dark / Light mode" toggle with Sun/Moon icons
+  - CashflowGraph.vue: ApexCharts theme-aware config (axis labels, grid, tooltip, legend)
+  - All 17 components + 8 views updated with dark mode variants
+  - DebugPill.vue: Intentionally NOT updated — uses hardcoded dark theme by design (alpha diagnostic)
+
+  **Completed TODO items moved here:**
+  - CSS variable palette, useDarkMode composable, flash prevention, meta theme-color tags, Tailwind v4 dark variant, color-scheme: dark, menu toggle, @media print CSS
+
 ## 2026-03-23
 
 - **Documentation Fixes — 4 issues from cross-repo audit:**

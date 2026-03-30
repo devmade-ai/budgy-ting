@@ -1,24 +1,27 @@
 <script setup lang="ts">
 /**
- * Requirement: Burger menu in header for accessing tutorial, user guide, and testing guide
- * Approach: Replace standalone "?" button with a menu icon that opens a dropdown.
- *   Dropdown items open the tutorial modal (existing) or a HelpDrawer with markdown content.
- *   Markdown files imported at build time via Vite ?raw to avoid runtime fetching.
+ * Requirement: App shell with header, burger menu, and content slot
+ * Approach: Sticky header with BurgerMenu component, main content area,
+ *   and overlay components (modals, drawers, toast). Menu items defined
+ *   here as data — BurgerMenu handles all interaction/accessibility.
  * Alternatives:
- *   - Keep "?" as tutorial only, add separate icons: Rejected — clutters header
- *   - Full sidebar navigation: Rejected — overkill for 3 menu items
+ *   - Inline menu in layout: Rejected — extracted to BurgerMenu for
+ *     separation of concerns and glow-props disclosure pattern compliance
  */
 
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePWAUpdate } from '@/composables/usePWAUpdate'
 import { useTutorial } from '@/composables/useTutorial'
+import { useDarkMode } from '@/composables/useDarkMode'
+import BurgerMenu from '@/components/BurgerMenu.vue'
+import type { MenuItem } from '@/components/BurgerMenu.vue'
 import InstallPrompt from '@/components/InstallPrompt.vue'
 import InstallInstructionsModal from '@/components/InstallInstructionsModal.vue'
 import TutorialModal from '@/components/TutorialModal.vue'
 import HelpDrawer from '@/components/HelpDrawer.vue'
 import ToastNotification from '@/components/ToastNotification.vue'
-import { Menu, CircleHelp, BookOpen, TestTubes, FileText, FileSpreadsheet, RefreshCw } from 'lucide-vue-next'
+import { CircleHelp, BookOpen, TestTubes, FileText, FileSpreadsheet, RefreshCw, Sun, Moon } from 'lucide-vue-next'
 
 // Build-time markdown imports — bundled as strings, no runtime fetch
 import userGuideMd from '../../docs/USER_GUIDE.md?raw'
@@ -32,10 +35,9 @@ const sampleCsvMd = 'Copy this sample data to test the import wizard, or use it 
 const router = useRouter()
 const { hasUpdate, offlineReady, checking, updateApp, checkForUpdate } = usePWAUpdate()
 const { showTutorial, showIfFirstVisit, openTutorial, dismissTutorial } = useTutorial()
+const { isDark, toggle: toggleDarkMode } = useDarkMode()
 
 const showInstructions = ref(false)
-const menuOpen = ref(false)
-const menuRef = ref<HTMLElement | null>(null)
 
 // Help drawer state
 type DrawerContent = 'user-guide' | 'testing-guide' | 'import-format' | 'sample-csv' | null
@@ -43,49 +45,42 @@ const activeDrawer = ref<DrawerContent>(null)
 
 onMounted(() => {
   showIfFirstVisit()
-  document.addEventListener('click', handleOutsideClick)
-})
-
-onUnmounted(() => {
-  document.removeEventListener('click', handleOutsideClick)
 })
 
 function goHome() {
   router.push({ name: 'workspace-list' })
 }
 
-function toggleMenu() {
-  menuOpen.value = !menuOpen.value
-}
-
-function handleOutsideClick(e: MouseEvent) {
-  if (menuOpen.value && menuRef.value && !menuRef.value.contains(e.target as Node)) {
-    menuOpen.value = false
-  }
-}
-
-function handleTutorial() {
-  menuOpen.value = false
-  openTutorial()
-}
-
-function openDrawer(content: DrawerContent) {
-  menuOpen.value = false
-  activeDrawer.value = content
-}
-
 function closeDrawer() {
   activeDrawer.value = null
 }
 
-function handleCheckForUpdate() {
-  menuOpen.value = false
-  checkForUpdate()
-}
+// Menu items — defined as data, BurgerMenu handles rendering and interaction.
+// Show/hide via visible prop, never render disabled items per glow-props spec.
+const menuItems = computed<MenuItem[]>(() => [
+  { label: 'How it works', icon: CircleHelp, action: () => openTutorial() },
+  { label: 'User Guide', icon: BookOpen, action: () => { activeDrawer.value = 'user-guide' } },
+  { label: 'Test Scenarios', icon: TestTubes, action: () => { activeDrawer.value = 'testing-guide' } },
+  { label: 'Import Format', icon: FileText, action: () => { activeDrawer.value = 'import-format' }, separator: true },
+  { label: 'Sample CSV', icon: FileSpreadsheet, action: () => { activeDrawer.value = 'sample-csv' } },
+  {
+    label: isDark.value ? 'Light mode' : 'Dark mode',
+    icon: isDark.value ? Sun : Moon,
+    iconClass: isDark.value ? 'text-amber-400' : 'text-gray-400 dark:text-zinc-500',
+    action: () => toggleDarkMode(),
+    separator: true,
+  },
+  {
+    label: checking.value ? 'Checking...' : 'Check for updates',
+    icon: RefreshCw,
+    action: () => checkForUpdate(),
+    disabled: checking.value,
+  },
+])
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50">
+  <div class="min-h-screen bg-gray-50 dark:bg-[var(--color-surface-page)]">
     <!-- Update banner -->
     <div
       v-if="hasUpdate"
@@ -112,88 +107,16 @@ function handleCheckForUpdate() {
     <InstallPrompt @show-instructions="showInstructions = true" />
 
     <!-- Header -->
-    <header class="bg-white border-b border-gray-200 sticky top-0 z-10">
+    <header class="bg-white dark:bg-[var(--color-surface)] border-b border-gray-200 dark:border-zinc-700 sticky top-0 z-10">
       <div class="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
         <button
-          class="text-lg font-bold text-brand-600 hover:text-brand-700 transition-colors"
+          class="text-lg font-bold text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 transition-colors"
           @click="goHome"
         >
           budgy-ting
         </button>
 
-        <!-- Menu button + dropdown -->
-        <div ref="menuRef" class="relative">
-          <button
-            class="w-10 h-10 rounded-full flex items-center justify-center text-gray-400 hover:text-brand-600 hover:bg-brand-50 transition-colors"
-            title="Menu"
-            aria-label="Menu"
-            aria-haspopup="true"
-            :aria-expanded="menuOpen"
-            @click="toggleMenu"
-          >
-            <Menu :size="18" aria-hidden="true" />
-          </button>
-
-          <!-- Dropdown menu -->
-          <div
-            v-if="menuOpen"
-            class="absolute right-0 top-full mt-1 w-48 max-w-[calc(100vw-1rem)] bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20"
-            role="menu"
-          >
-            <!-- Mobile UX: min-h-[44px] touch targets on all menu items -->
-            <button
-              class="w-full text-left px-4 py-2 min-h-[44px] text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-              role="menuitem"
-              @click="handleTutorial"
-            >
-              <CircleHelp :size="16" class="text-gray-400" aria-hidden="true" />
-              How it works
-            </button>
-            <button
-              class="w-full text-left px-4 py-2 min-h-[44px] text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-              role="menuitem"
-              @click="openDrawer('user-guide')"
-            >
-              <BookOpen :size="16" class="text-gray-400" aria-hidden="true" />
-              User Guide
-            </button>
-            <button
-              class="w-full text-left px-4 py-2 min-h-[44px] text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-              role="menuitem"
-              @click="openDrawer('testing-guide')"
-            >
-              <TestTubes :size="16" class="text-gray-400" aria-hidden="true" />
-              Test Scenarios
-            </button>
-            <div class="border-t border-gray-100 my-1" role="separator" />
-            <button
-              class="w-full text-left px-4 py-2 min-h-[44px] text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-              role="menuitem"
-              @click="openDrawer('import-format')"
-            >
-              <FileText :size="16" class="text-gray-400" aria-hidden="true" />
-              Import Format
-            </button>
-            <button
-              class="w-full text-left px-4 py-2 min-h-[44px] text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-              role="menuitem"
-              @click="openDrawer('sample-csv')"
-            >
-              <FileSpreadsheet :size="16" class="text-gray-400" aria-hidden="true" />
-              Sample CSV
-            </button>
-            <div class="border-t border-gray-100 my-1" role="separator" />
-            <button
-              class="w-full text-left px-4 py-2 min-h-[44px] text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-              role="menuitem"
-              :disabled="checking"
-              @click="handleCheckForUpdate"
-            >
-              <RefreshCw :size="16" class="text-gray-400" :class="{ 'animate-spin': checking }" aria-hidden="true" />
-              {{ checking ? 'Checking...' : 'Check for updates' }}
-            </button>
-          </div>
-        </div>
+        <BurgerMenu :items="menuItems" />
       </div>
     </header>
 

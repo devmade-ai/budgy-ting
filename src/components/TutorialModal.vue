@@ -104,11 +104,11 @@ function goToStep(index: number) {
         role="dialog"
         aria-label="How it works"
         aria-modal="true"
-        class="relative bg-white rounded-xl shadow-xl max-w-sm w-full p-6"
+        class="relative bg-white dark:bg-[var(--color-surface-elevated)] rounded-xl shadow-xl dark:shadow-none max-w-sm w-full p-6"
       >
         <!-- Skip/close button -->
         <button
-          class="absolute top-3 right-3 text-gray-400 hover:text-gray-600 transition-colors"
+          class="absolute top-3 right-3 text-gray-400 dark:text-zinc-400 hover:text-gray-600 dark:hover:text-zinc-200 transition-colors"
           aria-label="Close tutorial"
           @click="emit('close')"
         >
@@ -123,10 +123,10 @@ function goToStep(index: number) {
             class="text-brand-500 mx-auto mb-4"
             aria-hidden="true"
           />
-          <h3 class="text-lg font-semibold text-gray-900 mb-2">
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-zinc-100 mb-2">
             {{ activeStep.title }}
           </h3>
-          <p class="text-sm text-gray-600 leading-relaxed">
+          <p class="text-sm text-gray-600 dark:text-zinc-300 leading-relaxed">
             {{ activeStep.description }}
           </p>
         </div>
@@ -140,7 +140,7 @@ function goToStep(index: number) {
             :aria-selected="index === currentStep"
             :aria-label="`Step ${index + 1}: ${s.title}`"
             class="w-2 h-2 rounded-full transition-colors"
-            :class="index === currentStep ? 'bg-brand-500' : 'bg-gray-200 hover:bg-gray-300'"
+            :class="index === currentStep ? 'bg-brand-500' : 'bg-gray-200 dark:bg-zinc-600 hover:bg-gray-300 dark:hover:bg-zinc-500'"
             @click="goToStep(index)"
           />
         </div>

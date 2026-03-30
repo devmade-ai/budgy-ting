@@ -65,6 +65,7 @@ Current working features:
 - Tag autocomplete from tagCache + pattern tags + ML suggestions
 - Duplicate detection on import (date + amount + description)
 - Pull-to-refresh, haptic feedback, bottom sheet modal
+- Dark mode: user-controlled toggle, system preference fallback, localStorage persistence, cross-tab sync, flash prevention, print overrides
 
 **Database:** Schema v8 (8 tables: workspaces, transactions, patterns, importBatches, tagCache, embeddingCache + 2 legacy)
 **Tech stack:** Vue 3 + TypeScript + Tailwind CSS v4 + Dexie.js + vite-plugin-pwa + ApexCharts + simple-statistics + Transformers.js (Web Worker)
@@ -155,6 +156,22 @@ Semver: patch|minor|major
 These footers are required on every commit. No exceptions.
 
 ### REMINDER: READ AND FOLLOW THE FUCKING CODE STANDARDS EVERY TIME
+
+### Z-Index Scale
+
+All projects follow this scale to prevent stacking conflicts between the burger menu, debug pill, modals, toasts, and install banners. Reference: glow-props CLAUDE.md.
+
+| Layer | Z-Index | Examples |
+|-------|---------|----------|
+| Base content | 0 | Page content, cards |
+| Inline dropdowns | 10 | Autocomplete popups, tag suggestions |
+| Sticky headers | 10 | App bar (`header` in AppLayout) |
+| Menu dropdowns | 20 | Action menus (WorkspaceDetailView) |
+| Menu backdrop | 40 | Burger menu backdrop (BurgerMenu) |
+| Menu dropdown | 50 | Burger menu card (BurgerMenu) |
+| Modals / drawers | 50 | Dialogs, bottom sheets, help drawers, confirm dialogs |
+| Toasts / banners | 70 | Update banner, install prompt, ToastNotification |
+| Debug pill | 80 | Debug overlay (separate Vue root) |
 
 ## Documentation
 
@@ -308,6 +325,7 @@ These footers are required on every commit. No exceptions.
   - Use `GITHUB_ALL_REPO_TOKEN` with the GitHub API (`api.github.com/repos/devmade-ai/{repo}/contents/{path}`) to read files from other devmade-ai repos
   - Use `$(printenv GITHUB_ALL_REPO_TOKEN)` not `$GITHUB_ALL_REPO_TOKEN` to avoid shell expansion issues
   - Never clone sibling repos — use the API instead
+- **Discontinued repos — skip entirely:** `plant-fur` and `coin-zapp` are discontinued. Do not check, audit, align, or include them in cross-project operations.
 
 ### REMINDER: READ AND FOLLOW THE FUCKING AI NOTES EVERY TIME
 

@@ -139,16 +139,16 @@ function handleContinue() {
 <template>
   <div>
     <h1 class="page-title mb-2">Import Actuals</h1>
-    <p class="text-gray-500 text-sm mb-6">
+    <p class="text-gray-500 dark:text-zinc-400 text-sm mb-6">
       Upload a CSV or JSON file with your actual spending data
     </p>
 
     <label
-      class="card flex flex-col items-center justify-center py-12 border-2 border-dashed border-gray-300 hover:border-brand-400 transition-colors cursor-pointer"
+      class="card flex flex-col items-center justify-center py-12 border-2 border-dashed border-gray-300 dark:border-zinc-600 hover:border-brand-400 dark:hover:border-brand-600 transition-colors cursor-pointer"
     >
-      <Upload :size="28" class="text-gray-400 mb-3" />
-      <p class="text-gray-600 font-medium">Choose a file</p>
-      <p class="text-gray-400 text-sm mt-1">CSV or JSON, max 10 MB</p>
+      <Upload :size="28" class="text-gray-400 dark:text-zinc-500 mb-3" />
+      <p class="text-gray-600 dark:text-zinc-300 font-medium">Choose a file</p>
+      <p class="text-gray-400 dark:text-zinc-500 text-sm mt-1">CSV or JSON, max 10 MB</p>
       <input
         type="file"
         accept=".csv,.json"
@@ -158,31 +158,31 @@ function handleContinue() {
     </label>
 
     <!-- File info — shown immediately after selection, before parsing completes -->
-    <div v-if="selectedFile && !parsedData" class="mt-4 flex items-center gap-3 text-sm text-gray-600">
-      <File :size="18" class="text-gray-400" />
+    <div v-if="selectedFile && !parsedData" class="mt-4 flex items-center gap-3 text-sm text-gray-600 dark:text-zinc-300">
+      <File :size="18" class="text-gray-400 dark:text-zinc-500" />
       <div>
         <p class="font-medium">{{ selectedFile.name }}</p>
-        <p class="text-xs text-gray-400">{{ selectedFile.size }}</p>
+        <p class="text-xs text-gray-400 dark:text-zinc-500">{{ selectedFile.size }}</p>
       </div>
-      <span v-if="parsing" class="text-xs text-gray-400 ml-auto">Parsing...</span>
+      <span v-if="parsing" class="text-xs text-gray-400 dark:text-zinc-500 ml-auto">Parsing...</span>
     </div>
 
-    <p v-if="fileError" class="text-sm text-red-500 mt-3">{{ fileError }}</p>
+    <p v-if="fileError" class="text-sm text-red-500 dark:text-red-400 mt-3">{{ fileError }}</p>
 
     <!-- Preview -->
     <template v-if="parsedData">
       <div class="mt-6">
-        <p class="text-sm text-gray-600 mb-2">
+        <p class="text-sm text-gray-600 dark:text-zinc-300 mb-2">
           {{ parsedData.totalRows }} rows detected with {{ parsedData.headers.length }} columns
         </p>
         <div class="overflow-x-auto">
-          <table class="w-full text-xs border border-gray-200 rounded-lg">
+          <table class="w-full text-xs border border-gray-200 dark:border-zinc-700 rounded-lg">
             <thead>
-              <tr class="bg-gray-50">
+              <tr class="bg-gray-50 dark:bg-zinc-800">
                 <th
                   v-for="h in parsedData.headers"
                   :key="h"
-                  class="text-left px-2 py-1.5 font-medium text-gray-600"
+                  class="text-left px-2 py-1.5 font-medium text-gray-600 dark:text-zinc-300"
                 >
                   {{ h }}
                 </th>
@@ -192,12 +192,12 @@ function handleContinue() {
               <tr
                 v-for="(row, i) in parsedData.rows.slice(0, 5)"
                 :key="i"
-                class="border-t border-gray-100"
+                class="border-t border-gray-100 dark:border-zinc-800"
               >
                 <td
                   v-for="h in parsedData.headers"
                   :key="h"
-                  class="px-2 py-1.5 text-gray-700 truncate max-w-[150px]"
+                  class="px-2 py-1.5 text-gray-700 dark:text-zinc-300 truncate max-w-[150px]"
                 >
                   {{ row[h] }}
                 </td>
@@ -205,7 +205,7 @@ function handleContinue() {
             </tbody>
           </table>
         </div>
-        <p v-if="parsedData.errors.length > 0" class="text-xs text-amber-600 mt-2">
+        <p v-if="parsedData.errors.length > 0" class="text-xs text-amber-600 dark:text-amber-400 mt-2">
           {{ parsedData.errors.length }} warning(s): {{ parsedData.errors[0] }}
         </p>
       </div>
@@ -214,7 +214,7 @@ function handleContinue() {
            Requirement: User must be able to fix DD/MM vs MM/DD ambiguity
            Approach: Dropdown showing detected format with option to change -->
       <div class="mt-4 flex items-center gap-3">
-        <label class="text-sm text-gray-600">Date format:</label>
+        <label class="text-sm text-gray-600 dark:text-zinc-300">Date format:</label>
         <select
           v-model.number="dateFormatIndex"
           class="input-field w-auto min-h-[44px]"
