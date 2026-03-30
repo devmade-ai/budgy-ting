@@ -16,9 +16,13 @@ import { debugLog } from '@/debug/debugLog'
 
 const STORAGE_KEY = 'darkMode'
 
-// Theme-color values must match --color-surface-page tokens in index.css
-const THEME_COLOR_LIGHT = '#f9fafb'
-const THEME_COLOR_DARK = '#14142a'
+// Theme-color uses brand color for both modes — the status bar is a branding
+// surface, not a content surface. A mid-tone brand color (#10b981) provides
+// enough contrast for status bar text in both light and dark OS modes.
+// Using page background colors causes visibility problems when the OS color
+// scheme differs from the app's theme.
+const THEME_COLOR_LIGHT = '#10b981'
+const THEME_COLOR_DARK = '#10b981'
 
 // Module-level singleton — shared across all components that call useDarkMode()
 const isDark = ref(getInitialDarkMode())
