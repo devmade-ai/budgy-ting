@@ -70,6 +70,22 @@
 3. Then commit everything together
 This is explicitly documented in CLAUDE.md Documentation section: "Update them as you work — don't wait for the user to ask."
 
+## Build verification didn't match CI pipeline (2026-03-30)
+
+**What went wrong:** Dark mode implementation passed local build checks but failed on Vercel. The CI runs `vue-tsc -b && vite build` (from `npm run build`), but the verification used `./node_modules/.bin/vite build` directly — which skips TypeScript strict checking. An unused `onUnmounted` import in `useDarkMode.ts` caused `TS6133` on CI.
+
+**Why it happened:** Two compounding errors: (1) Build check used the wrong command — `vite build` instead of `npm run build` — so `vue-tsc` never ran. (2) The cleanup audit agent used manual code reading to check for unused imports instead of running the actual type checker, and missed the unused import.
+
+**How to prevent it:** Always run `npm run build` (the same command CI uses), not `vite build` directly. For unused import detection, run `vue-tsc --noEmit` — visual inspection is unreliable for `TS6133`. Check `package.json` scripts to understand what CI actually executes before choosing a build verification command.
+
+## Replaced branded status bar color with page backgrounds (2026-03-30)
+
+**What went wrong:** The dark mode implementation replaced the branded PWA theme-color (`#10b981`, brand green) with generic page background colors (`#f9fafb` light / `#14142a` dark) in `<meta name="theme-color">` tags and the `useDarkMode.ts` constants. This caused the status bar to lose its branded appearance and created a visibility problem: if the phone's OS color scheme differed from the app's theme, status bar text (time, battery, wifi) could become invisible — light text on a light background, or dark text on a dark background.
+
+**Why it happened:** Followed the glow-props pattern too literally. The glow-props docs say "values should match your palette" and show surface colors as examples — but the intent is theme-appropriate colors, not necessarily page backgrounds. The status bar is a branding surface, not a content surface.
+
+**How to prevent it:** When implementing theme-color meta tags, use a mid-tone brand color that provides sufficient contrast for status bar text in both light and dark OS modes. Don't assume the status bar should "blend into" the page — it should carry brand identity. Test by asking: "If the OS is in opposite color scheme from the app, will the status bar text be readable?"
+
 ## Deleted entire UI instead of migrating it (2026-03-04)
 
 **What went wrong:** User asked to clean up deprecated type tags and legacy hacks. Instead of removing the `@deprecated` annotations and fixing the code properly, deleted 25 files — every view, engine, and component that used the old types — leaving the app as an empty shell with only workspace CRUD. The workspace list detail tabs, import wizard, export/import, and all comparison views were gone.
