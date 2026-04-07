@@ -16,12 +16,12 @@ It destroys the session — the input modal covers context the user needs to rea
 
 ## Cross-Project Reference
 
-Shared CLAUDE.md patterns are maintained at:
+All shared implementation patterns, AI Notes, and process updates are maintained in the **glow-props** repo — the single source of truth:
 ```
 https://raw.githubusercontent.com/devmade-ai/glow-props/main/CLAUDE.md
 ```
 
-Check this periodically for new Suggested Implementations, AI Notes, or process updates that should be synced into this project. Adapt React examples to Vue 3 Composition API when porting.
+**NEVER copy pattern content into this file or any local file.** Always fetch from the source when you need a pattern. Adapt React examples to Vue 3 Composition API when implementing.
 
 ## Process
 
@@ -326,308 +326,35 @@ All projects follow this scale to prevent stacking conflicts between the burger 
   - Use `$(printenv GITHUB_ALL_REPO_TOKEN)` not `$GITHUB_ALL_REPO_TOKEN` to avoid shell expansion issues
   - Never clone sibling repos — use the API instead
 - **Discontinued repos — skip entirely:** `plant-fur` and `coin-zapp` are discontinued. Do not check, audit, align, or include them in cross-project operations.
+- **Implementation patterns — no local copies.** All Suggested Implementation patterns live in glow-props CLAUDE.md. Always fetch from `api.github.com/repos/devmade-ai/glow-props/contents/CLAUDE.md` before implementing. Never paste pattern content into this project's CLAUDE.md or any local file. Never reconstruct patterns from memory. If the source is unreachable, defer the work.
 
 ### REMINDER: READ AND FOLLOW THE FUCKING AI NOTES EVERY TIME
 
 ## Suggested Implementations
 
-Reference patterns for features implemented in this project. These document the architecture and behavior — check existing code matches before modifying.
+**DO NOT store implementation patterns locally.** All patterns live in the glow-props source repo and must be fetched from there every time.
 
-### PWA System
+### Where to find patterns
 
-The PWA system has four parts:
+The single source of truth for all implementation patterns is the glow-props CLAUDE.md. The list of available patterns changes over time — always check the source for what's current:
 
-**Service worker & updates** (`src/composables/usePWAUpdate.ts`): Wraps `vite-plugin-pwa`'s virtual import with `registerType: 'prompt'` — users control when updates apply. Checks for new service worker versions every 60 minutes via `registration.update()`. Exposes `hasUpdate` ref and `updateApp()` to the UI. The offline-ready notification auto-dismisses after 3 seconds.
-
-**Install detection** (`src/composables/usePWAInstall.ts`): Detects browser type (Chrome/Edge/Brave/Safari/Firefox) via UA string. Captures `beforeinstallprompt` on Chromium browsers for native install. For Safari and Firefox, falls back to manual instruction flow. Tracks install analytics in localStorage (last 50 events: prompted, installed, dismissed, instructions-viewed). Respects standalone mode detection (hides prompt when already installed). Dismiss state persisted in localStorage.
-
-**Install prompt UI** (`src/components/InstallPrompt.vue`): Renders a banner with "Install" (Chromium native) or "How to Install" (Safari/Firefox) buttons, plus a "Not now" dismiss. Hidden when already in standalone mode, dismissed, or unsupported browser.
-
-**Manual install instructions** (`src/components/InstallInstructionsModal.vue`): Browser-specific step-by-step guides in a modal. Four variants: Safari iOS (Share → Add to Home Screen), Safari macOS (File → Add to Dock), Firefox Android (menu → Install), Firefox desktop (tells user to use Chrome/Edge instead). Plain language, aimed at non-technical users.
-
-#### Fix: Timer Leaks on Unmount (Nested Timeouts)
-
-Debounce patterns using `setTimeout` leak when a component unmounts mid-timeout. The nested case is worse: a timeout callback sets *another* timeout, and cleaning up only the outer one leaves the inner one orphaned.
-
-**Fix — track all timeout IDs:**
-```typescript
-// In a composable or component setup
-const timeouts: ReturnType<typeof setTimeout>[] = []
-
-function scheduleWithCleanup() {
-  const outer = setTimeout(() => {
-    doSomething()
-    const inner = setTimeout(() => save(), 500)
-    timeouts.push(inner)
-  }, 300)
-  timeouts.push(outer)
-}
-
-onUnmounted(() => timeouts.forEach(clearTimeout))
+```
+https://raw.githubusercontent.com/devmade-ai/glow-props/main/CLAUDE.md
 ```
 
-**General rule:** Every `setTimeout`, `setInterval`, `addEventListener`, or `subscribe` call inside a component needs a corresponding cleanup in `onUnmounted`. If callbacks create *new* async operations, those need cleanup too.
-
-#### Fix: PWA Install Prompt Race Condition
-
-In SPAs, `beforeinstallprompt` can fire before the framework mounts. This event fires once — if nothing is listening, it's lost.
-
-**Part 1: Inline script in `index.html` (before module scripts)**
-
-```html
-<script>
-  window.addEventListener('beforeinstallprompt', function (e) {
-    e.preventDefault();
-    window.__pwaInstallPromptEvent = e;
-  });
-</script>
+**How to access:** Use `GITHUB_ALL_REPO_TOKEN` with the GitHub API:
 ```
-
-Classic (non-module) script executes synchronously during HTML parse. Stashes the event on `window` for the composable to consume.
-
-**Part 2: Composable consumes the stashed event**
-
-```typescript
-function consumeEarlyCapturedEvent() {
-  const win = window as unknown as Record<string, unknown>
-  const captured = win.__pwaInstallPromptEvent
-  if (captured) {
-    delete win.__pwaInstallPromptEvent
-    return captured
-  }
-  return null
-}
-
-// At module load (outside composable function):
-const early = consumeEarlyCapturedEvent()
-if (early) {
-  deferredPrompt = early
-  canNativeInstall.value = true
-}
-
-// Fallback listener for first-visit case
-window.addEventListener('beforeinstallprompt', (e) => { ... })
+api.github.com/repos/devmade-ai/glow-props/contents/CLAUDE.md
 ```
+Or use `$(printenv GITHUB_ALL_REPO_TOKEN)` with curl (see AI Notes for proxy handling).
 
-**Why both parts:** On repeat visits (cached SW), the event fires before mount — the inline script catches it. On first visits (SW registers late), the event fires after mount — the listener catches it.
+### Rules
 
-### Debug System
-
-Alpha-phase diagnostic tool, intended to be removed post-alpha.
-
-**In-memory event store** (`src/debug/debugLog.ts`): Pub/sub system with a capped circular buffer of 200 entries. Each entry has: `id`, `timestamp`, `source` (boot/db/pwa/import/engine/global), `severity` (info/success/warn/error), `event`, and optional `details`. Global `window.error` and `unhandledrejection` listeners capture crashes early.
-
-**Floating debug pill** (`src/debug/DebugPill.vue`): Mounted in a separate Vue root (survives App crashes). Collapsed: "dbg" pill with entry count and error/warning badges. Expanded: two tabs — Log (timestamped, color-coded entries) and Environment (URL, UA, screen, online status, SW/IndexedDB support). Copy generates a full debug report to clipboard. Clear wipes all entries.
-
-### App Icons from SVG Source
-
-Single SVG source file (`public/icon.svg`), Sharp converts to all needed PNG sizes. One command regenerates everything.
-
-**Generator:** `scripts/generate-icons.mjs` — reads SVG, outputs:
-- `pwa-512x512.png` (512x512) — PWA manifest, maskable
-- `pwa-192x192.png` (192x192) — PWA manifest, any
-- `apple-touch-icon.png` (180x180) — iOS bookmark
-- `favicon.ico` (32x32) — browser tab (PNG wrapped in ICO container)
-
-**Run:** `npm run generate-icons`
-
-**SVG design rules:**
-- Canvas must be square (`viewBox="0 0 512 512"`)
-- Add `shape-rendering="geometricPrecision"` to the root `<svg>` element — tells the rasterizer to prioritize accurate geometry over speed
-- Use paths, not text — avoid font rendering inconsistencies across OS/CI
-- Background fills entire canvas (no transparency)
-- Important content stays within inner 80% (safe zone for maskable crop)
-- Design must be legible at 32px (favicon) — avoid fine details
-- **400 DPI rasterization** — Sharp renders the SVG at ~5.5x the default 72 DPI before downscaling, so edges are anti-aliased from high-res source data. The 192px PWA icon benefits most.
-
-**PWA manifest icons** (configured in `vite.config.ts` via vite-plugin-pwa):
-- 192x192 with `purpose: 'any'`
-- 512x512 with `purpose: 'any'`
-- 512x512 with `purpose: 'maskable'` (separate entry)
-
-Don't combine `"any maskable"` — browsers pick the wrong one.
-
-### Download as PDF (via `window.print()`)
-
-Zero-dependency PDF download using the browser's native print dialog. No PDF libraries needed — the user selects "Save as PDF" from their system print dialog.
-
-#### How It Works
-
-Three pieces: a trigger button, a `no-print` utility class, and print-friendly CSS overrides.
-
-**1. Trigger Button** — A simple button that calls `window.print()`. Place in the page header or wherever the user expects a download action. The button itself should be hidden during print (see `no-print` class).
-
-**2. The `no-print` Utility Class** — Hide interactive or irrelevant elements when printing/saving as PDF:
-
-```css
-@media print {
-  .no-print {
-    display: none !important;
-  }
-}
-```
-
-Apply to: navigation bars, action buttons, footers with interactive links, modals, tooltips, forms, debug overlays.
-
-**3. Print-Friendly CSS Overrides** — Override dark themes, fix link visibility, prevent content splitting:
-
-```css
-@media print {
-  body {
-    background: white !important;
-    color: black !important;
-  }
-  a {
-    color: black !important;
-    text-decoration: underline !important;
-  }
-  section {
-    break-inside: avoid;
-    page-break-inside: avoid;
-  }
-}
-```
-
-#### Key Lessons
-
-1. **No library needed** — `window.print()` opens the system print dialog, which includes "Save as PDF" on all major browsers and operating systems.
-2. **`!important` is justified here** — print overrides must win against inline styles, CSS-in-JS, and dark mode classes.
-3. **Test in print preview** — use Ctrl/Cmd+P to verify layout. Check for: hidden elements, color contrast, page breaks, readability.
-4. **`break-inside: avoid` on sections** — prevents awkward mid-section page breaks.
-5. **Hide the download button itself** — the button that triggers `window.print()` should be inside a `no-print` container.
-
-### HTTPS Proxy Support for Node.js Scripts
-
-Zero-dependency HTTP CONNECT tunnel for Node.js scripts that need to reach external APIs through an HTTPS proxy. Solves the problem that Node.js's built-in `fetch()` (undici) and `https.get()` **do not** respect `HTTP_PROXY`/`HTTPS_PROXY` environment variables.
-
-#### The Problem
-
-In proxy-only environments (CI containers, Claude Code remote sessions, corporate networks), outbound traffic must route through an HTTP proxy. But:
-
-- **`fetch()` (Node 18+ built-in)**: Uses undici internally. Does NOT auto-detect `HTTP_PROXY`/`HTTPS_PROXY` env vars. Requests fail with DNS errors.
-- **`https.get()`**: Also does NOT respect proxy env vars. Same DNS failure.
-- **`curl`**: Works — it reads `HTTP_PROXY`/`HTTPS_PROXY` automatically. But shelling out to curl from Node is ugly.
-- **`global-agent` / `proxy-agent` packages**: Work, but add external dependencies for a simple tunnel.
-
-#### The Solution
-
-Detect the proxy from environment variables, establish an HTTP CONNECT tunnel, then pipe the HTTPS request through the tunnel socket. Pure `http`/`https` stdlib — no dependencies.
-
-```javascript
-import http from 'http';
-import https from 'https';
-
-// --- Proxy detection ---
-const PROXY_URL = process.env.https_proxy || process.env.HTTPS_PROXY || null;
-
-function getProxyConnectOptions(targetHost) {
-  const proxy = new URL(PROXY_URL);
-  const options = {
-    host: proxy.hostname,
-    port: proxy.port,
-    method: 'CONNECT',
-    path: `${targetHost}:443`,
-    headers: { 'Host': `${targetHost}:443` },
-    timeout: 15000,
-  };
-  if (proxy.username) {
-    const auth = Buffer.from(
-      decodeURIComponent(proxy.username) + ':' + decodeURIComponent(proxy.password)
-    ).toString('base64');
-    options.headers['Proxy-Authorization'] = `Basic ${auth}`;
-  }
-  return options;
-}
-
-// --- HTTPS GET with automatic proxy support ---
-function httpsGet(requestUrl, headers = {}) {
-  const parsed = new URL(requestUrl);
-  if (PROXY_URL) {
-    return httpsGetViaProxy(parsed, headers);
-  }
-  return httpsGetDirect(parsed, headers);
-}
-
-function httpsGetDirect(parsed, headers) {
-  return new Promise((resolve, reject) => {
-    const req = https.get(parsed.href, { headers, timeout: 15000 }, (res) => {
-      let data = '';
-      res.on('data', (chunk) => { data += chunk; });
-      res.on('end', () => {
-        if (res.statusCode >= 200 && res.statusCode < 300) {
-          resolve(JSON.parse(data));
-        } else {
-          reject(new Error(`HTTP ${res.statusCode}: ${data.substring(0, 200)}`));
-        }
-      });
-    });
-    req.on('error', reject);
-    req.on('timeout', () => { req.destroy(); reject(new Error('Request timeout')); });
-  });
-}
-
-function httpsGetViaProxy(parsed, headers) {
-  return new Promise((resolve, reject) => {
-    const connectOptions = getProxyConnectOptions(parsed.hostname);
-    const proxyReq = http.request(connectOptions);
-
-    proxyReq.on('connect', (res, socket) => {
-      if (res.statusCode !== 200) {
-        socket.destroy();
-        reject(new Error(`Proxy CONNECT failed: ${res.statusCode}`));
-        return;
-      }
-      const tlsReq = https.get({
-        host: parsed.hostname,
-        path: parsed.pathname + parsed.search,
-        headers,
-        socket,
-        servername: parsed.hostname,
-        timeout: 15000,
-      }, (tlsRes) => {
-        let data = '';
-        tlsRes.on('data', (chunk) => { data += chunk; });
-        tlsRes.on('end', () => {
-          if (tlsRes.statusCode >= 200 && tlsRes.statusCode < 300) {
-            resolve(JSON.parse(data));
-          } else {
-            reject(new Error(`HTTP ${tlsRes.statusCode}: ${data.substring(0, 200)}`));
-          }
-        });
-      });
-      tlsReq.on('error', reject);
-      tlsReq.on('timeout', () => { tlsReq.destroy(); reject(new Error('Request timeout')); });
-    });
-
-    proxyReq.on('error', reject);
-    proxyReq.on('timeout', () => { proxyReq.destroy(); reject(new Error('Proxy connect timeout')); });
-    proxyReq.end();
-  });
-}
-```
-
-**Usage:**
-```javascript
-const data = await httpsGet('https://api.example.com/status', {
-  'User-Agent': 'MyApp/1.0',
-});
-```
-
-**For curl in shell scripts:**
-```bash
-# curl respects HTTP_PROXY/HTTPS_PROXY automatically
-# If the env var is named differently, pass it explicitly:
-curl -x "$GLOBAL_AGENT_HTTP_PROXY" https://api.example.com/status
-```
-
-#### Key Lessons
-
-1. **Node's `fetch()` and `https.get()` ignore proxy env vars** — unlike `curl`, Python `requests`, or Go's `http.Client`, Node does not auto-detect `HTTP_PROXY`.
-2. **HTTP CONNECT is the standard** — the proxy sees only the target hostname, not the request content.
-3. **`socket` + `servername` are both required** — `socket` reuses the tunnel; `servername` enables SNI.
-4. **Auth uses Basic scheme** — proxy credentials are sent as `Proxy-Authorization: Basic base64(user:pass)` in the CONNECT request.
-5. **No external dependencies needed** — the stdlib solution has zero supply chain risk.
-6. **`curl` just works** — it reads `HTTP_PROXY`/`HTTPS_PROXY` automatically.
+1. **Always fetch from glow-props** — never rely on cached, copied, or memorized versions of patterns
+2. **Never paste pattern content into this file** — this section is a pointer, not a copy
+3. **Adapt React examples to Vue 3 Composition API** when implementing patterns from glow-props
+4. **Check for updates before implementing** — patterns evolve; the source always has the latest version
+5. **If glow-props is unreachable**, note it and defer — do not reconstruct patterns from memory
 
 ## Prohibitions
 
@@ -643,6 +370,7 @@ Never:
 - Remove features during "cleanup" without checking if they're documented as intentional (see AI_MISTAKES.md)
 - Proceed with assumptions when a single clarifying question would prevent a wrong commit
 - Use interactive input prompts or selection UIs — list options as numbered text instead
+- Store, copy, or paste implementation patterns locally — always fetch from glow-props source
 
 ### REMINDER: READ AND FOLLOW THE FUCKING PROHIBITIONS EVERY TIME
 
