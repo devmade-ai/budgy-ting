@@ -11,12 +11,14 @@
  *   - Manual SW registration: Rejected — vite-plugin-pwa handles caching strategy
  */
 
-import { ref, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRegisterSW } from 'virtual:pwa-register/vue'
 import { debugLog } from '@/debug/debugLog'
 
 const CHECK_INTERVAL_MS = 60 * 60 * 1000 // 60 minutes
 const OFFLINE_DISMISS_MS = 3000
+const UPDATE_SUPPRESSION_MS = 30_000 // 30 seconds
+const SUPPRESSION_KEY = 'budgy-ting:pwa-update-applied'
 
 const offlineReady = ref(false)
 const checking = ref(false)
@@ -56,6 +58,40 @@ const {
   },
 })
 
+// Requirement: Suppress update banner for 30 seconds after applying an update
+// Approach: sessionStorage timestamp written before update. On reload, the new
+//   SW may briefly signal needRefresh again — suppress it if within 30 seconds.
+//   sessionStorage survives the reload but clears when the browser session ends.
+// Alternatives:
+//   - localStorage: Rejected — persists across sessions, could permanently suppress
+//   - In-memory flag: Rejected — lost on the reload that the update itself triggers
+function wasJustUpdated(): boolean {
+  try {
+    const ts = sessionStorage.getItem(SUPPRESSION_KEY)
+    if (!ts) return false
+    const elapsed = Date.now() - Number(ts)
+    if (elapsed < UPDATE_SUPPRESSION_MS) {
+      debugLog('pwa', 'info', `Update suppression active (${Math.round(elapsed / 1000)}s ago)`)
+      return true
+    }
+    sessionStorage.removeItem(SUPPRESSION_KEY)
+  } catch {
+    // sessionStorage unavailable — no suppression
+  }
+  return false
+}
+
+function markUpdateApplied() {
+  try {
+    sessionStorage.setItem(SUPPRESSION_KEY, String(Date.now()))
+  } catch {
+    // sessionStorage unavailable — skip
+  }
+}
+
+// Expose a suppression-aware computed instead of raw hasUpdate
+const hasSuppressedUpdate = computed(() => hasUpdate.value && !wasJustUpdated())
+
 // Log when update becomes available
 watch(hasUpdate, (ready) => {
   if (ready) {
@@ -63,8 +99,24 @@ watch(hasUpdate, (ready) => {
   }
 })
 
+// Requirement: Check for SW updates when tab regains focus
+// Approach: visibilitychange listener triggers registration.update() when
+//   the document transitions from hidden to visible. Catches updates that
+//   arrived while the user had the tab backgrounded.
+// Alternatives:
+//   - Only rely on periodic timer: Rejected — 60-minute interval means users
+//     who switch back after a deploy could wait up to an hour
+function handleVisibilityChange() {
+  if (document.visibilityState === 'visible' && swRegistration) {
+    debugLog('pwa', 'info', 'Tab regained focus — checking for SW updates')
+    swRegistration.update()
+  }
+}
+document.addEventListener('visibilitychange', handleVisibilityChange)
+
 function updateApp() {
   debugLog('pwa', 'info', 'User triggered SW update')
+  markUpdateApplied()
   updateServiceWorker(true)
 }
 
@@ -90,7 +142,7 @@ async function checkForUpdate() {
 
 export function usePWAUpdate() {
   return {
-    hasUpdate,
+    hasUpdate: hasSuppressedUpdate,
     offlineReady,
     checking,
     updateApp,

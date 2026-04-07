@@ -21,7 +21,7 @@ import InstallInstructionsModal from '@/components/InstallInstructionsModal.vue'
 import TutorialModal from '@/components/TutorialModal.vue'
 import HelpDrawer from '@/components/HelpDrawer.vue'
 import ToastNotification from '@/components/ToastNotification.vue'
-import { CircleHelp, BookOpen, TestTubes, FileText, FileSpreadsheet, RefreshCw, Sun, Moon } from 'lucide-vue-next'
+import { CircleHelp, BookOpen, TestTubes, FileText, FileSpreadsheet, RefreshCw, Sun, Moon, Printer } from 'lucide-vue-next'
 
 // Build-time markdown imports — bundled as strings, no runtime fetch
 import userGuideMd from '../../docs/USER_GUIDE.md?raw'
@@ -64,11 +64,16 @@ const menuItems = computed<MenuItem[]>(() => [
   { label: 'Import Format', icon: FileText, action: () => { activeDrawer.value = 'import-format' }, separator: true },
   { label: 'Sample CSV', icon: FileSpreadsheet, action: () => { activeDrawer.value = 'sample-csv' } },
   {
+    label: 'Save as PDF',
+    icon: Printer,
+    action: () => window.print(),
+    separator: true,
+  },
+  {
     label: isDark.value ? 'Light mode' : 'Dark mode',
     icon: isDark.value ? Sun : Moon,
     iconClass: isDark.value ? 'text-warning' : 'text-base-content/50',
     action: () => toggleDarkMode(),
-    separator: true,
   },
   {
     label: checking.value ? 'Checking...' : 'Check for updates',

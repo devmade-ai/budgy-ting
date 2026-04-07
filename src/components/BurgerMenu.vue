@@ -64,13 +64,54 @@ function handleItem(item: MenuItem) {
   setTimeout(() => item.action(), 50)
 }
 
-// Escape key closes menu — only registered while open
-// Requirement: Keyboard accessibility for menu close
-// Reference: glow-props CLAUDE.md "Burger Menu — Escape key closes menu"
+// Requirement: Keyboard navigation for disclosure menu
+// Approach: Escape closes, ArrowDown/ArrowUp move focus (with wrapping),
+//   Home/End jump to first/last. Disabled items are skipped.
+// Reference: glow-props CLAUDE.md "Burger Menu — Arrow key navigation"
+function getFocusableButtons(): HTMLButtonElement[] {
+  if (!menuRef.value) return []
+  return Array.from(
+    menuRef.value.querySelectorAll('button:not([disabled])'),
+  ) as HTMLButtonElement[]
+}
+
 function handleKeyDown(e: KeyboardEvent) {
   if (e.key === 'Escape') {
     e.preventDefault()
     close()
+    return
+  }
+
+  const buttons = getFocusableButtons()
+  if (buttons.length === 0) return
+
+  const currentIndex = buttons.indexOf(document.activeElement as HTMLButtonElement)
+
+  switch (e.key) {
+    case 'ArrowDown': {
+      e.preventDefault()
+      // Wrap to first when at end (or nothing focused)
+      const next = currentIndex < buttons.length - 1 ? currentIndex + 1 : 0
+      buttons[next]?.focus()
+      break
+    }
+    case 'ArrowUp': {
+      e.preventDefault()
+      // Wrap to last when at start (or nothing focused)
+      const prev = currentIndex > 0 ? currentIndex - 1 : buttons.length - 1
+      buttons[prev]?.focus()
+      break
+    }
+    case 'Home': {
+      e.preventDefault()
+      buttons[0]?.focus()
+      break
+    }
+    case 'End': {
+      e.preventDefault()
+      buttons[buttons.length - 1]?.focus()
+      break
+    }
   }
 }
 

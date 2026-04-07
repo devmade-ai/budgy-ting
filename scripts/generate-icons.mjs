@@ -2,10 +2,13 @@
  * Generate PWA icon PNGs from icon.svg using sharp.
  *
  * Requirement: CI and local icon generation from single SVG source
- * Approach: sharp for SVG→PNG rasterisation, manual ICO packing
+ * Approach: sharp for SVG→PNG rasterisation at 400 DPI, manual ICO packing.
+ *   400 DPI (~5.5x default 72 DPI) renders the SVG at high resolution before
+ *   downscaling, producing clean anti-aliased edges especially on the 192px icon.
  * Alternatives:
  *   - Python script (generate-icons.py): Rejected for CI — needs Python + manual pixel drawing
  *   - Canvas-based: Rejected — heavier dependency, no benefit over sharp
+ *   - 150 DPI: Previous setting — produced slightly fuzzy edges on smaller icons
  */
 
 import sharp from 'sharp'
@@ -26,7 +29,7 @@ const sizes = [
 ]
 
 for (const { name, size } of sizes) {
-  await sharp(svg, { density: 150 })
+  await sharp(svg, { density: 400 })
     .resize(size, size)
     .png()
     .toFile(resolve(publicDir, name))
@@ -34,7 +37,7 @@ for (const { name, size } of sizes) {
 }
 
 // Favicon — 32x32 PNG wrapped in ICO container
-const favicon32 = await sharp(svg, { density: 150 })
+const favicon32 = await sharp(svg, { density: 400 })
   .resize(32, 32)
   .png()
   .toBuffer()

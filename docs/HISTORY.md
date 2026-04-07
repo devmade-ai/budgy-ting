@@ -4,6 +4,16 @@
 
 ## 2026-04-07
 
+- **APP_ICONS: Sharp density 150 → 400 DPI** — Updated `scripts/generate-icons.mjs` to rasterize SVG at 400 DPI (~5.5x default 72 DPI) before downscaling. Produces cleaner anti-aliased edges, especially on the 192px PWA icon. Regenerated all PNGs.
+
+- **DOWNLOAD_PDF: Print trigger button** — Added "Save as PDF" item to burger menu. Calls `window.print()` which opens the system print dialog (includes "Save as PDF" on all browsers). Print CSS (`.no-print`, `@media print` rules) already existed in `index.css`. The menu container already has `no-print` class so the button hides during print.
+
+- **BURGER_MENU: Arrow key navigation** — Added `ArrowDown`/`ArrowUp` (with wrapping), `Home`/`End` keyboard handlers to BurgerMenu.vue. Queries focusable (non-disabled) buttons and moves focus between them. Disabled items are automatically skipped via `:not([disabled])` selector.
+
+- **PWA: Visibility-based update checks** — Added `visibilitychange` listener in `usePWAUpdate.ts` that calls `registration.update()` when the tab transitions from hidden to visible. Catches SW updates that arrived while the tab was backgrounded, instead of waiting up to 60 minutes for the periodic timer.
+
+- **PWA: 30-second update suppression** — After user applies an update, a `sessionStorage` timestamp is written. On the subsequent reload, `wasJustUpdated()` checks if the timestamp is within 30 seconds and suppresses the `hasUpdate` signal via a computed wrapper (`hasSuppressedUpdate`). Prevents the update banner from flickering back immediately after the page reloads. `sessionStorage` chosen because it survives the reload but clears when the browser session ends.
+
 - **DaisyUI v5 Migration — Full theme system replacement:**
 
   **Infrastructure:**
