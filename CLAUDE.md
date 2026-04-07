@@ -336,7 +336,7 @@ All projects follow this scale to prevent stacking conflicts between the burger 
 
 ### Where to find patterns
 
-The single source of truth for all implementation patterns (PWA, debug system, icons, PDF, proxy, etc.) is the glow-props CLAUDE.md:
+The single source of truth for all implementation patterns is the glow-props CLAUDE.md. The list of available patterns changes over time — always check the source for what's current:
 
 ```
 https://raw.githubusercontent.com/devmade-ai/glow-props/main/CLAUDE.md
