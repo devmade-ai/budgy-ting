@@ -27,6 +27,3 @@ npm-debug.log*
 dev-dist/
 sw.js
 workbox-*.js
-
-# Implementation patterns live upstream in glow-props — never store locally
-docs/implementations/
