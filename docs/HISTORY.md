@@ -2,6 +2,15 @@
 
 <!-- Changelog and record of completed work. Organized by date. -->
 
+## 2026-04-07
+
+- **Removed local Suggested Implementations from CLAUDE.md:**
+  - Deleted ~300 lines of hard-copied patterns (PWA, debug, icons, PDF, proxy)
+  - Replaced with pointer to glow-props source repo (single source of truth)
+  - Updated Cross-Project Reference to prohibit local copies
+  - Added AI Note enforcing fetch-from-source rule
+  - Added Prohibition against storing/copying patterns locally
+
 ## 2026-03-30
 
 - **Burger Menu Hardening — Extracted BurgerMenu.vue (glow-props sync):**
