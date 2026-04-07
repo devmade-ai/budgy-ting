@@ -38,3 +38,16 @@ const debugApp = createApp(DebugPill)
 debugApp.mount(debugRoot)
 
 debugLog('boot', 'success', 'Debug pill mounted')
+
+// Drain any pre-framework errors captured by the inline pill in index.html
+// into the real debug log system so they appear in the Vue debug pill.
+const win = window as unknown as Record<string, unknown>
+const preErrors = win.__debugPreErrors as Array<{ time: string; message: string }> | undefined
+if (preErrors && preErrors.length > 0) {
+  for (const err of preErrors) {
+    debugLog('boot', 'error', `Pre-framework: ${err.message}`)
+  }
+}
+// Clean up the global
+delete win.__debugPushError
+delete win.__debugPreErrors

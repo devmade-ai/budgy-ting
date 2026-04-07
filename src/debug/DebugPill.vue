@@ -6,10 +6,13 @@
  *   diagnostics in a floating pill that survives app crashes (mounted in a
  *   separate Vue root).
  * Approach: Collapsed pill shows entry count + error/warning badges. Expanded
- *   state has Log and Environment tabs with Copy/Clear actions.
+ *   state has Log, Environment, and PWA tabs with Copy/Clear actions.
+ *   All styling uses inline styles (no Tailwind) so the pill renders even
+ *   if CSS fails to load.
  * Alternatives:
  *   - Console-only: Rejected — inaccessible to target users
  *   - External error service (Sentry): Rejected — local-first principle
+ *   - Tailwind classes: Previous approach — pill wouldn't render if CSS fails
  */
 
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
@@ -24,10 +27,13 @@ import {
 } from './debugLog'
 
 const expanded = ref(false)
-const activeTab = ref<'log' | 'env'>('log')
+const activeTab = ref<'log' | 'env' | 'pwa'>('log')
 const entries = ref<DebugEntry[]>([])
 const logContainer = ref<HTMLElement | null>(null)
 const copyFeedback = ref(false)
+
+// PWA diagnostics data — refreshed when PWA tab is active
+const pwaDiagnostics = ref<Array<{ label: string; value: string; ok: boolean }>>([])
 
 // Subscribe to new entries
 let unsubscribe: (() => void) | null = null
@@ -59,29 +65,34 @@ watch(
   },
 )
 
+// Refresh PWA diagnostics when tab is activated
+watch(activeTab, (tab) => {
+  if (tab === 'pwa') refreshPwaDiagnostics()
+})
+
 // ── Counts ──
 
 const entryCount = computed(() => entries.value.length)
 const errorCount = computed(() => entries.value.filter((e) => e.severity === 'error').length)
 const warnCount = computed(() => entries.value.filter((e) => e.severity === 'warn').length)
 
-// ── Styling helpers ──
+// ── Styling helpers (inline style objects — no Tailwind dependency) ──
 
 const sourceColors: Record<DebugSource, string> = {
-  boot: 'text-purple-600',
-  db: 'text-blue-600',
-  pwa: 'text-teal-600',
-  import: 'text-amber-600',
-  engine: 'text-indigo-600',
-  ml: 'text-orange-600',
-  global: 'text-gray-600',
+  boot: '#9333ea',
+  db: '#2563eb',
+  pwa: '#0d9488',
+  import: '#d97706',
+  engine: '#4f46e5',
+  ml: '#ea580c',
+  global: '#6b7280',
 }
 
 const severityColors: Record<DebugSeverity, string> = {
-  info: 'text-gray-500',
-  success: 'text-green-600',
-  warn: 'text-yellow-600',
-  error: 'text-red-600',
+  info: '#6b7280',
+  success: '#16a34a',
+  warn: '#ca8a04',
+  error: '#dc2626',
 }
 
 function formatTime(iso: string): string {
@@ -102,6 +113,60 @@ const envData = computed(() => [
   { label: 'IndexedDB', value: 'indexedDB' in window ? 'Supported' : 'Not supported' },
   { label: 'Timestamp', value: new Date().toISOString() },
 ])
+
+// ── PWA Diagnostics ──
+// Requirement: Active health checks for PWA readiness
+// Approach: Check HTTPS, SW state, manifest, standalone mode, install prompt.
+//   Refreshed each time the PWA tab is opened (not polling).
+
+async function refreshPwaDiagnostics() {
+  const checks: Array<{ label: string; value: string; ok: boolean }> = []
+
+  // HTTPS check
+  const isSecure = location.protocol === 'https:' || location.hostname === 'localhost'
+  checks.push({ label: 'HTTPS', value: isSecure ? 'Yes' : 'No (required for SW)', ok: isSecure })
+
+  // Service Worker support
+  const swSupported = 'serviceWorker' in navigator
+  checks.push({ label: 'SW Support', value: swSupported ? 'Yes' : 'No', ok: swSupported })
+
+  // Service Worker state
+  if (swSupported) {
+    try {
+      const reg = await navigator.serviceWorker.getRegistration()
+      if (reg) {
+        const sw = reg.active || reg.waiting || reg.installing
+        const state = sw?.state ?? 'none'
+        checks.push({ label: 'SW State', value: state, ok: state === 'activated' })
+
+        if (reg.waiting) {
+          checks.push({ label: 'SW Waiting', value: 'Yes (update pending)', ok: false })
+        }
+      } else {
+        checks.push({ label: 'SW State', value: 'Not registered', ok: false })
+      }
+    } catch {
+      checks.push({ label: 'SW State', value: 'Error checking', ok: false })
+    }
+  }
+
+  // Manifest check (look for <link rel="manifest">)
+  const manifestLink = document.querySelector('link[rel="manifest"]')
+  checks.push({ label: 'Manifest', value: manifestLink ? 'Present' : 'Missing', ok: !!manifestLink })
+
+  // Standalone mode
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+  checks.push({ label: 'Standalone', value: isStandalone ? 'Yes' : 'No (browser)', ok: isStandalone })
+
+  // Install prompt captured
+  const hasPrompt = !!(window as unknown as Record<string, unknown>).__pwaInstallPromptEvent
+  checks.push({ label: 'Install Prompt', value: hasPrompt ? 'Captured' : 'Not available', ok: hasPrompt })
+
+  // Online status
+  checks.push({ label: 'Online', value: navigator.onLine ? 'Yes' : 'Offline', ok: navigator.onLine })
+
+  pwaDiagnostics.value = checks
+}
 
 // ── Actions ──
 
@@ -147,21 +212,21 @@ function toggle() {
 </script>
 
 <template>
-  <!-- z-[80] per Z-Index Scale in CLAUDE.md — highest layer, debug must be visible above all UI -->
-  <div class="fixed bottom-4 right-4 z-[80]">
+  <!-- z-index 80 per Z-Index Scale in CLAUDE.md — highest layer, debug must be visible above all UI.
+       All styling is inline (no Tailwind) so the pill renders even if CSS fails to load. -->
+  <div style="position:fixed;bottom:16px;right:16px;z-index:80;font-family:ui-monospace,SFMono-Regular,monospace">
     <!-- Collapsed pill -->
     <button
       v-if="!expanded"
-      class="bg-gray-900 text-white text-xs font-mono px-3 py-1.5 rounded-full shadow-lg
-             hover:bg-gray-800 transition-colors flex items-center gap-1.5"
+      style="background:#111827;color:#fff;font-size:12px;padding:6px 12px;border-radius:9999px;border:none;cursor:pointer;display:flex;align-items:center;gap:6px;box-shadow:0 4px 6px rgba(0,0,0,0.3)"
       @click="toggle"
     >
       <span>dbg</span>
-      <span class="text-gray-400">{{ entryCount }}</span>
-      <span v-if="errorCount > 0" class="bg-red-500 text-white text-[10px] px-1.5 rounded-full">
+      <span style="color:#9ca3af">{{ entryCount }}</span>
+      <span v-if="errorCount > 0" style="background:#ef4444;color:#fff;font-size:10px;padding:0 6px;border-radius:9999px">
         {{ errorCount }}
       </span>
-      <span v-if="warnCount > 0" class="bg-yellow-500 text-white text-[10px] px-1.5 rounded-full">
+      <span v-if="warnCount > 0" style="background:#eab308;color:#fff;font-size:10px;padding:0 6px;border-radius:9999px">
         {{ warnCount }}
       </span>
     </button>
@@ -169,41 +234,39 @@ function toggle() {
     <!-- Expanded panel -->
     <div
       v-else
-      class="bg-gray-900 text-white rounded-xl shadow-2xl w-[360px] max-h-[70vh] flex flex-col overflow-hidden"
+      style="background:#111827;color:#fff;border-radius:12px;box-shadow:0 10px 25px rgba(0,0,0,0.4);width:360px;max-height:70vh;display:flex;flex-direction:column;overflow:hidden"
     >
       <!-- Header -->
-      <div class="flex items-center justify-between px-3 py-2 border-b border-gray-700">
-        <div class="flex gap-1">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid #374151">
+        <div style="display:flex;gap:4px">
           <button
-            class="text-xs px-2 py-1 rounded transition-colors"
-            :class="activeTab === 'log' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white'"
-            @click="activeTab = 'log'"
+            v-for="tab in (['log', 'env', 'pwa'] as const)"
+            :key="tab"
+            style="font-size:12px;padding:4px 8px;border-radius:4px;border:none;cursor:pointer;transition:background 0.15s"
+            :style="{
+              background: activeTab === tab ? '#374151' : 'transparent',
+              color: activeTab === tab ? '#fff' : '#9ca3af',
+            }"
+            @click="activeTab = tab"
           >
-            Log
-          </button>
-          <button
-            class="text-xs px-2 py-1 rounded transition-colors"
-            :class="activeTab === 'env' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white'"
-            @click="activeTab = 'env'"
-          >
-            Environment
+            {{ tab === 'log' ? 'Log' : tab === 'env' ? 'Environment' : 'PWA' }}
           </button>
         </div>
-        <div class="flex gap-1">
+        <div style="display:flex;gap:4px">
           <button
-            class="text-xs px-2 py-1 rounded text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
+            style="font-size:12px;padding:4px 8px;border-radius:4px;border:none;cursor:pointer;color:#9ca3af;background:transparent"
             @click="copyReport"
           >
             {{ copyFeedback ? 'Copied!' : 'Copy' }}
           </button>
           <button
-            class="text-xs px-2 py-1 rounded text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
+            style="font-size:12px;padding:4px 8px;border-radius:4px;border:none;cursor:pointer;color:#9ca3af;background:transparent"
             @click="handleClear"
           >
             Clear
           </button>
           <button
-            class="text-xs px-2 py-1 rounded text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
+            style="font-size:12px;padding:4px 8px;border-radius:4px;border:none;cursor:pointer;color:#9ca3af;background:transparent"
             @click="toggle"
           >
             Close
@@ -215,21 +278,21 @@ function toggle() {
       <div
         v-if="activeTab === 'log'"
         ref="logContainer"
-        class="flex-1 overflow-y-auto p-2 font-mono text-[11px] leading-relaxed min-h-[200px] max-h-[50vh]"
+        style="flex:1;overflow-y:auto;padding:8px;font-size:11px;line-height:1.6;min-height:200px;max-height:50vh"
       >
-        <div v-if="entries.length === 0" class="text-gray-500 text-center py-8">
+        <div v-if="entries.length === 0" style="color:#6b7280;text-align:center;padding:32px 0">
           No entries yet
         </div>
         <div
           v-for="entry in entries"
           :key="entry.id"
-          class="py-0.5 flex gap-1.5 items-start hover:bg-gray-800/50 px-1 rounded"
+          style="padding:2px 4px;display:flex;gap:6px;align-items:flex-start;border-radius:4px"
         >
-          <span class="text-gray-500 shrink-0">{{ formatTime(entry.timestamp) }}</span>
-          <span :class="sourceColors[entry.source]" class="shrink-0">[{{ entry.source }}]</span>
-          <span :class="severityColors[entry.severity]" class="break-all">
+          <span style="color:#6b7280;flex-shrink:0">{{ formatTime(entry.timestamp) }}</span>
+          <span :style="{ color: sourceColors[entry.source], flexShrink: 0 }">[{{ entry.source }}]</span>
+          <span :style="{ color: severityColors[entry.severity], wordBreak: 'break-all' }">
             {{ entry.event }}
-            <span v-if="entry.details" class="text-gray-500">
+            <span v-if="entry.details" style="color:#6b7280">
               {{ JSON.stringify(entry.details) }}
             </span>
           </span>
@@ -238,17 +301,41 @@ function toggle() {
 
       <!-- Environment tab -->
       <div
-        v-else
-        class="flex-1 overflow-y-auto p-3 text-xs min-h-[200px] max-h-[50vh]"
+        v-else-if="activeTab === 'env'"
+        style="flex:1;overflow-y:auto;padding:12px;font-size:12px;min-height:200px;max-height:50vh"
       >
         <div
           v-for="item in envData"
           :key="item.label"
-          class="flex justify-between py-1.5 border-b border-gray-800 last:border-0"
+          style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #1f2937"
         >
-          <span class="text-gray-400">{{ item.label }}</span>
-          <span class="text-gray-200 text-right max-w-[220px] truncate ml-2">{{ item.value }}</span>
+          <span style="color:#9ca3af">{{ item.label }}</span>
+          <span style="color:#e5e7eb;text-align:right;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-left:8px">{{ item.value }}</span>
         </div>
+      </div>
+
+      <!-- PWA tab -->
+      <div
+        v-else
+        style="flex:1;overflow-y:auto;padding:12px;font-size:12px;min-height:200px;max-height:50vh"
+      >
+        <div v-if="pwaDiagnostics.length === 0" style="color:#6b7280;text-align:center;padding:32px 0">
+          Loading diagnostics...
+        </div>
+        <div
+          v-for="check in pwaDiagnostics"
+          :key="check.label"
+          style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #1f2937"
+        >
+          <span style="color:#9ca3af">{{ check.label }}</span>
+          <span :style="{ color: check.ok ? '#22c55e' : '#f87171' }">{{ check.value }}</span>
+        </div>
+        <button
+          style="margin-top:12px;width:100%;padding:6px;font-size:11px;border-radius:4px;border:1px solid #374151;background:transparent;color:#9ca3af;cursor:pointer"
+          @click="refreshPwaDiagnostics"
+        >
+          Refresh
+        </button>
       </div>
     </div>
   </div>

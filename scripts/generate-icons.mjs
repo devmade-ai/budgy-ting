@@ -19,9 +19,12 @@ import { fileURLToPath } from 'url'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const publicDir = resolve(__dirname, '../public')
 const svgPath = resolve(publicDir, 'icon.svg')
+const maskableSvgPath = resolve(publicDir, 'icon-maskable.svg')
 
 const svg = readFileSync(svgPath)
+const maskableSvg = readFileSync(maskableSvgPath)
 
+// Standard icons — from icon.svg (full-bleed, purpose: any)
 const sizes = [
   { name: 'pwa-512x512.png', size: 512 },
   { name: 'pwa-192x192.png', size: 192 },
@@ -35,6 +38,17 @@ for (const { name, size } of sizes) {
     .toFile(resolve(publicDir, name))
   console.log(`Generated ${name} (${size}x${size})`)
 }
+
+// Maskable icon — from icon-maskable.svg (content within 80% safe zone, purpose: maskable)
+// Requirement: Android adaptive icons crop to various shapes. Content must be
+//   within the inner 80% safe zone to avoid clipping.
+// Approach: Separate SVG source with padded content, rendered at 1024px for
+//   maximum quality on high-density displays.
+await sharp(maskableSvg, { density: 400 })
+  .resize(1024, 1024)
+  .png()
+  .toFile(resolve(publicDir, 'pwa-maskable-1024x1024.png'))
+console.log('Generated pwa-maskable-1024x1024.png (1024x1024)')
 
 // Favicon — 32x32 PNG wrapped in ICO container
 const favicon32 = await sharp(svg, { density: 400 })

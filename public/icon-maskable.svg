@@ -1,0 +1,29 @@
+<!--
+  Maskable icon variant — safe-zone aware.
+
+  Requirement: Android adaptive icons crop to various shapes (circle, squircle,
+    teardrop). Content must be within the inner 80% safe zone to avoid clipping.
+  Approach: Same B monogram as icon.svg but with the background filling the
+    full 512x512 canvas and content scaled to fit within the 80% inner zone
+    (centered in a 410x410 area, offset by 51px from each edge).
+  Reference: CLAUDE.md "App Icons from SVG Source" — maskable safe zone rules
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" shape-rendering="geometricPrecision">
+  <rect width="512" height="512" fill="#10b981"/>
+  <!-- Content scaled to 80% safe zone: translate(51,51) scale(0.8) applied to original paths -->
+  <path fill="white" fill-rule="evenodd" d="
+    M 163 137.4
+    H 262.2
+    C 351.8 137.4, 351.8 249.4, 262.2 249.4
+    L 249.4 252.6
+    C 371 252.6, 371 374.2, 262.2 374.2
+    H 163
+    Z
+    M 214.2 172.6
+    C 318.2 172.6, 318.2 214.2, 214.2 214.2
+    Z
+    M 214.2 284.6
+    C 331 284.6, 331 337.4, 214.2 337.4
+    Z
+  "/>
+</svg>

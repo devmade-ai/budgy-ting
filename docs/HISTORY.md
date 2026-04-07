@@ -4,6 +4,26 @@
 
 ## 2026-04-07
 
+- **APP_ICONS: Separate 1024px maskable icon** — Created `public/icon-maskable.svg` with B monogram scaled to 80% inner safe zone (translate+scale applied to original paths). Updated `generate-icons.mjs` to produce `pwa-maskable-1024x1024.png` from the maskable SVG. Updated PWA manifest in `vite.config.ts` to reference the dedicated maskable icon with `purpose: 'maskable'` (was reusing pwa-512x512.png). Standard icons keep `purpose: 'any'`.
+
+- **BURGER_MENU: Z-index scale audit** — Verified all z-index values across 15 occurrences in the codebase. All values correctly aligned with the documented scale in CLAUDE.md: inline dropdowns (10), sticky headers (10), menu dropdowns (20), menu backdrop (40), menu/modals/drawers (50), toasts (70), debug pill (80). No changes needed.
+
+- **BURGER_MENU: Theme UI** — Dark/light toggle already exists in the burger menu (Sun/Moon icon, wired to `useDarkMode`). Multi-theme picker (multiple DaisyUI themes) deferred — no current user need, DaisyUI supports it when desired.
+
+- **DEBUG_SYSTEM: Console interception** — Patched `console.error` and `console.warn` at module load in `debugLog.ts`. Preserves original methods for pass-through. Recursion guard (`_interceptingConsole` flag) prevents infinite loops if `debugLog` triggers a console call. Only intercepts error/warn — info/log excluded as too noisy.
+
+- **DEBUG_SYSTEM: Circular buffer** — Replaced `Array.push()` + `Array.shift()` (O(n) eviction) with fixed-size circular buffer using head/count pointers (O(1)). Buffer pre-allocated as `Array(200).fill(null)`. `getEntries()` returns chronologically ordered snapshot by iterating from head. Added `getEntryCount()` utility.
+
+- **DEBUG_SYSTEM: Inline styles** — Replaced all Tailwind classes in `DebugPill.vue` with inline `style=""` attributes. The pill now renders independently of CSS loading — if Tailwind/Vite fails, the pill still appears with correct dark theme styling. Same hardcoded dark theme as before (alpha-only component).
+
+- **DEBUG_SYSTEM: PWA Diagnostics tab** — Added third "PWA" tab to the debug pill with active health checks: HTTPS, SW support, SW state (activated/waiting/installing), manifest presence, standalone mode, install prompt capture, online status. Each check shows a green/red status indicator. Manual refresh button. Diagnostics run on-demand when the tab is activated (not polling).
+
+- **DEBUG_SYSTEM: Pre-framework inline pill** — Added vanilla JS `<script>` in `index.html` that renders a minimal "dbg" pill before Vue mounts. Exposes `window.__debugPushError()` for early error capture. Shows 20-second loading timeout warning if Vue hasn't mounted. `MutationObserver` watches for `#debug-root` to cleanly remove the pre-pill when Vue's debug pill takes over. Pre-framework errors are drained into the real debug log via `window.__debugPreErrors` in `main.ts`.
+
+- **PWA_SYSTEM: PWA diagnostics wired to debug pill** — PWA health checks are built directly into the DebugPill PWA tab (not a separate composable). Checks are self-contained using browser APIs (`navigator.serviceWorker.getRegistration()`, manifest link detection, etc.).
+
+- **EVENT_BUS: Decision** — Evaluated codebase: all inter-component communication uses Vue emits (35 occurrences across 13 files) or composable refs (useDarkMode, useToast, usePWAUpdate). No cross-service pub/sub needs identified. Event bus pattern not needed — skipped.
+
 - **APP_ICONS: Sharp density 150 → 400 DPI** — Updated `scripts/generate-icons.mjs` to rasterize SVG at 400 DPI (~5.5x default 72 DPI) before downscaling. Produces cleaner anti-aliased edges, especially on the 192px PWA icon. Regenerated all PNGs.
 
 - **DOWNLOAD_PDF: Print trigger button** — Added "Save as PDF" item to burger menu. Calls `window.print()` which opens the system print dialog (includes "Save as PDF" on all browsers). Print CSS (`.no-print`, `@media print` rules) already existed in `index.css`. The menu container already has `no-print` class so the button hides during print.

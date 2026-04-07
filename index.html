@@ -56,6 +56,74 @@
         window.__pwaInstallPromptEvent = e;
       });
     </script>
+    <!-- Requirement: Pre-framework debug pill — visible before Vue mounts
+         Approach: Vanilla JS pill rendered immediately during HTML parse. Shows
+           "dbg" pill with error count. window.__debugPushError() captures early
+           errors. 20-second loading timeout shows warning if Vue hasn't mounted.
+           The Vue DebugPill replaces this once main.ts mounts debug-root.
+         Why inline: Module scripts are deferred. If Vite/Vue fails to load
+           (network error, JS parse failure, broken build), this pill still shows.
+         Reference: glow-props CLAUDE.md "Debug System — Pre-framework inline pill" -->
+    <script>
+      (function() {
+        var errors = [];
+        window.__debugPreErrors = errors;
+        var pill = document.createElement('div');
+        pill.id = 'pre-debug-pill';
+        pill.style.cssText = 'position:fixed;bottom:16px;right:16px;z-index:80;font-family:monospace;background:#111827;color:#fff;font-size:12px;padding:6px 12px;border-radius:9999px;cursor:pointer;box-shadow:0 4px 6px rgba(0,0,0,0.3);display:flex;align-items:center;gap:6px';
+        pill.innerHTML = '<span>dbg</span><span style="color:#9ca3af">0</span>';
+        document.body.appendChild(pill);
+
+        var countEl = pill.querySelector('span:last-child');
+        var errorBadge = null;
+
+        function updatePill() {
+          if (countEl) countEl.textContent = String(errors.length);
+          if (errors.length > 0 && !errorBadge) {
+            errorBadge = document.createElement('span');
+            errorBadge.style.cssText = 'background:#ef4444;color:#fff;font-size:10px;padding:0 6px;border-radius:9999px';
+            pill.appendChild(errorBadge);
+          }
+          if (errorBadge) errorBadge.textContent = String(errors.length);
+        }
+
+        // Expose global error push for pre-framework errors
+        window.__debugPushError = function(msg) {
+          errors.push({ time: new Date().toISOString(), message: String(msg) });
+          updatePill();
+        };
+
+        // Capture early errors
+        window.addEventListener('error', function(e) {
+          window.__debugPushError(e.message || 'Unknown error');
+        });
+
+        // 20-second loading timeout — if Vue hasn't mounted, something is wrong
+        var loadingTimeout = setTimeout(function() {
+          if (document.getElementById('pre-debug-pill')) {
+            window.__debugPushError('App loading timeout (20s) — framework may have failed to mount');
+          }
+        }, 20000);
+
+        // Vue's main.ts will create #debug-root — when it appears, remove the pre-pill
+        // and clear the timeout. Observed via MutationObserver for reliability.
+        var observer = new MutationObserver(function(mutations) {
+          for (var i = 0; i < mutations.length; i++) {
+            for (var j = 0; j < mutations[i].addedNodes.length; j++) {
+              var node = mutations[i].addedNodes[j];
+              if (node.id === 'debug-root') {
+                clearTimeout(loadingTimeout);
+                var prePill = document.getElementById('pre-debug-pill');
+                if (prePill) prePill.remove();
+                observer.disconnect();
+                return;
+              }
+            }
+          }
+        });
+        observer.observe(document.body, { childList: true });
+      })();
+    </script>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

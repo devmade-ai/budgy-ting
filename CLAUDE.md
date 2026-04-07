@@ -60,8 +60,10 @@ Current working features:
 - Single-screen dashboard (cashflow graph, metrics grid, transaction table)
 - Transaction edit modal with read-only view mode
 - Export/import/restore workspace data as JSON
-- PWA: offline-first, installable, service worker update prompt, manual update check
-- Debug pill (alpha): floating diagnostic panel with log + environment tabs
+- PWA: offline-first, installable, service worker update prompt, manual update check, visibility-based update detection, 30-second post-update suppression
+- Debug pill (alpha): floating diagnostic panel with log + environment + PWA diagnostics tabs, inline styles (CSS-independent), console.error/warn interception, circular buffer, pre-framework inline pill with 20s timeout
+- Save as PDF via window.print() in burger menu
+- Burger menu keyboard navigation (ArrowDown/Up wrapping, Home/End)
 - Tag autocomplete from tagCache + pattern tags + ML suggestions
 - Duplicate detection on import (date + amount + description)
 - Pull-to-refresh, haptic feedback, bottom sheet modal
