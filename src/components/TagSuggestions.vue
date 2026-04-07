@@ -24,14 +24,14 @@ const emit = defineEmits<{
 
 <template>
   <div v-if="props.suggestions.length > 0" class="flex flex-wrap items-center gap-1 mt-1">
-    <Sparkles :size="12" class="text-amber-400 flex-shrink-0" aria-hidden="true" />
+    <Sparkles :size="12" class="text-warning flex-shrink-0" aria-hidden="true" />
     <span
       v-for="s in props.suggestions"
       :key="s.tag"
-      class="inline-flex items-center gap-0.5 text-xs border border-dashed border-gray-300 dark:border-zinc-600 text-gray-600 dark:text-zinc-300 rounded px-1.5 py-0.5"
+      class="inline-flex items-center gap-0.5 text-xs border border-dashed border-base-300 text-base-content/70 rounded px-1.5 py-0.5"
     >
       <button
-        class="hover:text-blue-600 transition-colors"
+        class="hover:text-info transition-colors"
         :aria-label="`Add tag: ${s.tag}`"
         @click="emit('accept', s.tag)"
       >
@@ -48,7 +48,7 @@ const emit = defineEmits<{
     </span>
     <button
       v-if="props.suggestions.length >= 2"
-      class="text-xs text-blue-500 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 underline ml-1"
+      class="text-xs text-info hover:opacity-80 underline ml-1"
       @click="emit('acceptAll')"
     >
       Add all

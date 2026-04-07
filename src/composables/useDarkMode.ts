@@ -1,12 +1,13 @@
 /**
  * Requirement: User-controlled dark/light mode with system preference fallback
- * Approach: Module-level singleton state. localStorage persistence, .dark class on <html>,
- *   matchMedia listener for OS preference (fallback only), cross-tab sync via storage event,
- *   dynamic meta theme-color update on toggle.
+ * Approach: Module-level singleton state. localStorage persistence, data-theme attribute
+ *   on <html> for DaisyUI theme switching, matchMedia listener for OS preference
+ *   (fallback only), cross-tab sync via storage event, dynamic meta theme-color update.
  * Alternatives:
  *   - CSS-only prefers-color-scheme: Rejected — no user override possible
- *   - Vue provide/inject context: Rejected — overkill for web (DOM class is source of truth)
+ *   - Vue provide/inject context: Rejected — overkill for web (DOM attribute is source of truth)
  *   - Pinia store: Rejected — theme is UI-only state, no cross-component actions needed
+ *   - .dark class toggle: Rejected — DaisyUI uses data-theme attribute for theming
  * Reference: glow-props CLAUDE.md "Theme & Dark Mode"
  */
 
@@ -39,11 +40,8 @@ function getInitialDarkMode(): boolean {
 
 function applyTheme(dark: boolean): void {
   const root = document.documentElement
-  if (dark) {
-    root.classList.add('dark')
-  } else {
-    root.classList.remove('dark')
-  }
+  // DaisyUI uses data-theme attribute for theme switching
+  root.setAttribute('data-theme', dark ? 'dark' : 'light')
 
   // Dynamically update ALL meta theme-color tags so Android Chrome address bar
   // syncs with manual toggles, not just system preference changes.

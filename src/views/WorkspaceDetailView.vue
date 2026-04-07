@@ -153,7 +153,7 @@ const menuActions: Array<{ label: string; icon: Component; action: () => void }>
     <!-- Workspace header -->
     <div class="mb-6">
       <button
-        class="text-sm text-gray-500 dark:text-zinc-400 hover:text-gray-700 dark:hover:text-zinc-200 mb-2 flex items-center gap-1 min-h-[44px]"
+        class="text-sm text-base-content/60 hover:text-base-content mb-2 flex items-center gap-1 min-h-[44px]"
         @click="router.push({ name: 'workspace-list' })"
       >
         <ArrowLeft :size="16" />
@@ -161,15 +161,15 @@ const menuActions: Array<{ label: string; icon: Component; action: () => void }>
       </button>
       <div class="flex items-center justify-between">
         <div>
-          <h1 class="page-title">{{ workspace.name }}</h1>
-          <p class="text-sm text-gray-500 dark:text-zinc-400 mt-0.5">
+          <h1 class="text-2xl font-bold text-base-content">{{ workspace.name }}</h1>
+          <p class="text-sm text-base-content/60 mt-0.5">
             {{ workspace.periodType === 'monthly' ? 'Monthly' : 'Custom period' }}
             <span v-if="workspace.currencyLabel"> &middot; {{ workspace.currencyLabel }}</span>
           </p>
         </div>
         <div class="flex items-center gap-2">
           <button
-            class="btn-primary text-sm min-h-[44px]"
+            class="btn btn-primary text-sm min-h-[44px]"
             title="Import actuals"
             @click="router.push({ name: 'import-actuals', params: { id: props.id } })"
           >
@@ -178,8 +178,8 @@ const menuActions: Array<{ label: string; icon: Component; action: () => void }>
           </button>
           <div ref="actionsMenuRef" class="relative">
             <button
-              class="w-11 h-11 rounded-full flex items-center justify-center text-gray-400 dark:text-zinc-500 hover:text-gray-600 dark:hover:text-zinc-200 hover:bg-gray-100 dark:hover:bg-zinc-700 transition-colors"
-              :class="{ 'animate-pulse ring-2 ring-brand-300 dark:ring-brand-600': showKebabHint }"
+              class="w-11 h-11 rounded-full flex items-center justify-center text-base-content/40 hover:text-base-content/70 hover:bg-base-200 transition-colors"
+              :class="{ 'animate-pulse ring-2 ring-primary/40': showKebabHint }"
               title="More actions"
               aria-label="More actions"
               aria-haspopup="true"
@@ -192,26 +192,26 @@ const menuActions: Array<{ label: string; icon: Component; action: () => void }>
             <!-- Desktop dropdown (hidden on mobile) -->
             <div
               v-if="actionsMenuOpen"
-              class="hidden sm:block absolute right-0 top-full mt-1 w-44 bg-white dark:bg-[var(--color-surface-elevated)] rounded-lg shadow-lg border border-gray-200 dark:border-zinc-700 py-1 z-20"
+              class="hidden sm:block absolute right-0 top-full mt-1 w-44 bg-base-100 rounded-lg shadow-lg border border-base-300 py-1 z-20"
               role="menu"
             >
               <button
                 v-for="item in menuActions"
                 :key="item.label"
-                class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-zinc-300 hover:bg-gray-50 dark:hover:bg-[var(--color-surface-hover)] flex items-center gap-2"
+                class="w-full text-left px-4 py-2 text-sm text-base-content/80 hover:bg-base-200 flex items-center gap-2"
                 role="menuitem"
                 @click="item.action()"
               >
-                <component :is="item.icon" :size="16" class="text-gray-400 dark:text-zinc-500" aria-hidden="true" />
+                <component :is="item.icon" :size="16" class="text-base-content/50" aria-hidden="true" />
                 {{ item.label }}
               </button>
-              <div class="border-t border-gray-100 dark:border-zinc-800 my-1" role="separator" />
+              <div class="border-t border-base-200 my-1" role="separator" />
               <button
-                class="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
+                class="w-full text-left px-4 py-2 text-sm text-error hover:bg-error/10 flex items-center gap-2"
                 role="menuitem"
                 @click="confirmDelete"
               >
-                <Trash2 :size="16" class="text-red-400 dark:text-red-300" aria-hidden="true" />
+                <Trash2 :size="16" class="text-error/70" aria-hidden="true" />
                 Delete workspace
               </button>
             </div>
@@ -230,18 +230,18 @@ const menuActions: Array<{ label: string; icon: Component; action: () => void }>
         <button
           v-for="item in menuActions"
           :key="item.label"
-          class="w-full text-left px-3 py-3 text-sm text-gray-700 dark:text-zinc-300 hover:bg-gray-50 dark:hover:bg-[var(--color-surface-hover)] rounded-lg flex items-center gap-3"
+          class="w-full text-left px-3 py-3 text-sm text-base-content/80 hover:bg-base-200 rounded-lg flex items-center gap-3"
           @click="item.action()"
         >
-          <component :is="item.icon" :size="18" class="text-gray-400 dark:text-zinc-500" aria-hidden="true" />
+          <component :is="item.icon" :size="18" class="text-base-content/50" aria-hidden="true" />
           {{ item.label }}
         </button>
-        <div class="border-t border-gray-100 dark:border-zinc-800 my-1" />
+        <div class="border-t border-base-200 my-1" />
         <button
-          class="w-full text-left px-3 py-3 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg flex items-center gap-3"
+          class="w-full text-left px-3 py-3 text-sm text-error hover:bg-error/10 rounded-lg flex items-center gap-3"
           @click="confirmDelete"
         >
-          <Trash2 :size="18" class="text-red-400 dark:text-red-300" aria-hidden="true" />
+          <Trash2 :size="18" class="text-error/70" aria-hidden="true" />
           Delete workspace
         </button>
       </div>

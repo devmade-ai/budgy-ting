@@ -66,7 +66,7 @@ const menuItems = computed<MenuItem[]>(() => [
   {
     label: isDark.value ? 'Light mode' : 'Dark mode',
     icon: isDark.value ? Sun : Moon,
-    iconClass: isDark.value ? 'text-amber-400' : 'text-gray-400 dark:text-zinc-500',
+    iconClass: isDark.value ? 'text-warning' : 'text-base-content/50',
     action: () => toggleDarkMode(),
     separator: true,
   },
@@ -80,11 +80,11 @@ const menuItems = computed<MenuItem[]>(() => [
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-[var(--color-surface-page)]">
+  <div class="min-h-screen bg-base-200">
     <!-- Update banner -->
     <div
       v-if="hasUpdate"
-      class="bg-brand-600 text-white text-sm px-4 py-2 flex items-center justify-between"
+      class="bg-primary text-primary-content text-sm px-4 py-2 flex items-center justify-between"
     >
       <span>A new version is available</span>
       <button
@@ -98,7 +98,7 @@ const menuItems = computed<MenuItem[]>(() => [
     <!-- Offline-ready notification (auto-dismisses after 3s) -->
     <div
       v-if="offlineReady"
-      class="bg-green-600 text-white text-sm px-4 py-2 text-center"
+      class="bg-success text-success-content text-sm px-4 py-2 text-center"
     >
       App is ready for offline use
     </div>
@@ -107,10 +107,10 @@ const menuItems = computed<MenuItem[]>(() => [
     <InstallPrompt @show-instructions="showInstructions = true" />
 
     <!-- Header -->
-    <header class="bg-white dark:bg-[var(--color-surface)] border-b border-gray-200 dark:border-zinc-700 sticky top-0 z-10">
+    <header class="bg-base-100 border-b border-base-300 sticky top-0 z-10">
       <div class="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
         <button
-          class="text-lg font-bold text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 transition-colors"
+          class="text-lg font-bold text-primary hover:opacity-80 transition-opacity"
           @click="goHome"
         >
           budgy-ting

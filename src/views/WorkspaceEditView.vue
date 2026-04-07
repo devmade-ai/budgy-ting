@@ -65,7 +65,7 @@ function handleCancel() {
 <template>
   <div>
     <button
-      class="text-sm text-gray-500 dark:text-zinc-400 hover:text-gray-700 dark:hover:text-zinc-200 mb-4 flex items-center gap-1"
+      class="text-sm text-base-content/60 hover:text-base-content mb-4 flex items-center gap-1"
       @click="handleCancel"
     >
       <ArrowLeft :size="16" />
@@ -77,7 +77,7 @@ function handleCancel() {
     <LoadingSpinner v-if="loading" />
 
     <template v-else-if="workspace">
-      <h1 class="page-title mb-6">Edit Workspace</h1>
+      <h1 class="text-2xl font-bold text-base-content mb-6">Edit Workspace</h1>
       <WorkspaceForm :workspace="workspace" @submit="handleSubmit" @cancel="handleCancel" />
     </template>
   </div>

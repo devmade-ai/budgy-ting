@@ -69,14 +69,14 @@ onUnmounted(() => {
         role="dialog"
         :aria-label="title"
         aria-modal="true"
-        class="absolute top-0 right-0 h-full w-[calc(100%-1rem)] sm:w-[calc(100%-2rem)] max-w-lg bg-white dark:bg-[var(--color-surface)] shadow-xl transition-transform duration-200 flex flex-col"
+        class="absolute top-0 right-0 h-full w-[calc(100%-1rem)] sm:w-[calc(100%-2rem)] max-w-lg bg-base-100 shadow-xl transition-transform duration-200 flex flex-col"
         :class="visible ? 'translate-x-0' : 'translate-x-full'"
       >
         <!-- Header -->
-        <div class="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-zinc-700 shrink-0">
-          <h2 class="text-lg font-semibold text-gray-900 dark:text-zinc-100">{{ title }}</h2>
+        <div class="flex items-center justify-between px-5 py-4 border-b border-base-300 shrink-0">
+          <h2 class="text-lg font-semibold text-base-content">{{ title }}</h2>
           <button
-            class="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 dark:text-zinc-400 hover:text-gray-600 dark:hover:text-zinc-200 hover:bg-gray-100 dark:hover:bg-zinc-700 transition-colors"
+            class="w-8 h-8 rounded-full flex items-center justify-center text-base-content/50 hover:text-base-content hover:bg-base-200 transition-colors"
             aria-label="Close"
             @click="handleClose"
           >
@@ -98,20 +98,20 @@ onUnmounted(() => {
 
 <style scoped>
 /* Minimal prose styles for rendered markdown — keeps it readable without a full typography plugin.
-   Dark mode uses CSS custom properties from the semantic token palette. */
-:deep(.prose) h1 { font-size: 1.5rem; font-weight: 700; margin: 1.5rem 0 0.75rem; color: var(--color-text-default); }
-:deep(.prose) h2 { font-size: 1.25rem; font-weight: 600; margin: 1.25rem 0 0.5rem; color: var(--color-text-default); border-bottom: 1px solid var(--color-border); padding-bottom: 0.25rem; }
-:deep(.prose) h3 { font-size: 1.1rem; font-weight: 600; margin: 1rem 0 0.5rem; color: var(--color-text-muted); }
-:deep(.prose) h4 { font-size: 1rem; font-weight: 600; margin: 0.75rem 0 0.25rem; color: var(--color-text-muted); }
-:deep(.prose) p { margin: 0.5rem 0; line-height: 1.6; color: var(--color-text-muted); }
-:deep(.prose) ul, :deep(.prose) ol { margin: 0.5rem 0; padding-left: 1.5rem; color: var(--color-text-muted); }
+   Uses DaisyUI semantic color tokens via oklch color space. */
+:deep(.prose) h1 { font-size: 1.5rem; font-weight: 700; margin: 1.5rem 0 0.75rem; color: oklch(from oklch(var(--color-base-content)) l c h); }
+:deep(.prose) h2 { font-size: 1.25rem; font-weight: 600; margin: 1.25rem 0 0.5rem; border-bottom: 1px solid oklch(var(--color-base-300)); padding-bottom: 0.25rem; }
+:deep(.prose) h3 { font-size: 1.1rem; font-weight: 600; margin: 1rem 0 0.5rem; opacity: 0.8; }
+:deep(.prose) h4 { font-size: 1rem; font-weight: 600; margin: 0.75rem 0 0.25rem; opacity: 0.8; }
+:deep(.prose) p { margin: 0.5rem 0; line-height: 1.6; opacity: 0.8; }
+:deep(.prose) ul, :deep(.prose) ol { margin: 0.5rem 0; padding-left: 1.5rem; opacity: 0.8; }
 :deep(.prose) li { margin: 0.25rem 0; line-height: 1.5; }
 :deep(.prose) li > ul, :deep(.prose) li > ol { margin: 0.125rem 0; }
-:deep(.prose) strong { font-weight: 600; color: var(--color-text-default); }
-:deep(.prose) code { background: var(--color-surface-inset); padding: 0.125rem 0.375rem; border-radius: 0.25rem; font-size: 0.85em; color: var(--color-text-default); }
-:deep(.prose) pre { background: var(--color-surface-inset); padding: 0.75rem 1rem; border-radius: 0.5rem; overflow-x: auto; margin: 0.5rem 0; }
+:deep(.prose) strong { font-weight: 600; opacity: 1; }
+:deep(.prose) code { background: oklch(var(--color-base-200)); padding: 0.125rem 0.375rem; border-radius: 0.25rem; font-size: 0.85em; }
+:deep(.prose) pre { background: oklch(var(--color-base-200)); padding: 0.75rem 1rem; border-radius: 0.5rem; overflow-x: auto; margin: 0.5rem 0; }
 :deep(.prose) pre code { background: none; padding: 0; }
-:deep(.prose) hr { border: none; border-top: 1px solid var(--color-border); margin: 1.5rem 0; }
-:deep(.prose) a { color: #10b981; text-decoration: underline; }
+:deep(.prose) hr { border: none; border-top: 1px solid oklch(var(--color-base-300)); margin: 1.5rem 0; }
+:deep(.prose) a { color: oklch(var(--color-primary)); text-decoration: underline; }
 :deep(.prose) input[type="checkbox"] { margin-right: 0.5rem; }
 </style>

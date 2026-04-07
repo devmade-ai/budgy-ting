@@ -35,11 +35,11 @@ function handleShowInstructions() {
 <template>
   <div
     v-if="showInstallPrompt"
-    class="bg-brand-50 dark:bg-brand-900/20 border-b border-brand-200 dark:border-brand-800 px-4 py-2.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-3"
+    class="bg-primary/10 border-b border-primary/20 px-4 py-2.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-3"
   >
     <div class="flex items-center gap-2 min-w-0">
-      <Smartphone :size="16" class="text-brand-600 shrink-0" />
-      <span class="text-sm text-brand-800 dark:text-brand-200 truncate">
+      <Smartphone :size="16" class="text-primary shrink-0" />
+      <span class="text-sm text-base-content truncate">
         Install budgy-ting for quick access
       </span>
     </div>
@@ -48,7 +48,7 @@ function handleShowInstructions() {
       <!-- Chromium: native install button -->
       <button
         v-if="isNativeInstallAvailable"
-        class="text-sm font-medium text-white bg-brand-500 hover:bg-brand-600 px-3 py-1 rounded-lg transition-colors"
+        class="btn btn-primary btn-sm"
         @click="handleInstall"
       >
         Install
@@ -57,7 +57,7 @@ function handleShowInstructions() {
       <!-- Safari/Firefox: show instructions -->
       <button
         v-else-if="needsManualInstructions"
-        class="text-sm font-medium text-white bg-brand-500 hover:bg-brand-600 px-3 py-1 rounded-lg transition-colors"
+        class="btn btn-primary btn-sm"
         @click="handleShowInstructions"
       >
         How to Install
@@ -65,7 +65,7 @@ function handleShowInstructions() {
 
       <!-- Dismiss -->
       <button
-        class="text-sm text-brand-500 hover:text-brand-700 transition-colors"
+        class="text-sm text-primary hover:opacity-70 transition-opacity"
         @click="dismiss"
       >
         Not now

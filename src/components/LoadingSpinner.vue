@@ -10,7 +10,7 @@ defineProps<{
 </script>
 
 <template>
-  <div class="text-center py-12 text-gray-400 dark:text-zinc-500" role="status" aria-live="polite">
+  <div class="text-center py-12 text-base-content/50" role="status" aria-live="polite">
     {{ message ?? 'Loading...' }}
   </div>
 </template>

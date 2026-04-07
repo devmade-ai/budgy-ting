@@ -2,6 +2,29 @@
 
 <!-- Changelog and record of completed work. Organized by date. -->
 
+## 2026-04-07
+
+- **DaisyUI v5 Migration — Full theme system replacement:**
+
+  **Infrastructure:**
+  - Installed `daisyui@5.5.19` as dev dependency
+  - `src/index.css`: Replaced custom `:root`/`.dark` CSS variable palette with `@plugin "daisyui"`. Removed custom `@layer components` (`.btn-primary`, `.btn-secondary`, `.btn-danger`, `.input-field`, `.card`, `.page-title`, `.tag-pill`). Overrode primary color to brand green (#10b981) via oklch. Kept `@theme` for brand color scale. Updated `@custom-variant dark` to target `[data-theme="dark"]`.
+  - `src/composables/useDarkMode.ts`: Switched from `.dark` class toggle to `data-theme` attribute (`setAttribute('data-theme', 'dark'|'light')`) for DaisyUI theme switching.
+  - `index.html`: Updated flash prevention script from `classList.add('dark')` to `setAttribute('data-theme', ...)`.
+
+  **Component Migration (30+ files):**
+  - Replaced all hardcoded color classes (`bg-white`, `bg-gray-*`, `text-gray-*`, `border-gray-*`, `bg-zinc-*`, `text-zinc-*`, `border-zinc-*`) with DaisyUI semantic tokens (`bg-base-100`, `bg-base-200`, `text-base-content`, `border-base-300`, etc.)
+  - Replaced all `dark:` prefixed color pairs with single DaisyUI token (e.g. `text-gray-900 dark:text-zinc-100` → `text-base-content`)
+  - Replaced semantic color pairs: `text-red-600 dark:text-red-400` → `text-error`, `text-green-600 dark:text-green-400` → `text-success`, `text-amber-*` → `text-warning`
+  - Replaced custom button classes: `btn-primary` → `btn btn-primary`, `btn-secondary` → `btn btn-ghost`, `btn-danger` → `btn btn-error`
+  - Replaced `input-field` → `input input-bordered` for inputs, `select select-bordered` for selects
+  - Replaced `tag-pill` → `badge badge-ghost text-xs`
+  - Replaced `page-title` → `text-2xl font-bold text-base-content`
+  - Replaced `card` → inline `bg-base-100 rounded-xl border border-base-300 p-4 shadow-sm`
+  - DebugPill intentionally NOT migrated (hardcoded dark theme by design — alpha-only)
+
+  **Files Changed:** index.css, index.html, useDarkMode.ts, package.json, AppLayout.vue, BurgerMenu.vue, ConfirmDialog.vue, ErrorBoundary.vue, ErrorAlert.vue, EmptyState.vue, BottomSheet.vue, HelpDrawer.vue, MetricCard.vue, SkeletonLoader.vue, DateInput.vue, InstallPrompt.vue, InstallInstructionsModal.vue, TutorialModal.vue, ToastNotification.vue, WorkspaceForm.vue, TransactionEditModal.vue, TransactionTable.vue, CashflowGraph.vue, ClassificationBadge.vue, LoadingSpinner.vue, TagSuggestions.vue, WorkspaceListView.vue, WorkspaceDetailView.vue, WorkspaceDashboard.vue, WorkspaceCreateView.vue, WorkspaceEditView.vue, ImportStepUpload.vue, ImportStepReview.vue, NewImportWizard.vue
+
 ## 2026-03-30
 
 - **Burger Menu Hardening — Extracted BurgerMenu.vue (glow-props sync):**
