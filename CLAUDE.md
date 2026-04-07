@@ -342,16 +342,16 @@ https://github.com/devmade-ai/glow-props/tree/main/docs/implementations
 
 | Pattern | Source file |
 |---------|-----------|
-| PWA System | `docs/implementations/PWA_SYSTEM.md` |
-| Debug System | `docs/implementations/DEBUG_SYSTEM.md` |
-| App Icons | `docs/implementations/APP_ICONS.md` |
-| Download as PDF | `docs/implementations/DOWNLOAD_PDF.md` |
-| Burger Menu | `docs/implementations/BURGER_MENU.md` |
-| Theme & Dark Mode | `docs/implementations/THEME_DARK_MODE.md` |
-| Event Bus | `docs/implementations/EVENT_BUS.md` |
-| HTTPS Proxy | `docs/implementations/HTTPS_PROXY.md` |
+| PWA System | [`PWA_SYSTEM.md`](https://github.com/devmade-ai/glow-props/blob/main/docs/implementations/PWA_SYSTEM.md) |
+| Debug System | [`DEBUG_SYSTEM.md`](https://github.com/devmade-ai/glow-props/blob/main/docs/implementations/DEBUG_SYSTEM.md) |
+| App Icons | [`APP_ICONS.md`](https://github.com/devmade-ai/glow-props/blob/main/docs/implementations/APP_ICONS.md) |
+| Download as PDF | [`DOWNLOAD_PDF.md`](https://github.com/devmade-ai/glow-props/blob/main/docs/implementations/DOWNLOAD_PDF.md) |
+| Burger Menu | [`BURGER_MENU.md`](https://github.com/devmade-ai/glow-props/blob/main/docs/implementations/BURGER_MENU.md) |
+| Theme & Dark Mode | [`THEME_DARK_MODE.md`](https://github.com/devmade-ai/glow-props/blob/main/docs/implementations/THEME_DARK_MODE.md) |
+| Event Bus | [`EVENT_BUS.md`](https://github.com/devmade-ai/glow-props/blob/main/docs/implementations/EVENT_BUS.md) |
+| HTTPS Proxy | [`HTTPS_PROXY.md`](https://github.com/devmade-ai/glow-props/blob/main/docs/implementations/HTTPS_PROXY.md) |
 
-**Never copy patterns into this file.** Fetch from source each time — patterns are actively maintained and improved upstream. Stale local copies cause drift. Adapt React examples to Vue 3 Composition API when porting.
+**There are no local copies of these patterns. Never create a `docs/implementations/` directory.** Fetch from source each time — patterns are actively maintained and improved upstream. Stale local copies cause drift. Adapt React examples to Vue 3 Composition API when porting.
 
 To fetch a specific pattern:
 ```bash
@@ -372,6 +372,7 @@ Never:
 - Remove features during "cleanup" without checking if they're documented as intentional (see AI_MISTAKES.md)
 - Proceed with assumptions when a single clarifying question would prevent a wrong commit
 - Use interactive input prompts or selection UIs — list options as numbered text instead
+- Create local copies of implementation patterns (no `docs/implementations/` directory) — always fetch from upstream glow-props repo at runtime
 
 ### REMINDER: READ AND FOLLOW THE FUCKING PROHIBITIONS EVERY TIME
 
