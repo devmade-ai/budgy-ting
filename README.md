@@ -1,4 +1,4 @@
-# budgy-ting
+# Farlume
 
 A local-first progressive web app for tracking household cashflow. Create workspaces, import bank statements, detect recurring spending patterns, and forecast your cashflow with statistical models.
 

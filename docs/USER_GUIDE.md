@@ -1,12 +1,12 @@
 # User Guide
 
-Everything you need to know about using budgy-ting to track and forecast your spending.
+Everything you need to know about using Farlume to track and forecast your spending.
 
 ---
 
 ## Getting Started
 
-budgy-ting is a cashflow tracking tool that runs entirely on your device. No accounts, no cloud, no sign-ups. Your data stays in your browser and never leaves your device.
+Farlume is a cashflow tracking tool that runs entirely on your device. No accounts, no cloud, no sign-ups. Your data stays in your browser and never leaves your device.
 
 When you first open the app, a **Demo Household** workspace is created automatically with realistic sample data — salary, rent, groceries, and more. This lets you explore all the features before creating your own workspace.
 
@@ -134,7 +134,7 @@ When ready, click **Import transactions** to save. You'll be redirected back to 
 
 ### Installing the App
 
-budgy-ting is a Progressive Web App (PWA) — you can install it on your phone or computer for quick access. When the install banner appears, click **Install**. On Safari or Firefox, click **How to Install** for instructions.
+Farlume is a Progressive Web App (PWA) — you can install it on your phone or computer for quick access. When the install banner appears, click **Install**. On Safari or Firefox, click **How to Install** for instructions.
 
 ### App Updates
 
@@ -146,7 +146,7 @@ After your first visit, the app works fully offline. A green notification confir
 
 ### Navigation
 
-- Click **budgy-ting** in the header to go back to the home screen from anywhere
+- Click **Farlume** in the header to go back to the home screen from anywhere
 - On workspace pages, click **Workspaces** in the breadcrumb to return to the workspace list
 
 ### Help Menu

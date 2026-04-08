@@ -118,7 +118,7 @@ export function generateReport(): string {
   })
 
   return [
-    '=== budgy-ting Debug Report ===',
+    '=== Farlume Debug Report ===',
     '',
     '--- Environment ---',
     ...env,

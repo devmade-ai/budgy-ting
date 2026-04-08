@@ -19,8 +19,8 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
       },
       manifest: {
-        name: 'budgy-ting',
-        short_name: 'budgy-ting',
+        name: 'Farlume',
+        short_name: 'Farlume',
         description: 'Plan and track expenses against budgets',
         // Requirement: Stable identity for Chrome PWA install system.
         // Approach: Explicit id so Chrome doesn't derive it from start_url
@@ -37,7 +37,7 @@ export default defineConfig({
         prefer_related_applications: false,
         // Requirement: Register as PWA share target for CSV/JSON files
         // Approach: share_target in manifest lets users share files directly
-        //   to budgy-ting from their phone's file manager or banking app
+        //   to Farlume from their phone's file manager or banking app
         share_target: {
           action: '/',
           method: 'POST',

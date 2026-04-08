@@ -37,7 +37,7 @@ const instructions = computed<{ title: string; steps: InstructionStep[] }>(() =>
           { step: 1, text: 'Tap the Share button at the bottom of the screen', icon: Share },
           { step: 2, text: 'Scroll down and tap "Add to Home Screen"', icon: PlusSquare },
           { step: 3, text: 'Tap "Add" in the top right corner', icon: Check },
-          { step: 4, text: 'budgy-ting will appear on your home screen' },
+          { step: 4, text: 'Farlume will appear on your home screen' },
         ],
       }
 
@@ -47,7 +47,7 @@ const instructions = computed<{ title: string; steps: InstructionStep[] }>(() =>
         steps: [
           { step: 1, text: 'Click "File" in the menu bar at the top', icon: Menu },
           { step: 2, text: 'Click "Add to Dock"', icon: PlusSquare },
-          { step: 3, text: 'budgy-ting will appear in your Dock' },
+          { step: 3, text: 'Farlume will appear in your Dock' },
         ],
       }
 
@@ -58,7 +58,7 @@ const instructions = computed<{ title: string; steps: InstructionStep[] }>(() =>
           { step: 1, text: 'Tap the three-dot menu at the top right', icon: MoreVertical },
           { step: 2, text: 'Tap "Install"', icon: Download },
           { step: 3, text: 'Confirm by tapping "Install" again' },
-          { step: 4, text: 'budgy-ting will appear on your home screen' },
+          { step: 4, text: 'Farlume will appear on your home screen' },
         ],
       }
 
@@ -74,7 +74,7 @@ const instructions = computed<{ title: string; steps: InstructionStep[] }>(() =>
 
     default:
       return {
-        title: 'Install budgy-ting',
+        title: 'Install Farlume',
         steps: [
           { step: 1, text: 'Look for an install option in your browser\'s menu.' },
           { step: 2, text: 'If you don\'t see one, try opening this page in Chrome or Safari.' },

@@ -1,8 +1,8 @@
-# budgy-ting
+# Farlume
 
 ## Product Definition
 
-budgy-ting is a local-first progressive web app for planning and tracking household cashflow. Users create workspaces for different spending plans, capture once-off or recurring income and expense lines, import actual spend data from CSV or JSON files, and compare projected versus actual spend with automated matching and visual reporting.
+Farlume is a local-first progressive web app for planning and tracking household cashflow. Users create workspaces for different spending plans, capture once-off or recurring income and expense lines, import actual spend data from CSV or JSON files, and compare projected versus actual spend with automated matching and visual reporting.
 
 All data lives on-device using IndexedDB. No authentication, no server. Exportable as JSON for backup or re-import.
 
@@ -184,7 +184,7 @@ This is a multi-step wizard:
    - All expense lines
    - All imported actuals with their match assignments
    - Comparison snapshot (calculated, included for convenience)
-3. File downloads with naming convention: `budgy-ting-{workspace-name}-{date}.json`
+3. File downloads with naming convention: `farlume-{workspace-name}-{date}.json`
 
 **Re-import:** Export format is backward-compatible. Import validates schema version, handles v1→v2 field mapping (budget→workspace, category→tags), and supports replace mode for existing workspaces.
 

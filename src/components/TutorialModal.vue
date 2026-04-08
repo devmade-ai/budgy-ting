@@ -28,7 +28,7 @@ interface TutorialStep {
 const steps: TutorialStep[] = [
   {
     icon: HandHeart,
-    title: 'Welcome to budgy-ting',
+    title: 'Welcome to Farlume',
     description: 'A simple tool to track your spending and forecast your cashflow. Everything stays on your device — no accounts, no cloud.',
   },
   {

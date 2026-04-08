@@ -1,6 +1,6 @@
 # Testing Guide
 
-Manual test scenarios for verifying budgy-ting works correctly. Run through these after making changes.
+Manual test scenarios for verifying Farlume works correctly. Run through these after making changes.
 
 ---
 
@@ -342,7 +342,7 @@ Run through this checklist after any change to verify nothing is broken:
 #### 4.1 Home Navigation
 
 **Steps:**
-1. From any workspace detail page, click **budgy-ting** in the header
+1. From any workspace detail page, click **Farlume** in the header
 
 **Expected:** Navigated to home screen with workspace list
 
@@ -437,7 +437,7 @@ Run through this checklist after any change to verify nothing is broken:
 1. Open app in Chromium browser for first time (or clear site data)
 
 **Expected:**
-- Install banner appears: "Install budgy-ting for quick access"
+- Install banner appears: "Install Farlume for quick access"
 - "Install" button triggers browser install dialog
 - "Not now" dismisses the banner
 

@@ -9,8 +9,8 @@
 import { ref } from 'vue'
 import { safeGetItem, safeSetItem } from './useSafeStorage'
 
-// Namespace all localStorage keys with 'budgy-ting:' prefix (colon separator)
-const STORAGE_KEY = 'budgy-ting:tutorial-dismissed'
+// Namespace all localStorage keys with 'farlume:' prefix (colon separator)
+const STORAGE_KEY = 'farlume:tutorial-dismissed'
 
 /** Module-level shared state (same pattern as usePWAInstall) */
 const showTutorial = ref(false)

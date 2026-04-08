@@ -1,5 +1,5 @@
 /**
- * Core data models for budgy-ting.
+ * Core data models for Farlume.
  * All dates stored as ISO strings (YYYY-MM-DD) without timezone.
  *
  * Requirement: Pivot from budget-first to actuals-first paradigm. "Expense" becomes

@@ -12,8 +12,8 @@
 import { ref } from 'vue'
 import { safeGetItem, safeSetItem } from './useSafeStorage'
 
-const VISIT_COUNT_KEY = 'budgy-ting:visit-count'
-const REMINDER_DISMISSED_KEY = 'budgy-ting:install-reminder-dismissed'
+const VISIT_COUNT_KEY = 'farlume:visit-count'
+const REMINDER_DISMISSED_KEY = 'farlume:install-reminder-dismissed'
 
 /** Minimum visits before showing the install reminder */
 const MIN_VISITS_FOR_REMINDER = 3
