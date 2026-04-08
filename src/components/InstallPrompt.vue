@@ -40,7 +40,7 @@ function handleShowInstructions() {
     <div class="flex items-center gap-2 min-w-0">
       <Smartphone :size="16" class="text-brand-600 shrink-0" />
       <span class="text-sm text-brand-800 dark:text-brand-200 truncate">
-        Install budgy-ting for quick access
+        Install Farlume for quick access
       </span>
     </div>
 

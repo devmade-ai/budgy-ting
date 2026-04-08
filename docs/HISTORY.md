@@ -637,7 +637,7 @@
   - Added pagination (50 per page) to import Step 3 — prevents DOM overload with large files
   - Created reusable `ErrorAlert.vue`, `LoadingSpinner.vue`, `EmptyState.vue` components
   - Created `useDialogA11y.ts` composable for shared modal accessibility logic
-  - Fixed localStorage key naming inconsistency (tutorial now uses `budgy-ting:` prefix like PWA install)
+  - Fixed localStorage key naming inconsistency (tutorial now uses `farlume:` prefix like PWA install)
   - Clarified app-lifetime interval in usePWAUpdate is intentional (not a memory leak)
 
 - **Completed TODO items moved here:**

@@ -1,5 +1,5 @@
 /**
- * Dexie.js database setup for budgy-ting.
+ * Dexie.js database setup for Farlume.
  *
  * Requirement: Local-first IndexedDB storage with typed schema
  * Approach: Dexie v4 with typed tables matching the data model
@@ -19,7 +19,7 @@ import type {
 } from '@/types/models'
 import { debugLog } from '@/debug/debugLog'
 
-const db = new Dexie('budgy-ting') as Dexie & {
+const db = new Dexie('farlume') as Dexie & {
   workspaces: EntityTable<Workspace, 'id'>
   transactions: EntityTable<Transaction, 'id'>
   patterns: EntityTable<RecurringPattern, 'id'>

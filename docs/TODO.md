@@ -21,7 +21,7 @@
 
 ## Technical — Icon Generation (glow-props sync)
 
-- [ ] Generate dedicated 1024x1024 maskable icon with proper safe-zone padding — glow-props recommends separate large maskable icon; budgy-ting only has 512x512 for maskable purpose
+- [ ] Generate dedicated 1024x1024 maskable icon with proper safe-zone padding — glow-props recommends separate large maskable icon; Farlume only has 512x512 for maskable purpose
 
 ## Technical
 

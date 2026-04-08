@@ -53,7 +53,7 @@ export function downloadJSON(data: ExportSchema, workspaceName: string): void {
 
   const dateStr = new Date().toISOString().slice(0, 10)
   const safeName = workspaceName.replace(/[^a-zA-Z0-9-_ ]/g, '').replace(/\s+/g, '-').toLowerCase()
-  const filename = `budgy-ting-${safeName}-${dateStr}.json`
+  const filename = `farlume-${safeName}-${dateStr}.json`
 
   const a = document.createElement('a')
   a.href = url

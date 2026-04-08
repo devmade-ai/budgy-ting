@@ -200,7 +200,7 @@ const { showInstallReminder, checkInstallReminder, dismissInstallReminder } = us
     >
       <div class="flex items-center gap-2 text-brand-700 dark:text-brand-300">
         <Smartphone :size="18" />
-        <span>Add budgy-ting to your home screen for quick access</span>
+        <span>Add Farlume to your home screen for quick access</span>
       </div>
       <button
         class="text-brand-400 dark:text-brand-500 hover:text-brand-600 text-xs ml-2 whitespace-nowrap"

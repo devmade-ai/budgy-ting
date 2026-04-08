@@ -1,6 +1,6 @@
 # Import File Format
 
-How to prepare a file for importing actual spending into budgy-ting.
+How to prepare a file for importing actual spending into Farlume.
 
 ---
 

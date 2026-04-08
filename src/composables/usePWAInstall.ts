@@ -61,7 +61,7 @@ function isStandalone(): boolean {
 
 // ── Analytics ──
 
-const ANALYTICS_KEY = 'budgy-ting:install-analytics'
+const ANALYTICS_KEY = 'farlume:install-analytics'
 const MAX_EVENTS = 50
 
 export type InstallAnalyticsEvent =
@@ -94,7 +94,7 @@ function trackEvent(event: InstallAnalyticsEvent, browser: BrowserType) {
 
 // ── Dismiss persistence ──
 
-const DISMISS_KEY = 'budgy-ting:install-dismissed'
+const DISMISS_KEY = 'farlume:install-dismissed'
 
 function isDismissed(): boolean {
   return safeGetItem(DISMISS_KEY) === 'true'

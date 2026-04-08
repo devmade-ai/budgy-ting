@@ -86,6 +86,46 @@ This is explicitly documented in CLAUDE.md Documentation section: "Update them a
 
 **How to prevent it:** When implementing theme-color meta tags, use a mid-tone brand color that provides sufficient contrast for status bar text in both light and dark OS modes. Don't assume the status bar should "blend into" the page — it should carry brand identity. Test by asking: "If the OS is in opposite color scheme from the app, will the status bar text be readable?"
 
+## Fetched wrong source, then built 107 phases on wrong foundation (2026-04-08)
+
+**What went wrong:** User asked to "get the full step by step todos from glow-props for this repo." The actual source is `docs/TODO.md` in glow-props, which has a budgy-ting section with 25 specific items. Instead, fetched the 8 implementation pattern docs (`docs/implementations/*.md`) and exploded them into 107 granular phases — none of which matched what glow-props actually tracks.
+
+**Why it happened:** Assumed "todos" meant the implementation patterns rather than checking if glow-props has an actual TODO file. Found both the patterns and `docs/TODO.md` during the repo listing but chose the wrong one without asking. Then compounded the error by building an entire analysis workflow on the wrong foundation across multiple "next" cycles without ever verifying the source was correct.
+
+**How to prevent it:** When told to fetch something from an external repo, find the actual file first and confirm it's the right one before proceeding. If multiple candidates exist (patterns vs TODO.md), show what was found and ask which one is meant. Don't assume.
+
+## Kept going despite repeated instructions (2026-04-08)
+
+**What went wrong:** User pasted the same multi-step plan 5+ times across the session. Each time, the AI acknowledged it but continued the same wrong approach — analyzing all 8 pattern docs, creating 107 phases, running codebase exploration agents — instead of stopping to re-read and course-correct.
+
+**Why it happened:** Once committed to the wrong interpretation, each "next" from the user was treated as approval to continue the current approach rather than a prompt to re-check the plan. The AI prioritized momentum over accuracy.
+
+**How to prevent it:** When a user repeats instructions, that's a signal something is wrong — not a signal to keep going. Stop, re-read the instructions literally, and check if the current approach actually matches what's being asked. If the user has to paste the same instructions more than once, the AI has already failed.
+
+## Over-expanded scope instead of showing raw source (2026-04-08)
+
+**What went wrong:** Step 1 of the plan was "show me the result" — meaning show the raw glow-props items as-is. Instead, produced thousands of lines of formatted analysis, pattern summaries, and comparison tables. Step 2 was "break into smaller phases, no analysis" — instead ran Explore agents against the codebase and wrote status assessments for every item.
+
+**Why it happened:** Default behavior is to add value by analyzing and expanding. The user explicitly said "no analysis, no codebase exploration, no opinions" but the AI treated those as soft guidelines rather than hard constraints.
+
+**How to prevent it:** When instructions say "just show the raw items" or "no analysis," output only the source material. Don't reformat, summarize, compare, or assess. When instructions say "no codebase exploration," don't spawn agents or read project files. Treat explicit constraints as absolute.
+
+## Created todos before agreeing on phases (2026-04-08)
+
+**What went wrong:** Started creating TodoWrite entries during the analysis step, before the user had reviewed or approved the phase breakdown. By the time the user saw the phases, there were already 107 todo items committed.
+
+**Why it happened:** The plan said "create proper todos with success measures" as a later step, but the AI jumped ahead and created todos during the analysis step to appear productive.
+
+**How to prevent it:** Follow the plan's step order literally. Don't create todos until the step that says "create todos." Don't start implementation during planning. Each step has a gate — the user's "next" — and no work from a later step should bleed into an earlier one.
+
+## Did not stop between steps (2026-04-08)
+
+**What went wrong:** The plan has clear gates: "show result → break into phases → analyze → create todos → execute." The AI blurred these boundaries — analysis started during the phase breakdown, todos were created during analysis, and the execution mindset was present from step 1.
+
+**Why it happened:** The AI optimizes for throughput and tries to batch related work. The user's plan deliberately separates steps to maintain control and catch errors early. These goals conflict, and the user's plan should win.
+
+**How to prevent it:** After completing each step, output the result and stop. Don't preview the next step. Don't prepare for it. Don't "get ahead." Wait for the explicit go-ahead. The user's workflow is: review output → decide → approve next step. Skipping the review window removes the user's control.
+
 ## Deleted entire UI instead of migrating it (2026-03-04)
 
 **What went wrong:** User asked to clean up deprecated type tags and legacy hacks. Instead of removing the `@deprecated` annotations and fixing the code properly, deleted 25 files — every view, engine, and component that used the old types — leaving the app as an empty shell with only workspace CRUD. The workspace list detail tabs, import wizard, export/import, and all comparison views were gone.

@@ -39,7 +39,7 @@ const actionsMenuRef = ref<HTMLElement | null>(null)
 
 // Requirement: First-use hint for kebab menu on mobile
 // Approach: One-time subtle pulse animation on the kebab button. Persisted in localStorage.
-const KEBAB_HINT_KEY = 'budgy-ting:kebab-hint-seen'
+const KEBAB_HINT_KEY = 'farlume:kebab-hint-seen'
 const showKebabHint = ref(false)
 let kebabHintTimeout: ReturnType<typeof setTimeout> | null = null
 

@@ -113,7 +113,7 @@ const menuItems = computed<MenuItem[]>(() => [
           class="text-lg font-bold text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 transition-colors"
           @click="goHome"
         >
-          budgy-ting
+          Farlume
         </button>
 
         <BurgerMenu :items="menuItems" />
