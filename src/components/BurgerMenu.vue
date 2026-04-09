@@ -186,7 +186,7 @@ watch(open, (isOpen) => {
         <ul class="list-none m-0 p-0">
           <template v-for="(item, i) in visibleItems" :key="item.label">
             <li v-if="item.separator && i > 0" role="separator">
-              <div class="border-t border-base-200 my-1" />
+              <div class="divider my-0 h-0" />
             </li>
             <li>
               <button

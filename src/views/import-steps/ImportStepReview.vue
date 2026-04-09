@@ -440,13 +440,12 @@ function handleImport() {
             <span v-else-if="!embeddingLoading && !embeddingError">Ready</span>
             <span v-else-if="embeddingProgress > 0">{{ Math.round(embeddingProgress) }}%</span>
           </div>
-          <div class="h-1.5 bg-base-200 rounded-full overflow-hidden">
-            <div
-              class="h-full rounded-full transition-all duration-300"
-              :class="embeddingError ? 'bg-warning' : 'bg-primary'"
-              :style="{ width: embeddingError ? '100%' : embeddingLoading ? `${Math.max(5, embeddingProgress)}%` : '100%' }"
-            />
-          </div>
+          <progress
+            class="progress h-1.5 w-full"
+            :class="embeddingError ? 'progress-warning' : 'progress-primary'"
+            :value="embeddingError ? 100 : embeddingLoading ? Math.max(5, embeddingProgress) : 100"
+            max="100"
+          />
         </div>
 
         <!-- Tag suggestion model -->
@@ -457,13 +456,12 @@ function handleImport() {
             <span v-else-if="!tagModelLoading && !tagModelError">Ready</span>
             <span v-else-if="tagModelProgress > 0">{{ Math.round(tagModelProgress) }}%</span>
           </div>
-          <div class="h-1.5 bg-base-200 rounded-full overflow-hidden">
-            <div
-              class="h-full rounded-full transition-all duration-300"
-              :class="tagModelError ? 'bg-warning' : 'bg-primary'"
-              :style="{ width: tagModelError ? '100%' : tagModelLoading ? `${Math.max(5, tagModelProgress)}%` : '100%' }"
-            />
-          </div>
+          <progress
+            class="progress h-1.5 w-full"
+            :class="tagModelError ? 'progress-warning' : 'progress-primary'"
+            :value="tagModelError ? 100 : tagModelLoading ? Math.max(5, tagModelProgress) : 100"
+            max="100"
+          />
         </div>
 
         <p class="text-xs text-base-content/40 text-center">

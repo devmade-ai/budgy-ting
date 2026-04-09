@@ -216,7 +216,7 @@ const menuActions: Array<{ label: string; icon: Component; action: () => void }>
                 <component :is="item.icon" :size="16" class="text-base-content/40" aria-hidden="true" />
                 {{ item.label }}
               </button>
-              <div class="border-t border-base-200 my-1" role="separator" />
+              <div class="divider my-0 h-0" role="separator" />
               <button
                 class="w-full text-left px-4 py-2 text-sm text-error hover:bg-error/10 flex items-center gap-2"
                 role="menuitem"
@@ -247,7 +247,7 @@ const menuActions: Array<{ label: string; icon: Component; action: () => void }>
           <component :is="item.icon" :size="18" class="text-base-content/40" aria-hidden="true" />
           {{ item.label }}
         </button>
-        <div class="border-t border-base-200 my-1" />
+        <div class="divider my-0 h-0" />
         <button
           class="w-full text-left px-3 py-3 text-sm text-error hover:bg-error/10 rounded-lg flex items-center gap-3"
           @click="confirmDelete"

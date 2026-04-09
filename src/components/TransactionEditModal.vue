@@ -18,7 +18,7 @@ import { useTagInput } from '@/composables/useTagInput'
 import { isIncome } from '@/types/models'
 import { useDialogA11y } from '@/composables/useDialogA11y'
 import TagSuggestions from '@/components/TagSuggestions.vue'
-import { X, Loader2 } from 'lucide-vue-next'
+import { X } from 'lucide-vue-next'
 import type { TagSuggestion } from '@/ml/types'
 import type { Transaction, TransactionClassification } from '@/types/models'
 
@@ -129,10 +129,10 @@ function acceptAllSuggestions() {
 
 <template>
   <Teleport to="body">
-    <div class="fixed inset-0 z-[60] flex items-center justify-center p-4">
+    <div class="modal modal-open z-[60]">
       <!-- Backdrop -->
       <div
-        class="absolute inset-0 bg-black/40"
+        class="modal-backdrop"
         aria-hidden="true"
         @click="emit('close')"
       />
@@ -143,7 +143,7 @@ function acceptAllSuggestions() {
         role="dialog"
         :aria-label="editing ? 'Edit transaction' : 'Transaction details'"
         aria-modal="true"
-        class="relative bg-base-100 rounded-xl shadow-xl max-w-md w-full p-4 sm:p-5 max-w-[calc(100%-1rem)] sm:max-w-md max-h-[90vh] overflow-y-auto"
+        class="modal-box max-w-md max-h-[90vh] p-4 sm:p-5"
       >
         <!-- Close button -->
         <!-- Mobile UX: 40x40px touch target for close button (was 18px icon with no padding) -->
@@ -340,7 +340,7 @@ function acceptAllSuggestions() {
                 @accept-all="acceptAllSuggestions"
               />
               <div v-if="suggestionsLoading" class="flex items-center gap-1 mt-1 text-xs text-base-content/40">
-                <Loader2 :size="12" class="animate-spin" />
+                <span class="loading loading-spinner loading-xs" />
                 Suggesting tags...
               </div>
 

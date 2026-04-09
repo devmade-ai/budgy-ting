@@ -212,21 +212,17 @@ const hasData = computed(() => actualPoints.value.length > 0 || props.forecastPo
   <div class="mb-6">
     <!-- Chart controls — hidden in print (interactive toggles, no value on paper) -->
     <div class="flex flex-wrap items-center gap-2 mb-4 no-print">
-      <div class="flex gap-1">
+      <div class="join">
         <button
-          class="btn text-xs px-3 py-1.5 rounded"
-          :class="chartMode === 'cumulative'
-            ? 'bg-primary/10 text-primary border border-primary/30'
-            : 'bg-base-200 text-base-content/70 border border-base-300'"
+          class="join-item btn btn-sm"
+          :class="chartMode === 'cumulative' ? 'btn-active' : ''"
           @click="chartMode = 'cumulative'"
         >
           Cumulative
         </button>
         <button
-          class="btn text-xs px-3 py-1.5 rounded"
-          :class="chartMode === 'daily'
-            ? 'bg-primary/10 text-primary border border-primary/30'
-            : 'bg-base-200 text-base-content/70 border border-base-300'"
+          class="join-item btn btn-sm"
+          :class="chartMode === 'daily' ? 'btn-active' : ''"
           @click="chartMode = 'daily'"
         >
           Daily net

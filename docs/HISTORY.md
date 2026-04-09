@@ -25,6 +25,16 @@
   - Fixed ImportStepReview duplicated classes (`w-full w-48`, `text-base text-xs`)
   - Updated print CSS: broadened `.card` selector to `.card, .rounded-xl` for card-like containers
 
+- **DaisyUI component adoption — replace custom patterns with DaisyUI utilities:**
+  - `steps` — NewImportWizard: replaced 25-line custom circle + connecting line step indicator
+  - `skeleton` — SkeletonLoader: replaced `animate-pulse` + `bg-base-300` boxes with DaisyUI skeleton class
+  - `join` + `join-item` — CashflowGraph, WorkspaceForm: replaced custom toggle button groups with conditional class overrides
+  - `divider` — BurgerMenu, WorkspaceDetailView, WorkspaceListView, InstallInstructionsModal: replaced `border-t border-base-*` separators
+  - `progress` — WorkspaceListView (pull-to-refresh), ImportStepReview (ML model loading): replaced custom progress bar divs
+  - `modal` + `modal-box` — ConfirmDialog, TutorialModal, InstallInstructionsModal, TransactionEditModal: replaced `fixed inset-0 z-[60]` + manual backdrop + positioning with DaisyUI modal/modal-box/modal-backdrop
+  - `loading loading-spinner` — TransactionEditModal: replaced Lucide Loader2 + animate-spin, removed unused Loader2 import
+  - HelpDrawer drawer: Skipped — DaisyUI drawer is for page-level sidebars, not modal overlay panels with custom animation timing
+
 
 
 - **PWA install detection — full pattern sync (glow-props PWA_SYSTEM sync):**

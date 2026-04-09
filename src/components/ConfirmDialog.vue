@@ -26,10 +26,10 @@ useDialogA11y(dialogRef, () => emit('cancel'))
 
 <template>
   <Teleport to="body">
-    <div class="fixed inset-0 z-[60] flex items-center justify-center p-4">
+    <div class="modal modal-open z-[60]">
       <!-- Backdrop -->
       <div
-        class="absolute inset-0 bg-black/40"
+        class="modal-backdrop"
         aria-hidden="true"
         @click="emit('cancel')"
       />
@@ -40,7 +40,7 @@ useDialogA11y(dialogRef, () => emit('cancel'))
         role="alertdialog"
         :aria-label="title"
         aria-modal="true"
-        class="relative bg-base-100 rounded-xl shadow-xl max-w-sm w-full max-w-[calc(100%-2rem)] p-6"
+        class="modal-box max-w-sm"
       >
         <h3 class="text-lg font-semibold text-base-content mb-2">{{ title }}</h3>
         <p class="text-sm text-base-content/70 mb-6">{{ message }}</p>

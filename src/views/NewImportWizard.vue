@@ -350,36 +350,19 @@ function goBack() {
     <LoadingSpinner v-if="loading" />
 
     <template v-else-if="workspace">
-      <!-- Step indicator — 2 steps: Upload → Review
+      <!-- Step indicator — DaisyUI steps component
            Requirement: Step numbers + text labels for non-technical users
-           Approach: Circle + label below each step, connected by line -->
-      <div class="flex items-start gap-2 mb-6">
-        <template v-for="s in [1, 2]" :key="s">
-          <div class="flex flex-col items-center min-w-0">
-            <div
-              class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium"
-              :class="s === step
-                ? 'bg-primary text-primary-content'
-                : s < step
-                  ? 'bg-primary/15 text-primary'
-                  : 'bg-base-200 text-base-content/40'"
-            >
-              {{ s < step ? '✓' : s }}
-            </div>
-            <span
-              class="text-xs mt-1"
-              :class="s === step ? 'text-primary font-medium' : 'text-base-content/40'"
-            >
-              {{ stepLabels[s - 1] }}
-            </span>
-          </div>
-          <div
-            v-if="s < 2"
-            class="flex-1 h-0.5 mt-4"
-            :class="s < step ? 'bg-primary/40' : 'bg-base-300'"
-          />
-        </template>
-      </div>
+           Approach: DaisyUI `steps` with step-primary for completed/active steps -->
+      <ul class="steps steps-horizontal w-full mb-2">
+        <li
+          v-for="(label, i) in stepLabels"
+          :key="i"
+          class="step"
+          :class="{ 'step-primary': i + 1 <= step }"
+        >
+          {{ label }}
+        </li>
+      </ul>
       <p class="text-xs text-base-content/40 mb-4">
         Step {{ step }} of 2
         <span v-if="step === 2 && parsedRows.length > 10">

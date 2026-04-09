@@ -131,9 +131,9 @@ const instructions = computed<InstructionSet>(() => {
 
 <template>
   <Teleport to="body">
-    <div class="fixed inset-0 z-[60] flex items-center justify-center p-4">
+    <div class="modal modal-open z-[60]">
       <!-- Backdrop -->
-      <div class="absolute inset-0 bg-black/40" aria-hidden="true" @click="emit('close')" />
+      <div class="modal-backdrop" aria-hidden="true" @click="emit('close')" />
 
       <!-- Dialog -->
       <div
@@ -141,7 +141,7 @@ const instructions = computed<InstructionSet>(() => {
         role="dialog"
         :aria-label="instructions.title"
         aria-modal="true"
-        class="relative bg-base-100 rounded-xl shadow-xl max-w-sm w-full p-6"
+        class="modal-box max-w-sm"
       >
         <h3 class="text-lg font-semibold text-base-content mb-4">
           {{ instructions.title }}
@@ -174,7 +174,8 @@ const instructions = computed<InstructionSet>(() => {
         </div>
 
         <!-- Benefits — helps non-technical users understand WHY to install -->
-        <div class="border-t border-base-200 pt-3 mt-4">
+        <div class="divider"></div>
+        <div>
           <p class="text-xs text-base-content/60 mb-1.5">Why install?</p>
           <ul class="text-xs text-base-content/40 space-y-1">
             <li class="flex items-center gap-2">

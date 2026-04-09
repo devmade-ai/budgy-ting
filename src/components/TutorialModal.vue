@@ -89,10 +89,10 @@ function goToStep(index: number) {
 
 <template>
   <Teleport to="body">
-    <div class="fixed inset-0 z-[60] flex items-center justify-center p-4">
+    <div class="modal modal-open z-[60]">
       <!-- Backdrop -->
       <div
-        class="absolute inset-0 bg-black/40"
+        class="modal-backdrop"
         aria-hidden="true"
         @click="emit('close')"
       />
@@ -103,7 +103,7 @@ function goToStep(index: number) {
         role="dialog"
         aria-label="How it works"
         aria-modal="true"
-        class="relative bg-base-100 rounded-xl shadow-xl max-w-sm w-full p-6"
+        class="modal-box max-w-sm"
       >
         <!-- Skip/close button -->
         <button

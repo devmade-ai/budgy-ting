@@ -102,23 +102,19 @@ function handleSubmit() {
       <label class="block text-sm font-medium text-base-content/80 mb-2">
         Period
       </label>
-      <div class="flex gap-2">
+      <div class="join w-full">
         <button
           type="button"
-          class="btn flex-1"
-          :class="periodType === 'monthly'
-            ? 'bg-primary/10 text-primary border border-primary/30'
-            : 'bg-base-200 text-base-content/70 border border-base-300 hover:bg-base-300'"
+          class="join-item btn flex-1"
+          :class="periodType === 'monthly' ? 'btn-active' : ''"
           @click="periodType = 'monthly'"
         >
           Monthly
         </button>
         <button
           type="button"
-          class="btn flex-1"
-          :class="periodType === 'custom'
-            ? 'bg-primary/10 text-primary border border-primary/30'
-            : 'bg-base-200 text-base-content/70 border border-base-300 hover:bg-base-300'"
+          class="join-item btn flex-1"
+          :class="periodType === 'custom' ? 'btn-active' : ''"
           @click="periodType = 'custom'"
         >
           Custom dates

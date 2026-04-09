@@ -219,13 +219,12 @@ const { showInstallReminder, checkInstallReminder, dismissInstallReminder } = us
       class="flex flex-col items-center py-2 text-xs transition-all"
       :style="{ height: `${Math.max(pullDistance, refreshing ? 40 : 0)}px` }"
     >
-      <div class="w-8 h-1 bg-base-300 rounded-full overflow-hidden mb-1">
-        <div
-          class="h-full rounded-full transition-colors"
-          :class="canRelease ? 'bg-primary' : 'bg-base-content/30'"
-          :style="{ width: refreshing ? '100%' : `${pullProgress * 100}%` }"
-        />
-      </div>
+      <progress
+        class="progress w-8 h-1 mb-1"
+        :class="canRelease ? 'progress-primary' : ''"
+        :value="refreshing ? 100 : pullProgress * 100"
+        max="100"
+      />
       <span :class="canRelease ? 'text-primary font-medium' : 'text-base-content/40'">
         {{ refreshing ? 'Refreshing...' : canRelease ? 'Release to refresh' : 'Pull to refresh' }}
       </span>
@@ -286,7 +285,8 @@ const { showInstallReminder, checkInstallReminder, dismissInstallReminder } = us
       </div>
 
       <!-- Data management -->
-      <div class="mt-8 pt-6 border-t border-base-300">
+      <div class="divider"></div>
+      <div>
         <button
           class="text-xs text-base-content/40 hover:text-error transition-colors"
           @click="showClearConfirm = true"
