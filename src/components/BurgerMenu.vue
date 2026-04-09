@@ -13,8 +13,9 @@
  * Reference: glow-props docs/implementations/BURGER_MENU.md
  */
 
-import { ref, watch, onMounted, onUnmounted, nextTick, type Component } from 'vue'
+import { ref, watch, onUnmounted, nextTick, type Component } from 'vue'
 import { Menu } from 'lucide-vue-next'
+import { debugLog } from '@/debug/debugLog'
 
 export interface MenuItem {
   label: string
@@ -62,13 +63,19 @@ function toggle() {
 // Close menu first, then execute action after DOM settles.
 // 50ms accounts for any visual transition — keeps the menu visually
 // closed before the action's side effects (modals, route changes) fire.
+// Errors routed to debug system per glow-props BURGER_MENU pattern.
 function handleItem(item: MenuItem) {
   if (item.disabled) return
   close()
   if (actionTimerId) clearTimeout(actionTimerId)
-  actionTimerId = setTimeout(() => {
+  actionTimerId = setTimeout(async () => {
     actionTimerId = null
-    item.action()
+    try {
+      await item.action()
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      debugLog('global', 'error', `Menu action "${item.label}" failed`, { error: msg })
+    }
   }, 50)
 }
 
@@ -111,20 +118,11 @@ function handleMenuKeyDown(e: KeyboardEvent) {
   }
 }
 
-// Outside click — close if click is outside the menu container
-function handleOutsideClick(e: MouseEvent) {
-  const container = triggerRef.value?.parentElement
-  if (open.value && container && !container.contains(e.target as Node)) {
-    close()
-  }
-}
-
-onMounted(() => {
-  document.addEventListener('click', handleOutsideClick)
-})
+// Outside click handled by backdrop @click="close" — no document listener needed.
+// The backdrop covers the full viewport when open (z-40), so all clicks outside
+// the menu dropdown (z-50) hit the backdrop and close the menu.
 
 onUnmounted(() => {
-  document.removeEventListener('click', handleOutsideClick)
   document.removeEventListener('keydown', handleKeyDown)
   if (actionTimerId) clearTimeout(actionTimerId)
 })

@@ -17,8 +17,13 @@
 
 - **Burger Menu — Arrow key navigation + z-index enforcement (glow-props BURGER_MENU sync):**
   - Added ArrowDown/ArrowUp (with wrapping) and Home/End key navigation to BurgerMenu.vue
+  - Arrow key idx=-1 guard: ArrowDown → first item, ArrowUp → last item when no button focused
   - Z-index scale enforced per pattern: modals/drawers z-50 → z-[60] (6 components: BottomSheet, ConfirmDialog, HelpDrawer, InstallInstructionsModal, TransactionEditModal, TutorialModal)
   - Updated CLAUDE.md z-index scale table to match pattern (modals = 60, consolidated base content = 0-10)
+  - Error routing: `handleItem` catches action errors and routes to `debugLog()` (debug pill visibility)
+  - Removed redundant `handleOutsideClick` document listener — backdrop `@click="close"` already handles outside clicks
+  - Timer cleanup: `handleItem` setTimeout tracked and cleared on unmount per AI_MISTAKES.md lesson
+  - Removed unused `onMounted` import
   - Theme UI already implemented (dark/light toggle with Sun/Moon icons in menu)
 
 - **Updated implementation pattern fetch URLs in CLAUDE.md:**
