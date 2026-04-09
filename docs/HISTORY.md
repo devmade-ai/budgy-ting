@@ -4,6 +4,13 @@
 
 ## 2026-04-09
 
+- **App Icons — 400 DPI + dedicated maskable icon (glow-props APP_ICONS sync):**
+  - Increased Sharp density from 150 to 400 DPI for crisper edge anti-aliasing
+  - Added 48x48 favicon PNG to generated sizes
+  - Created dedicated 1024x1024 maskable icon with safe-zone padding (B glyph scaled to 80%, no rounded corners)
+  - Updated manifest: 192/512 = `purpose: "any"`, 1024 maskable = `purpose: "maskable"`
+  - Removed old maskable entry that reused pwa-512x512.png
+
 - **Updated implementation pattern fetch URLs in CLAUDE.md:**
   - Renamed "Suggested Implementations" → "Implementation Patterns (Source of Truth)"
   - Changed all fetch URLs from `glow-props/contents/CLAUDE.md` to `glow-props/contents/docs/implementations/{PATTERN_NAME}.md`

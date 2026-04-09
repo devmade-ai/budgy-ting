@@ -19,10 +19,6 @@
 - [ ] Virtual scrolling for long transaction lists (vue-virtual-scroller) — current pagination filters full array on every change, 10K+ transactions will lag
 - [ ] Keyboard shortcuts for common actions
 
-## Technical — Icon Generation (glow-props sync)
-
-- [ ] Generate dedicated 1024x1024 maskable icon with proper safe-zone padding — glow-props recommends separate large maskable icon; Farlume only has 512x512 for maskable purpose
-
 ## Technical
 
 - [ ] Remove debug system (DebugPill + debugLog) after alpha phase
