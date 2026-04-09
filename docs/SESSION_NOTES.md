@@ -4,7 +4,7 @@
 
 ## Worked on
 
-glow-props pattern sync — CLAUDE.md reference migration, APP_ICONS implementation, BURGER_MENU implementation.
+glow-props pattern sync — CLAUDE.md reference migration, APP_ICONS, BURGER_MENU, DEBUG_SYSTEM.
 
 ## Accomplished
 
@@ -30,15 +30,28 @@ glow-props pattern sync — CLAUDE.md reference migration, APP_ICONS implementat
 - Removed redundant `handleOutsideClick` document listener (backdrop handles it)
 - Timer cleanup: setTimeout tracked + cleared on unmount
 - `visibleItems` → `computed` (was function call in template)
-- Theme UI already done (dark/light toggle with Sun/Moon icons)
+
+**DEBUG_SYSTEM (glow-props sync):**
+- Circular buffer: Array.shift() O(n) → head/count pointer O(1)
+- Console interception: console.error/warn patched at module load with re-entrancy guard
+- PWA Diagnostics tab: 7 health checks (protocol, network, SW, standalone, install prompt, SW state, manifest)
+- Inline styles: all Tailwind replaced in DebugPill.vue (CSS-independent)
+- Pre-framework inline pill: vanilla JS in index.html with error buffer, __debugPushError(), 20s load timeout
+- Error dedup: inline listeners yield to debugLog.ts via __debugLogReady flag
+- Diagnostic indices: hardcoded → label-based findIndex lookup
+- Inline pill: alert() → toggleable DOM error panel
+- URL query param redaction in reports, ClipboardItem Blob fallback
+- DebugSource accepts ad-hoc strings via `(string & {})`
+- main.ts bridges pre-mount errors and clears load timer
 
 ## Current state
 
-All work complete and pushed to `claude/fix-docs-fetch-urls-B2Gel`. Build verified. Zero stale `glow-props CLAUDE.md` references remain. Z-index scale matches pattern.
+All work complete and pushed to `claude/fix-docs-fetch-urls-B2Gel`. Build verified. TypeScript clean. This session addressed CLAUDE.md, APP_ICONS, BURGER_MENU, and DEBUG_SYSTEM items from glow-props pattern gaps.
 
 ## Key context
 
-- glow-props `docs/TODO.md` has a "Per-Repo Pattern Implementation Gaps" section with a budgy-ting subsection — this session addressed CLAUDE.md, APP_ICONS, and BURGER_MENU items
+- glow-props `docs/TODO.md` has a "Per-Repo Pattern Implementation Gaps" section with a budgy-ting subsection — this session addressed 4 of 8 categories
+- Remaining categories not yet addressed: DOWNLOAD_PDF, PWA_SYSTEM, THEME_DARK_MODE, EVENT_BUS
 - The implementation pattern docs (`docs/implementations/*.md`) are reference material, not the todo list
 - User's plan: fetch source → break into phases → analyze one at a time → create todos with success measures → execute one at a time with verification
 - Critical constraints: stop between steps, no unapproved work, no assumptions, ask before deciding
