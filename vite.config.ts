@@ -11,7 +11,7 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'prompt',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png'],
+      includeAssets: ['favicon.ico', 'favicon-48x48.png', 'apple-touch-icon.png'],
       // Requirement: ONNX Runtime WASM files (~22MB) must not be precached by the SW
       // Approach: Exclude .wasm from precache manifest. Transformers.js fetches and caches
       //   these via the browser Cache API at runtime, independent of the SW.

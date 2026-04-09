@@ -10,6 +10,8 @@
   - Created dedicated 1024x1024 maskable icon with safe-zone padding (B glyph scaled to 80%, no rounded corners)
   - Updated manifest: 192/512 = `purpose: "any"`, 1024 maskable = `purpose: "maskable"`
   - Removed old maskable entry that reused pwa-512x512.png
+  - Added 48x48 PNG favicon with `<link rel="icon" type="image/png">` in index.html (modern browsers prefer PNG over ICO)
+  - Added `favicon-48x48.png` to `includeAssets` for offline precaching
   - Build verified: manifest.webmanifest has correct icon entries, all PNGs in dist
 
 - **Updated implementation pattern fetch URLs in CLAUDE.md:**

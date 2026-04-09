@@ -28,6 +28,7 @@ const sizes = [
   { name: 'pwa-512x512.png', size: 512 },
   { name: 'pwa-192x192.png', size: 192 },
   { name: 'apple-touch-icon.png', size: 180 },
+  { name: 'favicon-48x48.png', size: 48 },
 ]
 
 for (const { name, size } of sizes) {
