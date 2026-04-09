@@ -17,6 +17,39 @@
  */
 
 import { createRouter, createWebHistory } from 'vue-router'
+import type { Component } from 'vue'
+
+// Requirement: Prevent ChunkLoadError when deploying new versions.
+// Approach: Wrap lazy imports with a retry that reloads once on 404. During the window
+//   between deploy (old chunks deleted) and SW update (new precache), lazy-loaded routes
+//   can 404. The SW precache covers most cases, but first-time visitors or users without
+//   an active SW hit this window.
+// Alternatives:
+//   - Keep old build artifacts: Rejected — complicates deploy pipeline, GitHub Pages auto-cleans
+//   - No protection: Rejected — 404 on navigation is a hard crash with no recovery
+// Reference: glow-props docs/implementations/PWA_SYSTEM.md (ChunkLoadError Prevention)
+const RETRY_KEY = 'farlume:chunk-retry-refreshed'
+
+function lazyRetry(importFn: () => Promise<{ default: Component }>): () => Promise<{ default: Component }> {
+  return () =>
+    new Promise((resolve, reject) => {
+      const hasRefreshed = sessionStorage.getItem(RETRY_KEY) === 'true'
+      importFn()
+        .then((module) => {
+          // Success — clear retry flag so future failures can retry again
+          sessionStorage.removeItem(RETRY_KEY)
+          resolve(module)
+        })
+        .catch((error: unknown) => {
+          if (!hasRefreshed) {
+            sessionStorage.setItem(RETRY_KEY, 'true')
+            window.location.reload()
+          } else {
+            reject(error)
+          }
+        })
+    })
+}
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -24,29 +57,29 @@ const router = createRouter({
     {
       path: '/',
       name: 'workspace-list',
-      component: () => import('@/views/WorkspaceListView.vue'),
+      component: lazyRetry(() => import('@/views/WorkspaceListView.vue')),
     },
     {
       path: '/workspace/new',
       name: 'workspace-create',
-      component: () => import('@/views/WorkspaceCreateView.vue'),
+      component: lazyRetry(() => import('@/views/WorkspaceCreateView.vue')),
     },
     {
       path: '/workspace/:id/edit',
       name: 'workspace-edit',
-      component: () => import('@/views/WorkspaceEditView.vue'),
+      component: lazyRetry(() => import('@/views/WorkspaceEditView.vue')),
       props: true,
     },
     {
       path: '/workspace/:id',
       name: 'workspace-detail',
-      component: () => import('@/views/WorkspaceDetailView.vue'),
+      component: lazyRetry(() => import('@/views/WorkspaceDetailView.vue')),
       props: true,
     },
     {
       path: '/workspace/:id/import',
       name: 'import-actuals',
-      component: () => import('@/views/NewImportWizard.vue'),
+      component: lazyRetry(() => import('@/views/NewImportWizard.vue')),
       props: true,
     },
     {

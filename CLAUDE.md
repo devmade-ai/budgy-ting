@@ -60,7 +60,7 @@ Current working features:
 - Single-screen dashboard (cashflow graph, metrics grid, transaction table)
 - Transaction edit modal with read-only view mode
 - Export/import/restore workspace data as JSON
-- PWA: offline-first, installable, service worker update prompt, manual update check, visibility-based update checks, 30s post-update suppression
+- PWA: offline-first, installable, service worker update prompt, manual update check, visibility-based update checks, 30s post-update suppression, 7-browser Chromium detection, iOS non-Safari redirect, ChunkLoadError lazy retry
 - Debug pill (alpha): floating diagnostic panel with log + environment + PWA diagnostics tabs, inline styles (CSS-independent), console interception, pre-framework inline pill with 20s load timeout
 - Tag autocomplete from tagCache + pattern tags + ML suggestions
 - Duplicate detection on import (date + amount + description)

@@ -21,11 +21,21 @@ export type BrowserType =
   | 'chrome'
   | 'edge'
   | 'brave'
+  | 'opera'
+  | 'samsung'
+  | 'vivaldi'
+  | 'arc'
   | 'safari-ios'
   | 'safari-macos'
   | 'firefox-android'
   | 'firefox-desktop'
   | 'unknown'
+
+// Chromium browsers that support beforeinstallprompt — single source of truth
+// used by install composable, diagnostic timeout, and debug pill.
+// Reference: glow-props docs/implementations/PWA_SYSTEM.md (Key Lesson #7)
+export const CHROMIUM_BROWSERS: BrowserType[] =
+  ['chrome', 'edge', 'brave', 'opera', 'samsung', 'vivaldi', 'arc']
 
 function detectBrowser(): BrowserType {
   const ua = navigator.userAgent.toLowerCase()
@@ -33,7 +43,24 @@ function detectBrowser(): BrowserType {
   const isAndroid = /android/.test(ua)
   const isMac = /macintosh|mac os x/.test(ua)
 
-  // Check Safari first (before Chrome, since Chrome on iOS includes "safari")
+  // Brave: Check navigator.brave existence first.
+  // Bug: Brave Mobile strips "Brave" from the UA string (confirmed 2026-03-07).
+  // Use existence check as primary, not async call or UA match.
+  // Reference: glow-props docs/implementations/PWA_SYSTEM.md (Key Lesson #8)
+  if ('brave' in navigator) return 'brave'
+
+  // iOS non-Safari browsers: CriOS (Chrome), FxiOS (Firefox), EdgiOS (Edge)
+  // These include "Safari" in their UA but are NOT Safari — they use WebKit but
+  // cannot trigger PWA installation. Must be detected before the Safari check
+  // to avoid misclassifying them as safari-ios.
+  // Reference: glow-props docs/implementations/PWA_SYSTEM.md (Key Lesson #9)
+  if (isIOS) {
+    if (/crios/.test(ua)) return 'chrome'
+    if (/fxios/.test(ua)) return 'firefox-desktop'
+    if (/edgios/.test(ua)) return 'edge'
+  }
+
+  // Safari (actual Safari — iOS Chrome/Firefox/Edge caught above)
   if (/safari/.test(ua) && !/chrome|chromium|edg|brave/.test(ua)) {
     return isIOS ? 'safari-ios' : isMac ? 'safari-macos' : 'unknown'
   }
@@ -43,9 +70,12 @@ function detectBrowser(): BrowserType {
     return isAndroid ? 'firefox-android' : 'firefox-desktop'
   }
 
-  // Chromium browsers — order matters (Brave and Edge include "chrome")
-  if (/brave/.test(ua)) return 'brave'
-  if (/edg/.test(ua)) return 'edge'
+  // Chromium browsers — order matters (some include "chrome" in UA)
+  if (/samsungbrowser/.test(ua)) return 'samsung'
+  if (/opr\//.test(ua) || /opera/.test(ua)) return 'opera'
+  if (/vivaldi/.test(ua)) return 'vivaldi'
+  if (/arc\//.test(ua)) return 'arc'
+  if (/edg\//.test(ua)) return 'edge'
   if (/chrome|chromium/.test(ua)) return 'chrome'
 
   return 'unknown'
@@ -67,6 +97,7 @@ const MAX_EVENTS = 50
 export type InstallAnalyticsEvent =
   | 'prompted'
   | 'installed'
+  | 'installed-via-browser'
   | 'dismissed'
   | 'instructions-viewed'
 
@@ -173,11 +204,27 @@ if (typeof window !== 'undefined') {
     debugLog('pwa', 'success', 'App installed')
   })
 
+  // Requirement: Detect installation via browser menu (not the native prompt)
+  // Approach: Watch display-mode: standalone change. When it transitions to standalone,
+  //   the user installed via the browser's menu. Without this, only appinstalled
+  //   event (fired by native prompt) is detected.
+  // Reference: glow-props docs/implementations/PWA_SYSTEM.md
+  const standaloneMediaQuery = window.matchMedia('(display-mode: standalone)')
+  standaloneMediaQuery.addEventListener('change', (e: MediaQueryListEvent) => {
+    if (e.matches) {
+      installed.value = true
+      canNativeInstall.value = false
+      deferredPrompt = null
+      trackEvent('installed-via-browser', browser.value)
+      debugLog('pwa', 'success', 'App installed via browser menu (display-mode changed)')
+    }
+  })
+
   // Diagnostic: Log installability state after Chrome's engagement heuristic
   // window has had time to evaluate. Helps debug why beforeinstallprompt
   // may not fire on certain devices/browsers.
   // Only runs on browsers that could fire the prompt (Chromium-based).
-  if (['chrome', 'edge', 'brave'].includes(browser.value)) {
+  if (CHROMIUM_BROWSERS.includes(browser.value)) {
     const diagTimeout = setTimeout(() => {
       if (!canNativeInstall.value && !installed.value) {
         debugLog('pwa', 'warn', 'No beforeinstallprompt after 5s', {
@@ -198,13 +245,20 @@ if (typeof window !== 'undefined') {
   }
 }
 
+// Detect iOS at module level for install instruction routing
+const isIOS = typeof navigator !== 'undefined' && /iphone|ipad|ipod/i.test(navigator.userAgent)
+
 export function usePWAInstall() {
   /** True when the native Chromium install prompt is available */
   const isNativeInstallAvailable = computed(() => canNativeInstall.value && !installed.value)
 
-  /** True when browser supports install but needs manual instructions (Safari/Firefox) */
+  /** True when browser supports install but needs manual instructions (Safari/Firefox/iOS non-Safari) */
   const needsManualInstructions = computed(() => {
     if (installed.value) return false
+    // iOS non-Safari browsers (Chrome/Firefox/Edge on iOS) can't install PWAs —
+    // need instructions to redirect to Safari.
+    // Reference: glow-props docs/implementations/PWA_SYSTEM.md (Key Lesson #9)
+    if (isIOS && !['safari-ios'].includes(browser.value)) return true
     return ['safari-ios', 'safari-macos', 'firefox-android'].includes(browser.value)
   })
 

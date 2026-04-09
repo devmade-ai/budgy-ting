@@ -4,23 +4,30 @@
 
 ## Worked on
 
-glow-props pattern sync — DOWNLOAD_PDF (Save as PDF) and PWA_SYSTEM (visibility checks + update suppression).
+glow-props pattern sync — DOWNLOAD_PDF (Save as PDF) and PWA_SYSTEM (full sync).
 
 ## Accomplished
 
 **Save as PDF (DOWNLOAD_PDF sync):**
-- "Save as PDF" in workspace actions menu (kebab + bottom sheet), calls `window.print()`
-- Full print output quality: `no-print` on all interactive elements, `print-show` forces table layout, `beforeprint`/`afterprint` bypasses pagination (all rows) and toggles dark mode off
-- ApexCharts print CSS: toolbar hidden, forced readable colors
-- Docs: USER_GUIDE, TESTING_GUIDE (scenario 1.6), README, regression checklist
+- "Save as PDF" in workspace actions menu, calls `window.print()`
+- Full print output: `no-print`, `print-show`, `beforeprint`/`afterprint` (pagination bypass + dark mode toggle), ApexCharts print CSS, cash-on-hand static display
+- Docs: USER_GUIDE, TESTING_GUIDE, README
+
+**PWA install detection (PWA_SYSTEM sync):**
+- Browser detection: 3 → 7 Chromium browsers (+ opera, samsung, vivaldi, arc)
+- Brave detection: `'brave' in navigator` (UA string unreliable on Brave Mobile)
+- `CHROMIUM_BROWSERS` exported constant (single source of truth)
+- iOS non-Safari: CriOS/FxiOS/EdgiOS detection + Safari redirect instructions
+- `display-mode: standalone` change listener (detects install via browser menu)
+- Install instructions: Chromium fallback, "Why install?" benefits, per-browser warning notes
+- `installed-via-browser` analytics event
 
 **PWA update checks (PWA_SYSTEM sync):**
-- Visibility-based update checks: `visibilitychange` listener on `document` triggers `registration.update()` when tab regains focus
-- 30-second post-update suppression: `wasJustUpdated()` checks `sessionStorage` timestamp, suppresses false re-detection in `watch(hasUpdate, ...)`
-- `checkForUpdate()`: 1500ms settle delay + error handling with debugLog
-- `cleanupOutdatedCaches: true` in workbox config
-- Fixed DebugPill install prompt diagnostic (`__pwaInstallPromptReceived` flag)
-- PWA diagnostics tab: already complete from DEBUG_SYSTEM sync (7 health checks in DebugPill)
+- Visibility-based checks, 30s suppression, 1500ms settle delay, error handling
+- `cleanupOutdatedCaches: true`, DebugPill install prompt flag fix
+
+**ChunkLoadError prevention:**
+- `lazyRetry()` wrapper on all 5 lazy route imports in router/index.ts
 
 ## Current state
 
@@ -28,9 +35,8 @@ All work complete and pushed to `claude/add-pdf-print-button-7zGtt`. Build verif
 
 ## Key context
 
-- `usePWAUpdate.ts` now has 3 update triggers: 60-min interval, `visibilitychange`, manual "Check for updates"
-- Suppression uses `sessionStorage` key `farlume:pwa-update-applied` — survives reload but not session close
-- `hasUpdate.value = false` in the watcher resets the `needRefresh` ref from `useRegisterSW` when suppressed
-- Print CSS lives in `src/index.css` `@media print` block
-- `beforeprint`/`afterprint` listeners in AppLayout (dark mode) and TransactionTable (pagination bypass)
+- `usePWAInstall.ts` exports `CHROMIUM_BROWSERS` constant — use it for any Chromium-specific logic
+- `lazyRetry()` in router uses `sessionStorage` key `farlume:chunk-retry-refreshed` to prevent infinite reloads
+- `usePWAUpdate.ts` has 3 update triggers: 60-min interval, `visibilitychange`, manual check
+- Print CSS in `src/index.css`, `beforeprint`/`afterprint` in AppLayout + TransactionTable
 - glow-props pattern sync remaining: THEME_DARK_MODE, EVENT_BUS

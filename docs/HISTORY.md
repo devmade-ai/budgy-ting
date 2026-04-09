@@ -4,6 +4,21 @@
 
 ## 2026-04-09
 
+- **PWA install detection — full pattern sync (glow-props PWA_SYSTEM sync):**
+  - Browser detection expanded from 3 → 7 Chromium browsers (+ opera, samsung, vivaldi, arc)
+  - Brave detection: `'brave' in navigator` existence check replaces UA string match (Brave Mobile strips "Brave" from UA)
+  - `CHROMIUM_BROWSERS` exported constant — single source of truth for install/diagnostics/analytics
+  - iOS non-Safari detection: CriOS (Chrome), FxiOS (Firefox), EdgiOS (Edge) caught before Safari check
+  - iOS non-Safari install instructions redirect users to Safari with explanation
+  - `display-mode: standalone` change listener detects install-via-browser-menu (not just native prompt)
+  - Chromium fallback instructions shown when native prompt fails (Chrome suppresses 90 days after dismiss)
+  - Install instructions modal: "Why install?" benefits section + per-browser warning notes (Brave Shields, Firefox desktop)
+  - `installed-via-browser` analytics event type added
+
+- **ChunkLoadError prevention (glow-props PWA_SYSTEM sync):**
+  - `lazyRetry()` wrapper on all lazy route imports — reloads once on 404 during deploy→SW update window
+  - `sessionStorage` flag prevents infinite reload loops
+
 - **PWA update checks — visibility + suppression + cleanup (glow-props PWA_SYSTEM sync):**
   - Visibility-based update checks: `visibilitychange` listener triggers `registration.update()` when tab regains focus (catches deploys while backgrounded)
   - 30-second post-update suppression: `wasJustUpdated()` checks `sessionStorage` timestamp to prevent false re-detection after applying an update
