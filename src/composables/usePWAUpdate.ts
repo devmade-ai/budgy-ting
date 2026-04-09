@@ -111,10 +111,16 @@ function updateApp() {
 
 /**
  * Requirement: Manual "Check for updates" action in burger menu
- * Approach: Call registration.update() on demand, show brief checking state
+ * Approach: Call registration.update() on demand, show brief checking state.
+ *   1500ms settle delay after update() lets async SW lifecycle events propagate
+ *   (onNeedRefresh may fire after update() resolves, not during it).
  * Alternatives:
  *   - Reuse periodic timer: Rejected — user expects immediate feedback
+ *   - No settle delay: Rejected — "Checking..." state flashes invisibly fast,
+ *     and SW events may not have fired yet when checking resets to false
  */
+const CHECK_SETTLE_MS = 1500
+
 async function checkForUpdate() {
   if (!swRegistration) {
     debugLog('pwa', 'warn', 'No service worker registration — cannot check for updates')
@@ -124,6 +130,12 @@ async function checkForUpdate() {
   checking.value = true
   try {
     await swRegistration.update()
+    // Settle delay — SW lifecycle events (onNeedRefresh, onOfflineReady) fire
+    // asynchronously after update() resolves. Without this delay, the checking
+    // state resets before the user sees feedback and before events propagate.
+    await new Promise(r => setTimeout(r, CHECK_SETTLE_MS))
+  } catch (e) {
+    debugLog('pwa', 'error', 'Update check failed', { error: String(e) })
   } finally {
     checking.value = false
   }

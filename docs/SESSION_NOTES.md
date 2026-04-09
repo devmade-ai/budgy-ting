@@ -17,6 +17,9 @@ glow-props pattern sync — DOWNLOAD_PDF (Save as PDF) and PWA_SYSTEM (visibilit
 **PWA update checks (PWA_SYSTEM sync):**
 - Visibility-based update checks: `visibilitychange` listener on `document` triggers `registration.update()` when tab regains focus
 - 30-second post-update suppression: `wasJustUpdated()` checks `sessionStorage` timestamp, suppresses false re-detection in `watch(hasUpdate, ...)`
+- `checkForUpdate()`: 1500ms settle delay + error handling with debugLog
+- `cleanupOutdatedCaches: true` in workbox config
+- Fixed DebugPill install prompt diagnostic (`__pwaInstallPromptReceived` flag)
 - PWA diagnostics tab: already complete from DEBUG_SYSTEM sync (7 health checks in DebugPill)
 
 ## Current state

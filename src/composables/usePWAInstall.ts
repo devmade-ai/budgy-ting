@@ -122,6 +122,11 @@ function consumeEarlyCapturedEvent(): (Event & { prompt: () => Promise<void> }) 
     | (Event & { prompt: () => Promise<void> })
     | undefined
   if (captured) {
+    // Set a flag before deleting the event so DebugPill's PWA diagnostics tab
+    // can detect that beforeinstallprompt was received. Without this, the
+    // diagnostic always shows "Not received" because this function deletes
+    // __pwaInstallPromptEvent before the user opens the debug pill.
+    win.__pwaInstallPromptReceived = true
     delete win.__pwaInstallPromptEvent
     return captured
   }

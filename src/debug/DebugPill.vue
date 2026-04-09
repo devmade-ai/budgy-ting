@@ -154,7 +154,9 @@ async function runDiagnostics() {
   results.push({ label: 'Standalone', status: standalone ? 'pass' : 'warn', detail: String(standalone) })
 
   // Install prompt
-  const hasPrompt = !!(window as any).__pwaInstallPromptEvent
+  // Check both: __pwaInstallPromptEvent (early capture, before composable runs)
+  // and __pwaInstallPromptReceived (flag set by usePWAInstall after consuming the event)
+  const hasPrompt = !!(window as any).__pwaInstallPromptEvent || !!(window as any).__pwaInstallPromptReceived
   results.push({ label: 'Install Prompt', status: hasPrompt ? 'pass' : 'warn', detail: hasPrompt ? 'Captured' : 'Not received' })
 
   // Show sync results + placeholders for async

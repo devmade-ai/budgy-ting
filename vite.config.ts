@@ -17,6 +17,10 @@ export default defineConfig({
       //   these via the browser Cache API at runtime, independent of the SW.
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        // Requirement: Remove stale caches from incompatible older Workbox versions
+        // Without this, stale caches accumulate across deployments
+        // Reference: glow-props docs/implementations/PWA_SYSTEM.md
+        cleanupOutdatedCaches: true,
       },
       manifest: {
         name: 'Farlume',

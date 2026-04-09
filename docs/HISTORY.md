@@ -4,10 +4,13 @@
 
 ## 2026-04-09
 
-- **PWA update checks — visibility + suppression (glow-props PWA_SYSTEM sync):**
+- **PWA update checks — visibility + suppression + cleanup (glow-props PWA_SYSTEM sync):**
   - Visibility-based update checks: `visibilitychange` listener triggers `registration.update()` when tab regains focus (catches deploys while backgrounded)
   - 30-second post-update suppression: `wasJustUpdated()` checks `sessionStorage` timestamp to prevent false re-detection after applying an update
-  - PWA diagnostics tab: already wired into debug pill from DEBUG_SYSTEM sync (protocol, network, SW state, manifest, install prompt checks)
+  - `checkForUpdate()`: 1500ms settle delay lets SW lifecycle events propagate, error handling with debugLog
+  - `cleanupOutdatedCaches: true` in workbox config — removes stale caches from older Workbox versions across deployments
+  - Fixed DebugPill install prompt diagnostic: `usePWAInstall` now sets `__pwaInstallPromptReceived` flag when consuming the early-captured event (diagnostic was always showing "Not received" because the event was deleted before the pill opened)
+  - PWA diagnostics tab: already wired into debug pill from DEBUG_SYSTEM sync
 
 - **Save as PDF — full print implementation (glow-props DOWNLOAD_PDF sync):**
   - Added "Save as PDF" menu item in workspace actions (kebab menu + mobile bottom sheet)
