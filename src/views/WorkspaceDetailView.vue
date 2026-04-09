@@ -21,7 +21,7 @@ import BottomSheet from '@/components/BottomSheet.vue'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import ErrorAlert from '@/components/ErrorAlert.vue'
 import WorkspaceDashboard from '@/views/WorkspaceDashboard.vue'
-import { ArrowLeft, Upload, MoreVertical, Download, Pencil, Trash2 } from 'lucide-vue-next'
+import { ArrowLeft, Upload, MoreVertical, Download, Pencil, Trash2, Printer } from 'lucide-vue-next'
 import type { Workspace } from '@/types/models'
 
 const props = defineProps<{ id: string }>()
@@ -137,8 +137,19 @@ async function deleteWorkspace() {
   }
 }
 
+// Requirement: "Save as PDF" button — triggers browser print dialog for PDF export
+// Approach: window.print() with existing @media print CSS (no-print hides interactive elements)
+// Alternatives:
+//   - pdf-lib: Rejected — text-heavy dashboard is better served by native print (searchable, zero deps)
+//   - Screenshot-to-PDF: Rejected — loses text selectability, larger file size
+function handlePrint() {
+  actionsMenuOpen.value = false
+  window.print()
+}
+
 /** Menu items shared between bottom sheet and dropdown */
 const menuActions: Array<{ label: string; icon: Component; action: () => void }> = [
+  { label: 'Save as PDF', icon: Printer, action: handlePrint },
   { label: 'Export', icon: Download, action: handleExport },
   { label: 'Edit workspace', icon: Pencil, action: editWorkspace },
 ]
@@ -153,7 +164,7 @@ const menuActions: Array<{ label: string; icon: Component; action: () => void }>
     <!-- Workspace header -->
     <div class="mb-6">
       <button
-        class="text-sm text-gray-500 dark:text-zinc-400 hover:text-gray-700 dark:hover:text-zinc-200 mb-2 flex items-center gap-1 min-h-[44px]"
+        class="text-sm text-gray-500 dark:text-zinc-400 hover:text-gray-700 dark:hover:text-zinc-200 mb-2 flex items-center gap-1 min-h-[44px] no-print"
         @click="router.push({ name: 'workspace-list' })"
       >
         <ArrowLeft :size="16" />
@@ -167,7 +178,7 @@ const menuActions: Array<{ label: string; icon: Component; action: () => void }>
             <span v-if="workspace.currencyLabel"> &middot; {{ workspace.currencyLabel }}</span>
           </p>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 no-print">
           <button
             class="btn-primary text-sm min-h-[44px]"
             title="Import actuals"

@@ -107,7 +107,7 @@ const menuItems = computed<MenuItem[]>(() => [
     <InstallPrompt @show-instructions="showInstructions = true" />
 
     <!-- Header -->
-    <header class="bg-white dark:bg-[var(--color-surface)] border-b border-gray-200 dark:border-zinc-700 sticky top-0 z-10">
+    <header class="bg-white dark:bg-[var(--color-surface)] border-b border-gray-200 dark:border-zinc-700 sticky top-0 z-10 no-print">
       <div class="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
         <button
           class="text-lg font-bold text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 transition-colors"

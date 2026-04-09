@@ -113,7 +113,7 @@ function getSuggestions(id: string): TagSuggestion[] {
 <template>
   <div>
     <!-- Filters — touch-friendly input sizing (min-h-44px) -->
-    <div v-if="transactions.length > 5" class="flex flex-wrap gap-2 mb-4">
+    <div v-if="transactions.length > 5" class="flex flex-wrap gap-2 mb-4 no-print">
       <input
         v-model="search"
         type="text"
@@ -235,7 +235,7 @@ function getSuggestions(id: string): TagSuggestion[] {
     </div>
 
     <!-- Pagination -->
-    <div v-if="totalPages > 1" class="flex items-center justify-between mt-4 text-sm text-gray-500 dark:text-zinc-400">
+    <div v-if="totalPages > 1" class="flex items-center justify-between mt-4 text-sm text-gray-500 dark:text-zinc-400 no-print">
       <span>{{ filtered.length }} transaction{{ filtered.length === 1 ? '' : 's' }}</span>
       <div class="flex gap-1">
         <button

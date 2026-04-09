@@ -12,7 +12,7 @@
 
 ## Features — Download as PDF (glow-props sync)
 
-- [ ] Print trigger — "Download as PDF" button in dashboard header or burger menu, calls `window.print()`
+- [x] ~~Print trigger — "Save as PDF" in workspace actions menu, calls `window.print()`~~ → moved to HISTORY.md
 
 ## UX
 
