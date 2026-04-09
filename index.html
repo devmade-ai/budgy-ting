@@ -11,7 +11,7 @@
            (time, battery, wifi icons) in both light and dark OS modes.
            Using page background colors causes visibility problems when the OS
            color scheme differs from the app's theme (e.g. light text on light bg).
-         Reference: glow-props CLAUDE.md "Theme & Dark Mode — Meta Theme-Color" -->
+         Reference: glow-props docs/implementations/THEME_DARK_MODE.md -->
     <meta name="theme-color" content="#10b981" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#10b981" media="(prefers-color-scheme: dark)" />
     <meta name="description" content="Plan and track expenses against budgets" />
@@ -29,7 +29,7 @@
            beforeinstallprompt script. Must duplicate the localStorage/matchMedia
            logic from useDarkMode.ts — the composable runs after Vue mount, too late.
          Why classic script: Module scripts are deferred — they run after DOM parse.
-         Reference: glow-props CLAUDE.md "Theme & Dark Mode — Flash Prevention" -->
+         Reference: glow-props docs/implementations/THEME_DARK_MODE.md -->
     <script>
       (function() {
         try {
@@ -50,7 +50,7 @@
            Stashes the event on window for usePWAInstall.ts to consume.
          Why: On repeat visits with a cached SW, the browser fires
            beforeinstallprompt before module scripts execute — losing the event.
-         Reference: glow-props CLAUDE.md "PWA Install Prompt Race Condition" -->
+         Reference: glow-props docs/implementations/PWA_SYSTEM.md -->
     <script>
       window.addEventListener('beforeinstallprompt', function (e) {
         e.preventDefault();

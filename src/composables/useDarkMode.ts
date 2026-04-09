@@ -7,7 +7,7 @@
  *   - CSS-only prefers-color-scheme: Rejected — no user override possible
  *   - Vue provide/inject context: Rejected — overkill for web (DOM class is source of truth)
  *   - Pinia store: Rejected — theme is UI-only state, no cross-component actions needed
- * Reference: glow-props CLAUDE.md "Theme & Dark Mode"
+ * Reference: glow-props docs/implementations/THEME_DARK_MODE.md
  */
 
 import { ref, watch } from 'vue'

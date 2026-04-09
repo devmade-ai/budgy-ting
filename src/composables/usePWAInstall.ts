@@ -115,7 +115,7 @@ const installed = ref(false)
 
 // Consume beforeinstallprompt event that may have been captured by the inline
 // script in index.html before Vue modules loaded (repeat-visit race condition).
-// See: glow-props CLAUDE.md "PWA Install Prompt Race Condition"
+// See: glow-props docs/implementations/PWA_SYSTEM.md
 function consumeEarlyCapturedEvent(): (Event & { prompt: () => Promise<void> }) | null {
   const win = window as unknown as Record<string, unknown>
   const captured = win.__pwaInstallPromptEvent as

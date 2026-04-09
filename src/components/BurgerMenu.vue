@@ -10,7 +10,7 @@
  *   - role="menu" pattern: Rejected — wrong ARIA semantics for navigation
  *   - Slide-out drawer: Rejected — needs animation lib, fights with bottom nav
  *   - Headless UI Disclosure: Viable — adds dependency for a single component
- * Reference: glow-props CLAUDE.md "Burger Menu"
+ * Reference: glow-props docs/implementations/BURGER_MENU.md
  */
 
 import { ref, watch, onMounted, onUnmounted, nextTick, type Component } from 'vue'
@@ -66,7 +66,7 @@ function handleItem(item: MenuItem) {
 
 // Escape key closes menu — only registered while open
 // Requirement: Keyboard accessibility for menu close
-// Reference: glow-props CLAUDE.md "Burger Menu — Escape key closes menu"
+// Reference: glow-props docs/implementations/BURGER_MENU.md
 function handleKeyDown(e: KeyboardEvent) {
   if (e.key === 'Escape') {
     e.preventDefault()
@@ -131,7 +131,7 @@ watch(open, (isOpen) => {
       <!-- Backdrop — cursor-pointer required for iOS Safari.
            iOS Safari does not fire click events on empty divs without it.
            This is an intentional iOS optimization, not a bug.
-           Reference: glow-props CLAUDE.md "Burger Menu — Key Lessons #2" -->
+           Reference: glow-props docs/implementations/BURGER_MENU.md -->
       <div
         class="fixed inset-0 z-40 cursor-pointer"
         @click="close"

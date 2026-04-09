@@ -13,6 +13,7 @@
   - Added 48x48 PNG favicon with `<link rel="icon" type="image/png">` in index.html (modern browsers prefer PNG over ICO)
   - Added `favicon-48x48.png` to `includeAssets` for offline precaching
   - Build verified: manifest.webmanifest has correct icon entries, all PNGs in dist
+  - Fixed 10 stale `glow-props CLAUDE.md` code comment references across 6 files — now point to specific pattern files in `docs/implementations/` (THEME_DARK_MODE.md, PWA_SYSTEM.md, DOWNLOAD_PDF.md, BURGER_MENU.md)
 
 - **Updated implementation pattern fetch URLs in CLAUDE.md:**
   - Renamed "Suggested Implementations" → "Implementation Patterns (Source of Truth)"
