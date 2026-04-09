@@ -11,7 +11,8 @@
   - iOS non-Safari detection: CriOS (Chrome), FxiOS (Firefox), EdgiOS (Edge) caught before Safari check
   - iOS non-Safari install instructions redirect users to Safari with explanation
   - `display-mode: standalone` change listener detects install-via-browser-menu (not just native prompt)
-  - Chromium fallback instructions shown when native prompt fails (Chrome suppresses 90 days after dismiss)
+  - Chromium fallback: 5s diagnostic timeout enables `chromiumFallback` ref → `needsManualInstructions` → install banner shows manual steps when native prompt was suppressed (Chrome 90-day dismiss)
+  - Chromium fallback instructions in modal for all 7 browsers (address bar icon, browser menu)
   - Install instructions modal: "Why install?" benefits section + per-browser warning notes (Brave Shields, Firefox desktop)
   - `installed-via-browser` analytics event type added
 

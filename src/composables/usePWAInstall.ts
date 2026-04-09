@@ -56,6 +56,9 @@ function detectBrowser(): BrowserType {
   // Reference: glow-props docs/implementations/PWA_SYSTEM.md (Key Lesson #9)
   if (isIOS) {
     if (/crios/.test(ua)) return 'chrome'
+    // FxiOS maps to firefox-desktop (not firefox-android) because iOS Firefox can't
+    // install PWAs — same limitation as Firefox Desktop. The iOS non-Safari check in
+    // needsManualInstructions catches this and shows Safari redirect instructions.
     if (/fxios/.test(ua)) return 'firefox-desktop'
     if (/edgios/.test(ua)) return 'edge'
   }
@@ -143,6 +146,9 @@ const canNativeInstall = ref(false)
 const browser = ref<BrowserType>('unknown')
 const dismissed = ref(false)
 const installed = ref(false)
+// Set true when Chromium browser's native prompt didn't fire after 5s — triggers
+// manual install instructions as fallback (Chrome suppresses prompt for 90 days after dismiss)
+const chromiumFallback = ref(false)
 
 // Consume beforeinstallprompt event that may have been captured by the inline
 // script in index.html before Vue modules loaded (repeat-visit race condition).
@@ -234,6 +240,10 @@ if (typeof window !== 'undefined') {
           hasManifestLink: !!document.querySelector('link[rel="manifest"]'),
           swControlled: !!navigator.serviceWorker?.controller,
         })
+        // Chrome suppresses the prompt for 90 days after dismissal.
+        // Show manual install instructions as fallback so users aren't stuck.
+        // Reference: glow-props docs/implementations/PWA_SYSTEM.md (Key Lesson #10)
+        chromiumFallback.value = true
       }
     }, 5000)
     // Clear if prompt arrives early to avoid noise
@@ -252,13 +262,15 @@ export function usePWAInstall() {
   /** True when the native Chromium install prompt is available */
   const isNativeInstallAvailable = computed(() => canNativeInstall.value && !installed.value)
 
-  /** True when browser supports install but needs manual instructions (Safari/Firefox/iOS non-Safari) */
+  /** True when browser supports install but needs manual instructions */
   const needsManualInstructions = computed(() => {
     if (installed.value) return false
     // iOS non-Safari browsers (Chrome/Firefox/Edge on iOS) can't install PWAs —
     // need instructions to redirect to Safari.
     // Reference: glow-props docs/implementations/PWA_SYSTEM.md (Key Lesson #9)
     if (isIOS && !['safari-ios'].includes(browser.value)) return true
+    // Chromium fallback — native prompt didn't fire after 5s (likely 90-day suppress)
+    if (chromiumFallback.value) return true
     return ['safari-ios', 'safari-macos', 'firefox-android'].includes(browser.value)
   })
 
