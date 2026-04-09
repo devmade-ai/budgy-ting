@@ -163,13 +163,12 @@ All projects follow this scale to prevent stacking conflicts between the burger 
 
 | Layer | Z-Index | Examples |
 |-------|---------|----------|
-| Base content | 0 | Page content, cards |
-| Inline dropdowns | 10 | Autocomplete popups, tag suggestions |
+| Base content | 0-10 | Page content, cards, inline dropdowns (autocomplete, tag suggestions) |
 | Sticky headers | 10 | App bar (`header` in AppLayout) |
 | Menu dropdowns | 20 | Action menus (WorkspaceDetailView) |
 | Menu backdrop | 40 | Burger menu backdrop (BurgerMenu) |
 | Menu dropdown | 50 | Burger menu card (BurgerMenu) |
-| Modals / drawers | 50 | Dialogs, bottom sheets, help drawers, confirm dialogs |
+| Modals / drawers | 60 | Dialogs, bottom sheets, help drawers, confirm dialogs |
 | Toasts / banners | 70 | Update banner, install prompt, ToastNotification |
 | Debug pill | 80 | Debug overlay (separate Vue root) |
 

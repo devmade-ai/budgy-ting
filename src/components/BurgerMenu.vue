@@ -74,6 +74,34 @@ function handleKeyDown(e: KeyboardEvent) {
   }
 }
 
+// Arrow key + Home/End navigation within menu items
+// Requirement: Keyboard traversal with wrapping for disclosure-pattern menu
+// Reference: glow-props docs/implementations/BURGER_MENU.md
+function handleMenuKeyDown(e: KeyboardEvent) {
+  const items = menuRef.value?.querySelectorAll('button:not([disabled])') as NodeListOf<HTMLElement> | undefined
+  if (!items || items.length === 0) return
+  const idx = Array.from(items).indexOf(document.activeElement as HTMLElement)
+
+  switch (e.key) {
+    case 'ArrowDown':
+      e.preventDefault()
+      items[(idx + 1) % items.length].focus()
+      break
+    case 'ArrowUp':
+      e.preventDefault()
+      items[(idx - 1 + items.length) % items.length].focus()
+      break
+    case 'Home':
+      e.preventDefault()
+      items[0].focus()
+      break
+    case 'End':
+      e.preventDefault()
+      items[items.length - 1].focus()
+      break
+  }
+}
+
 // Outside click — close if click is outside the menu container
 function handleOutsideClick(e: MouseEvent) {
   const container = triggerRef.value?.parentElement
@@ -146,6 +174,7 @@ watch(open, (isOpen) => {
                bg-white dark:bg-[var(--color-surface-elevated)]
                border border-gray-200 dark:border-zinc-700
                py-1 overflow-hidden overscroll-contain"
+        @keydown="handleMenuKeyDown"
       >
         <ul class="list-none m-0 p-0">
           <template v-for="(item, i) in visibleItems()" :key="item.label">

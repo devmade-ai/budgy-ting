@@ -15,6 +15,12 @@
   - Build verified: manifest.webmanifest has correct icon entries, all PNGs in dist
   - Fixed 10 stale `glow-props CLAUDE.md` code comment references across 6 files — now point to specific pattern files in `docs/implementations/` (THEME_DARK_MODE.md, PWA_SYSTEM.md, DOWNLOAD_PDF.md, BURGER_MENU.md)
 
+- **Burger Menu — Arrow key navigation + z-index enforcement (glow-props BURGER_MENU sync):**
+  - Added ArrowDown/ArrowUp (with wrapping) and Home/End key navigation to BurgerMenu.vue
+  - Z-index scale enforced per pattern: modals/drawers z-50 → z-[60] (6 components: BottomSheet, ConfirmDialog, HelpDrawer, InstallInstructionsModal, TransactionEditModal, TutorialModal)
+  - Updated CLAUDE.md z-index scale table to match pattern (modals = 60, consolidated base content = 0-10)
+  - Theme UI already implemented (dark/light toggle with Sun/Moon icons in menu)
+
 - **Updated implementation pattern fetch URLs in CLAUDE.md:**
   - Renamed "Suggested Implementations" → "Implementation Patterns (Source of Truth)"
   - Changed all fetch URLs from `glow-props/contents/CLAUDE.md` to `glow-props/contents/docs/implementations/{PATTERN_NAME}.md`

@@ -54,7 +54,7 @@ onUnmounted(() => {
 
 <template>
   <Teleport to="body">
-    <div class="fixed inset-0 z-50 flex">
+    <div class="fixed inset-0 z-[60] flex">
       <!-- Backdrop -->
       <div
         class="absolute inset-0 bg-black/40 transition-opacity duration-200"

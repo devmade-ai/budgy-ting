@@ -90,7 +90,7 @@ function goToStep(index: number) {
 
 <template>
   <Teleport to="body">
-    <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="fixed inset-0 z-[60] flex items-center justify-center p-4">
       <!-- Backdrop -->
       <div
         class="absolute inset-0 bg-black/40"

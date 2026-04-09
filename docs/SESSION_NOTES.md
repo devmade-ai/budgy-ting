@@ -4,7 +4,7 @@
 
 ## Worked on
 
-glow-props pattern reference migration + APP_ICONS implementation (CLAUDE.md fetch URLs, code comment references, icon generation).
+glow-props pattern reference migration + APP_ICONS + BURGER_MENU implementation.
 
 ## Accomplished
 
@@ -19,10 +19,14 @@ glow-props pattern reference migration + APP_ICONS implementation (CLAUDE.md fet
 - Created dedicated 1024x1024 maskable icon (no rounded corners, B glyph scaled to 80% safe zone)
 - Added 48x48 PNG favicon with `<link rel="icon">` in index.html and `includeAssets` in vite config
 - Updated manifest: 192/512 purpose "any", 1024 purpose "maskable"
+- Added ArrowDown/ArrowUp (wrapping) + Home/End key navigation to BurgerMenu.vue
+- Z-index scale enforced: modals/drawers z-50 → z-[60] across 6 components
+- Updated CLAUDE.md z-index scale table (modals = 60)
+- Theme UI in menu already done (dark/light toggle with Sun/Moon icons)
 
 ## Current state
 
-All work complete and pushed to `claude/fix-docs-fetch-urls-B2Gel`. Build verified. Zero stale `glow-props CLAUDE.md` references remain in the codebase.
+All work complete and pushed to `claude/fix-docs-fetch-urls-B2Gel`. Build verified. Zero stale `glow-props CLAUDE.md` references remain. Z-index scale matches pattern. This session addressed CLAUDE.md, APP_ICONS, and BURGER_MENU items from glow-props TODO.
 
 ## Key context
 
