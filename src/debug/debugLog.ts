@@ -82,16 +82,10 @@ export function debugLog(
 }
 
 /**
- * Subscribe to new debug entries. New subscribers receive current entries
- * immediately — eliminates timing bugs where a late subscriber misses boot entries.
- * Returns an unsubscribe function.
+ * Subscribe to new debug entries. Returns an unsubscribe function.
  */
 export function subscribe(fn: Subscriber): () => void {
   subscribers.add(fn)
-  const current = getEntries()
-  for (const entry of current) {
-    try { fn(entry) } catch { /* ignore */ }
-  }
   return () => subscribers.delete(fn)
 }
 
@@ -171,14 +165,25 @@ if (typeof window !== 'undefined' && !(window as any).__debugConsolePatched) {
   const originalError = console.error
   const originalWarn = console.warn
 
+  // Re-entrancy guard: if a subscriber error triggers console.error before
+  // being caught, the patched console.error would call debugLog again, which
+  // notifies subscribers, which may throw again → infinite loop.
+  let intercepting = false
+
   console.error = (...args: unknown[]) => {
     originalError.apply(console, args)
+    if (intercepting) return
+    intercepting = true
     debugLog('global', 'error', args.map(String).join(' '))
+    intercepting = false
   }
 
   console.warn = (...args: unknown[]) => {
     originalWarn.apply(console, args)
+    if (intercepting) return
+    intercepting = true
     debugLog('global', 'warn', args.map(String).join(' '))
+    intercepting = false
   }
 }
 
@@ -187,6 +192,9 @@ if (typeof window !== 'undefined' && !(window as any).__debugConsolePatched) {
 
 if (typeof window !== 'undefined' && !(window as any).__debugLogListenersAttached) {
   (window as any).__debugLogListenersAttached = true
+  // Signal to inline pill's error listeners (index.html) that debugLog.ts is active.
+  // They check this flag and skip capture to prevent duplicate entries.
+  ;(window as any).__debugLogReady = true
 
   window.addEventListener('error', (event) => {
     debugLog('global', 'error', event.message || 'Unknown error', {

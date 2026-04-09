@@ -162,19 +162,25 @@ async function runDiagnostics() {
   results.push({ label: 'Manifest', status: 'running', detail: 'Checking...' })
   diagnostics.value = [...results]
 
+  // Helper: update result by label (avoids fragile hardcoded indices)
+  function set(label: string, result: DiagnosticResult) {
+    const idx = results.findIndex((r) => r.label === label)
+    if (idx >= 0) results[idx] = result
+  }
+
   // Async: SW state
   if ('serviceWorker' in navigator) {
     try {
       const reg = await navigator.serviceWorker.getRegistration('/')
       if (runId !== diagnosticRunId) return
       const state = reg?.active ? 'active' : reg?.waiting ? 'waiting' : reg?.installing ? 'installing' : 'none'
-      results[5] = { label: 'SW State', status: reg ? 'pass' : 'warn', detail: state }
+      set('SW State', { label: 'SW State', status: reg ? 'pass' : 'warn', detail: state })
     } catch (e) {
       if (runId !== diagnosticRunId) return
-      results[5] = { label: 'SW State', status: 'fail', detail: String(e) }
+      set('SW State', { label: 'SW State', status: 'fail', detail: String(e) })
     }
   } else {
-    results[5] = { label: 'SW State', status: 'fail', detail: 'No SW support' }
+    set('SW State', { label: 'SW State', status: 'fail', detail: 'No SW support' })
   }
   diagnostics.value = [...results]
 
@@ -187,17 +193,17 @@ async function runDiagnostics() {
       const manifest = await res.json()
       const hasIcons = manifest.icons?.length > 0
       const hasName = !!manifest.name
-      results[6] = {
+      set('Manifest', {
         label: 'Manifest',
         status: hasIcons && hasName ? 'pass' : 'warn',
         detail: `name=${manifest.name || 'missing'}, icons=${manifest.icons?.length || 0}`,
-      }
+      })
     } catch {
       if (runId !== diagnosticRunId) return
-      results[6] = { label: 'Manifest', status: 'fail', detail: 'Failed to fetch' }
+      set('Manifest', { label: 'Manifest', status: 'fail', detail: 'Failed to fetch' })
     }
   } else {
-    results[6] = { label: 'Manifest', status: 'warn', detail: 'No <link rel="manifest"> found' }
+    set('Manifest', { label: 'Manifest', status: 'warn', detail: 'No <link rel="manifest"> found' })
   }
   if (runId === diagnosticRunId) diagnostics.value = [...results]
 }

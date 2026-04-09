@@ -61,7 +61,7 @@ Current working features:
 - Transaction edit modal with read-only view mode
 - Export/import/restore workspace data as JSON
 - PWA: offline-first, installable, service worker update prompt, manual update check
-- Debug pill (alpha): floating diagnostic panel with log + environment tabs
+- Debug pill (alpha): floating diagnostic panel with log + environment + PWA diagnostics tabs, inline styles (CSS-independent), console interception, pre-framework inline pill with 20s load timeout
 - Tag autocomplete from tagCache + pattern tags + ML suggestions
 - Duplicate detection on import (date + amount + description)
 - Pull-to-refresh, haptic feedback, bottom sheet modal

@@ -17,6 +17,11 @@
   - ClipboardItem Blob fallback added to copy
   - main.ts bridges pre-mount errors and clears loading timer on Vue mount
   - Global error listener HMR guard to prevent duplicates
+  - Console interception re-entrancy guard (prevents infinite loop if subscriber triggers console.error)
+  - Inline pill error listeners yield to debugLog.ts via __debugLogReady flag (prevents duplicate entries)
+  - Hardcoded diagnostic indices replaced with label-based lookup (fragile → robust)
+  - Inline pill alert() replaced with DOM error panel (non-blocking, scrollable)
+  - Removed unnecessary immediate subscriber delivery (DebugPill re-fetches on every notify)
 
 - **App Icons — 400 DPI + dedicated maskable icon (glow-props APP_ICONS sync):**
   - Increased Sharp density from 150 to 400 DPI for crisper edge anti-aliasing
