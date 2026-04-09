@@ -28,7 +28,6 @@ const sizes = [
   { name: 'pwa-512x512.png', size: 512 },
   { name: 'pwa-192x192.png', size: 192 },
   { name: 'apple-touch-icon.png', size: 180 },
-  { name: 'favicon-48x48.png', size: 48 },
 ]
 
 for (const { name, size } of sizes) {
@@ -50,7 +49,6 @@ for (const { name, size } of sizes) {
 const svgString = svg.toString('utf8')
 const maskableSvg = Buffer.from(
   svgString
-    .replace('<svg ', '<svg shape-rendering="geometricPrecision" ')
     .replace(/ rx="92"/, '')
     .replace('<path ', '<g transform="translate(51.2 51.2) scale(0.8)"><path ')
     .replace('</svg>', '</g></svg>')
