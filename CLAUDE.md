@@ -159,7 +159,7 @@ These footers are required on every commit. No exceptions.
 
 ### Z-Index Scale
 
-All projects follow this scale to prevent stacking conflicts between the burger menu, debug pill, modals, toasts, and install banners. Reference: glow-props CLAUDE.md.
+All projects follow this scale to prevent stacking conflicts between the burger menu, debug pill, modals, toasts, and install banners. Reference: glow-props `docs/implementations/BURGER_MENU.md`.
 
 | Layer | Z-Index | Examples |
 |-------|---------|----------|
