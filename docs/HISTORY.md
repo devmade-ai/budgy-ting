@@ -18,6 +18,13 @@
   - Z-index scale unchanged (already aligned: 10/40/50/60/70/80)
   - Brand colors retained in `@theme` for chart data visualization (CashflowGraph hex colors intentionally not migrated — ApexCharts requires hardcoded values)
 
+- **DaisyUI migration cleanup — strengthening pass:**
+  - Fixed 4 `<select>` elements using `input input-bordered` → `select select-bordered` (TransactionTable, TransactionEditModal)
+  - Fixed `--color-neutral` in @theme conflicting with DaisyUI's `neutral` semantic color — renamed to `--color-data-neutral`
+  - Fixed cross-tab sync in useDarkMode.ts — added `syncing` guard flag to prevent watchers from redundantly calling applyTheme() and re-persisting values that came FROM another tab
+  - Fixed ImportStepReview duplicated classes (`w-full w-48`, `text-base text-xs`)
+  - Updated print CSS: broadened `.card` selector to `.card, .rounded-xl` for card-like containers
+
 
 
 - **PWA install detection — full pattern sync (glow-props PWA_SYSTEM sync):**

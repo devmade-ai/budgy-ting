@@ -286,7 +286,7 @@ function acceptAllSuggestions() {
                 <select
                   :id="`${uid}-dir`"
                   v-model="localIsIncome"
-                  class="input input-bordered w-full text-base min-h-[44px]"
+                  class="select select-bordered w-full text-base min-h-[44px]"
                 >
                   <option :value="false">Expense</option>
                   <option :value="true">Income</option>
@@ -300,7 +300,7 @@ function acceptAllSuggestions() {
               <select
                 :id="`${uid}-type`"
                 v-model="localClassification"
-                class="input input-bordered w-full text-base min-h-[44px]"
+                class="select select-bordered w-full text-base min-h-[44px]"
               >
                 <option value="recurring">Recurring</option>
                 <option value="once-off">Once-off</option>

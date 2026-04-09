@@ -509,7 +509,7 @@ function handleImport() {
           v-model="search"
           type="text"
           placeholder="Search descriptions..."
-          class="input input-bordered w-full text-base py-1.5 px-3 w-48 min-h-[44px]"
+          class="input input-bordered text-base py-1.5 px-3 w-48 min-h-[44px]"
         />
         <button
           class="text-xs text-base-content/60 hover:text-base-content underline"
@@ -602,7 +602,7 @@ function handleImport() {
                     v-model="tagInputValue"
                     type="text"
                     placeholder="Type a tag..."
-                    class="input input-bordered w-full text-base text-xs w-full py-1.5 px-2"
+                    class="input input-bordered w-full text-xs py-1.5 px-2"
                     role="combobox"
                     :aria-expanded="tagAutocompleteVisible"
                     aria-autocomplete="list"

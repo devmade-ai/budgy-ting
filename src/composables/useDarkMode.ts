@@ -22,6 +22,12 @@ const COMBO_KEY = 'themeCombo'
 const isDark = ref(getInitialDarkMode())
 const currentComboId = ref(getInitialCombo())
 
+// Guard flag — prevents watchers from firing during cross-tab sync.
+// Without this, setting isDark.value and currentComboId.value in the storage
+// handler triggers both watchers, which redundantly call applyTheme() and
+// re-persist values that came FROM another tab's localStorage write.
+let syncing = false
+
 // Apply immediately at module load (before any component mounts)
 applyTheme(isDark.value, currentComboId.value)
 
@@ -35,6 +41,10 @@ function getInitialCombo(): string {
   return validCombo(safeGetItem(COMBO_KEY))
 }
 
+/**
+ * Apply both theming layers and update meta theme-color.
+ * @param skipPersist - true when values came from another tab (no need to write back)
+ */
 function applyTheme(dark: boolean, comboId: string, skipPersist = false): void {
   const root = document.documentElement
   const combo = getCombo(comboId)
@@ -50,7 +60,7 @@ function applyTheme(dark: boolean, comboId: string, skipPersist = false): void {
   // Layer 2: DaisyUI component colors
   root.setAttribute('data-theme', themeName)
 
-  // Update PWA status bar color
+  // Update PWA status bar color to match active theme
   const color = dark ? combo.metaColorDark : combo.metaColorLight
   document.querySelectorAll('meta[name="theme-color"]').forEach(meta => {
     meta.setAttribute('content', color)
@@ -62,35 +72,44 @@ function applyTheme(dark: boolean, comboId: string, skipPersist = false): void {
   }
 }
 
-// Watch isDark and combo changes
+// Watch isDark and combo changes — skipped during cross-tab sync
 watch(isDark, (dark) => {
+  if (syncing) return
   applyTheme(dark, currentComboId.value)
   debugLog('boot', 'info', `Theme changed to ${dark ? 'dark' : 'light'}`)
 })
 
 watch(currentComboId, (comboId) => {
+  if (syncing) return
   applyTheme(isDark.value, comboId)
   debugLog('boot', 'info', `Theme combo changed to ${comboId}`)
 })
 
-// Cross-tab sync — storage event only fires in OTHER tabs
+// Cross-tab sync — storage event only fires in OTHER tabs (not the one that wrote),
+// so there's no infinite loop risk. The syncing flag prevents the watchers from
+// re-persisting values that already came from localStorage.
 function handleStorageSync(e: StorageEvent): void {
   if (e.key === DARK_MODE_KEY && e.newValue !== null) {
+    syncing = true
     const dark = e.newValue === 'true'
     const comboId = validCombo(safeGetItem(COMBO_KEY))
     isDark.value = dark
     currentComboId.value = comboId
+    syncing = false
     applyTheme(dark, comboId, true)
   }
   if (e.key === COMBO_KEY && e.newValue !== null) {
+    syncing = true
     const comboId = validCombo(e.newValue)
     currentComboId.value = comboId
+    syncing = false
     applyTheme(isDark.value, comboId, true)
   }
 }
 window.addEventListener('storage', handleStorageSync)
 
-// Track OS preference changes — only when user hasn't made an explicit choice
+// Track OS preference changes — only when user hasn't made an explicit choice.
+// If they've manually toggled, their choice persists and system changes are ignored.
 const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
 function handleSystemPreferenceChange(e: MediaQueryListEvent): void {
   if (safeGetItem(DARK_MODE_KEY) === null) {

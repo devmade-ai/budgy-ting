@@ -4,29 +4,23 @@
 
 ## Worked on
 
-DaisyUI v5 migration — full 6-phase migration from custom Tailwind CSS variables to DaisyUI semantic theme system.
+DaisyUI v5 migration — full 6-phase migration + thorough strengthening/cleanup pass.
 
 ## Accomplished
 
-**Phase 0 — Prerequisites:**
-- Installed daisyui@5, configured `@plugin "daisyui"` with 4 themes (lofi, black, emerald, forest)
-- Created `src/config/themes.ts` with named combos (Approach B): "Classic" and "Nature"
-- Updated flash prevention script in index.html for dual-layer theming
+**Initial migration (6 phases):**
+- Phase 0: Installed daisyui@5, configured `@plugin "daisyui"` with 4 themes, updated flash prevention
+- Phase 2: Removed all custom `:root`/`.dark` CSS variable definitions and custom component classes
+- Phase 3: Migrated all 30+ Vue files to DaisyUI semantic tokens (bg-base-100, text-base-content, etc.)
+- Phase 5: TypeScript + Vite build verification passed
 
-**Phase 2 — CSS Variable Removal:**
-- Deleted all `:root`/`.dark` custom variable definitions from index.css
-- Deleted all custom component classes (btn-primary, btn-secondary, btn-danger, input-field, card, tag-pill, page-title)
-
-**Phase 3 — Component Migration (30+ files):**
-- Replaced all `dark:` paired classes with single DaisyUI semantic tokens
-- Migrated buttons to DaisyUI `btn btn-primary`, `btn btn-ghost`, `btn btn-error`
-- Migrated inputs to DaisyUI `input input-bordered`
-- Migrated badges to DaisyUI `badge badge-ghost badge-sm`
-- Migrated all color references: bg-base-100, text-base-content, border-base-300, text-error, text-success, text-info, text-warning, text-primary
-
-**Phase 5 — Verification:**
-- TypeScript type check passes
-- Vite build succeeds (115KB CSS with DaisyUI)
+**Strengthening pass (audit + fixes):**
+- Fixed 4 `<select>` elements: `input input-bordered` → `select select-bordered`
+- Fixed `--color-neutral` @theme conflict with DaisyUI's `neutral` — renamed to `--color-data-neutral`
+- Added `syncing` guard flag in useDarkMode.ts cross-tab sync to prevent redundant watcher calls
+- Fixed ImportStepReview duplicated CSS classes (`w-full w-48`, `text-base text-xs`)
+- Updated print CSS selector to include `.rounded-xl` for card-like containers
+- Verified DebugPill (uses inline styles, unaffected), ApexCharts (uses hardcoded hex, `:key` includes isDark), print mode (properly saves/restores data-theme)
 
 ## Current state
 
@@ -34,9 +28,10 @@ All work complete. Build verified. Ready for visual testing.
 
 ## Key context
 
-- `src/config/themes.ts` — theme combo definitions (add more combos here)
-- `src/composables/useDarkMode.ts` — now handles data-theme + .dark dual-layer
-- Flash prevention script in `index.html` has hardcoded combo map (must stay in sync with themes.ts)
-- Brand colors kept in `@theme` for CashflowGraph chart data (not DaisyUI-controlled)
-- DebugPill uses inline styles — intentionally NOT migrated (CSS-independent by design)
+- `src/config/themes.ts` — theme combo definitions. Flash prevention script in index.html has hardcoded combo map that MUST stay in sync.
+- `src/composables/useDarkMode.ts` — dual-layer (data-theme + .dark). Has `syncing` flag for cross-tab sync.
+- DaisyUI registered themes: `lofi --default, black --prefersdark, emerald, forest`
+- Brand colors in `@theme` for CashflowGraph ONLY (not DaisyUI-controlled)
+- `--color-data-neutral` (renamed from `--color-neutral` to avoid DaisyUI conflict)
+- DebugPill intentionally NOT migrated (inline styles, CSS-independent by design)
 - glow-props pattern sync remaining: EVENT_BUS

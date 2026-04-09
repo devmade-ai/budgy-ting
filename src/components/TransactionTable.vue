@@ -142,14 +142,14 @@ function getSuggestions(id: string): TagSuggestion[] {
       />
       <select
         v-model="filterTag"
-        class="input input-bordered text-base w-auto min-h-[44px]"
+        class="select select-bordered text-base w-auto min-h-[44px]"
       >
         <option value="">All tags</option>
         <option v-for="tag in allTags" :key="tag" :value="tag">{{ tag }}</option>
       </select>
       <select
         v-model="filterClassification"
-        class="input input-bordered text-base w-auto min-h-[44px]"
+        class="select select-bordered text-base w-auto min-h-[44px]"
       >
         <option value="">All types</option>
         <option value="recurring">Recurring</option>

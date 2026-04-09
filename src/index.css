@@ -35,7 +35,9 @@
   --color-brand-900: #064e3b;
   --color-overspend: #ef4444;
   --color-underspend: #22c55e;
-  --color-neutral: #6b7280;
+  /* Renamed from --color-neutral to avoid conflict with DaisyUI's `neutral` semantic color.
+     DaisyUI uses `neutral` for buttons/badges; this is for chart data visualization only. */
+  --color-data-neutral: #6b7280;
 }
 
 /* Native form inputs, selects, scrollbars must match theme.
@@ -66,7 +68,8 @@
     color: black !important;
     text-decoration: underline !important;
   }
-  section, .card {
+  /* Target card-like containers — both DaisyUI .card and any rounded-xl bordered containers */
+  section, .card, .rounded-xl {
     break-inside: avoid;
     page-break-inside: avoid;
   }
