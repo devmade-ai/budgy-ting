@@ -1,14 +1,35 @@
 /// <reference types="vitest/config" />
 import { defineConfig } from 'vite'
+import type { Plugin } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import { resolve } from 'path'
 
+// Requirement: Supplementary update detection independent of SW changes.
+// Approach: Emit version.json with a buildTime timestamp during build.
+//   usePWAUpdate.ts fetches this on visibility change and compares against
+//   localStorage to detect deploys that didn't modify sw.js.
+// Reference: glow-props docs/implementations/PWA_SYSTEM.md (version.json)
+function versionJsonPlugin(): Plugin {
+  return {
+    name: 'version-json',
+    apply: 'build',
+    generateBundle() {
+      this.emitFile({
+        type: 'asset',
+        fileName: 'version.json',
+        source: JSON.stringify({ buildTime: new Date().toISOString() }),
+      })
+    },
+  }
+}
+
 export default defineConfig({
   plugins: [
     vue(),
     tailwindcss(),
+    versionJsonPlugin(),
     VitePWA({
       registerType: 'prompt',
       includeAssets: ['favicon.ico', 'favicon-48x48.png', 'apple-touch-icon.png'],

@@ -20,6 +20,12 @@
   - `lazyRetry()` wrapper on all lazy route imports — reloads once on 404 during deploy→SW update window
   - `sessionStorage` flag prevents infinite reload loops
 
+- **version.json supplementary update detection (glow-props PWA_SYSTEM sync):**
+  - Vite plugin (`versionJsonPlugin`) emits `version.json` with ISO `buildTime` on every build
+  - `checkVersionUpdate()` in usePWAUpdate.ts fetches with `cache: 'no-store'`, compares against `localStorage`
+  - Runs on initial load (stores current version) and on visibility change (throttled to once per minute)
+  - Catches app changes that don't modify `sw.js` (edge case where precache manifest stays identical)
+
 - **PWA update checks — visibility + suppression + cleanup (glow-props PWA_SYSTEM sync):**
   - Visibility-based update checks: `visibilitychange` listener triggers `registration.update()` when tab regains focus (catches deploys while backgrounded)
   - 30-second post-update suppression: `wasJustUpdated()` checks `sessionStorage` timestamp to prevent false re-detection after applying an update

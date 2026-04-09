@@ -78,16 +78,60 @@ const {
   },
 })
 
-// Requirement: Visibility-based update checks — detect updates when tab regains focus
+// ── Supplementary version detection ──
+// Requirement: Detect app changes that don't modify sw.js
+// Approach: Fetch /version.json (generated at build time) and compare buildTime
+//   against localStorage. Catches the edge case where precached assets change but
+//   the SW file itself doesn't (no revision change in the precache manifest).
+// Alternatives:
+//   - SW-only detection: Covers most cases but misses config-only or asset-only changes
+//   - Polling version.json on interval: Rejected — visibility check is sufficient
+// Reference: glow-props docs/implementations/PWA_SYSTEM.md (version.json)
+const VERSION_KEY = 'farlume:app-build-time'
+const VERSION_THROTTLE_MS = 60_000 // Don't fetch more than once per minute
+let lastVersionCheck = 0
+
+async function checkVersionUpdate(): Promise<boolean> {
+  if (Date.now() - lastVersionCheck < VERSION_THROTTLE_MS) return false
+  lastVersionCheck = Date.now()
+
+  try {
+    const res = await fetch('/version.json', { cache: 'no-store' })
+    if (!res.ok) return false
+    const { buildTime } = await res.json()
+    const stored = localStorage.getItem(VERSION_KEY)
+    if (stored && stored !== buildTime) {
+      debugLog('pwa', 'info', 'New app version detected via version.json', { stored, buildTime })
+      return true
+    }
+    localStorage.setItem(VERSION_KEY, buildTime)
+    return false
+  } catch { return false }
+}
+
+// Store current version on initial load (no-op if already stored)
+checkVersionUpdate()
+
+// ── Visibility-based checks ──
+// Requirement: Detect updates when tab regains focus
 // Approach: Listen for visibilitychange at module level. When the page becomes visible,
-//   call registration.update() to check for a new SW. This catches deploys that happened
+//   check both the SW registration AND version.json. This catches deploys that happened
 //   while the tab was backgrounded, without waiting for the next hourly interval.
 // Alternatives:
 //   - Polling only: Rejected — 60-minute gaps miss updates for long-backgrounded tabs
 //   - Focus event: Rejected — fires on window focus even within same tab (noisy)
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && swRegistration) {
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState !== 'visible') return
+
+  // SW update check
+  if (swRegistration) {
     swRegistration.update()
+  }
+
+  // Supplementary version.json check (throttled to once per minute)
+  const versionChanged = await checkVersionUpdate()
+  if (versionChanged && !hasUpdate.value) {
+    hasUpdate.value = true
   }
 })
 

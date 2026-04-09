@@ -29,6 +29,11 @@ glow-props pattern sync — DOWNLOAD_PDF (Save as PDF) and PWA_SYSTEM (full sync
 **ChunkLoadError prevention:**
 - `lazyRetry()` wrapper on all 5 lazy route imports in router/index.ts
 
+**version.json supplementary detection:**
+- `versionJsonPlugin()` in vite.config.ts emits `version.json` with `buildTime` on every build
+- `checkVersionUpdate()` in usePWAUpdate.ts fetches on visibility change (throttled 60s), compares against localStorage
+- Catches edge case: app changes that don't modify sw.js
+
 ## Current state
 
 All work complete and pushed to `claude/add-pdf-print-button-7zGtt`. Build verified.
@@ -37,6 +42,6 @@ All work complete and pushed to `claude/add-pdf-print-button-7zGtt`. Build verif
 
 - `usePWAInstall.ts` exports `CHROMIUM_BROWSERS` constant — use it for any Chromium-specific logic
 - `lazyRetry()` in router uses `sessionStorage` key `farlume:chunk-retry-refreshed` to prevent infinite reloads
-- `usePWAUpdate.ts` has 3 update triggers: 60-min interval, `visibilitychange`, manual check
+- `usePWAUpdate.ts` has 4 update triggers: 60-min interval, `visibilitychange`, manual check, version.json comparison
 - Print CSS in `src/index.css`, `beforeprint`/`afterprint` in AppLayout + TransactionTable
 - glow-props pattern sync remaining: THEME_DARK_MODE, EVENT_BUS
