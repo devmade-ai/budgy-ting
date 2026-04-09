@@ -2,6 +2,57 @@
 
 <!-- Changelog and record of completed work. Organized by date. -->
 
+## 2026-04-09
+
+- **Debug System — Full pattern sync (glow-props DEBUG_SYSTEM sync):**
+  - Circular buffer: replaced Array.shift() O(n) with head/count pointer pattern O(1) in debugLog.ts
+  - Console interception: patched console.error/console.warn at module load with HMR guard
+  - PWA Diagnostics tab: third tab in DebugPill with active health checks (protocol, SW state, manifest, standalone, install prompt)
+  - Inline styles: replaced all Tailwind classes in DebugPill.vue with inline styles (survives CSS load failures)
+  - Pre-framework inline pill: vanilla JS script in index.html with error buffer, __debugPushError(), 20-second loading timeout
+  - URL query param redaction in debug reports
+  - Immediate subscriber delivery (new subscribers get current entries)
+  - DebugSource type accepts ad-hoc string sources via `(string & {})`
+  - Timestamp changed from ISO string to numeric (Date.now()) for consistency
+  - ClipboardItem Blob fallback added to copy
+  - main.ts bridges pre-mount errors and clears loading timer on Vue mount
+  - Global error listener HMR guard to prevent duplicates
+  - Console interception re-entrancy guard (prevents infinite loop if subscriber triggers console.error)
+  - Inline pill error listeners yield to debugLog.ts via __debugLogReady flag (prevents duplicate entries)
+  - Hardcoded diagnostic indices replaced with label-based lookup (fragile → robust)
+  - Inline pill alert() replaced with DOM error panel (non-blocking, scrollable)
+  - Removed unnecessary immediate subscriber delivery (DebugPill re-fetches on every notify)
+
+- **App Icons — 400 DPI + dedicated maskable icon (glow-props APP_ICONS sync):**
+  - Increased Sharp density from 150 to 400 DPI for crisper edge anti-aliasing
+  - Added `shape-rendering="geometricPrecision"` to source `icon.svg` (prioritizes accurate geometry for all rasterized icons)
+  - Created dedicated 1024x1024 maskable icon with safe-zone padding (B glyph scaled to 80%, no rounded corners)
+  - Updated manifest: 192/512 = `purpose: "any"`, 1024 maskable = `purpose: "maskable"`
+  - Removed old maskable entry that reused pwa-512x512.png
+  - Added 48x48 PNG favicon with `<link rel="icon" type="image/png">` in index.html (modern browsers prefer PNG over ICO)
+  - Added `favicon-48x48.png` to `includeAssets` for offline precaching
+  - Build verified: manifest.webmanifest has correct icon entries, all PNGs in dist
+  - Fixed 10 stale `glow-props CLAUDE.md` code comment references across 6 files — now point to specific pattern files in `docs/implementations/` (THEME_DARK_MODE.md, PWA_SYSTEM.md, DOWNLOAD_PDF.md, BURGER_MENU.md)
+
+- **Burger Menu — Arrow key navigation + z-index enforcement (glow-props BURGER_MENU sync):**
+  - Added ArrowDown/ArrowUp (with wrapping) and Home/End key navigation to BurgerMenu.vue
+  - Arrow key idx=-1 guard: ArrowDown → first item, ArrowUp → last item when no button focused
+  - Z-index scale enforced per pattern: modals/drawers z-50 → z-[60] (6 components: BottomSheet, ConfirmDialog, HelpDrawer, InstallInstructionsModal, TransactionEditModal, TutorialModal)
+  - Updated CLAUDE.md z-index scale table to match pattern (modals = 60, consolidated base content = 0-10)
+  - Error routing: `handleItem` catches action errors and routes to `debugLog()` (debug pill visibility)
+  - Removed redundant `handleOutsideClick` document listener — backdrop `@click="close"` already handles outside clicks
+  - Timer cleanup: `handleItem` setTimeout tracked and cleared on unmount per AI_MISTAKES.md lesson
+  - Removed unused `onMounted` import
+  - Theme UI already implemented (dark/light toggle with Sun/Moon icons in menu)
+
+- **Updated implementation pattern fetch URLs in CLAUDE.md:**
+  - Renamed "Suggested Implementations" → "Implementation Patterns (Source of Truth)"
+  - Changed all fetch URLs from `glow-props/contents/CLAUDE.md` to `glow-props/contents/docs/implementations/{PATTERN_NAME}.md`
+  - Added GitHub Pages URL: `https://devmade-ai.github.io/glow-props/patterns/{PATTERN_NAME}.md`
+  - Added listing endpoint to discover available patterns dynamically
+  - Updated AI Notes entry to reference `docs/implementations/` folder
+  - Updated Cross-Project Reference section with new URLs
+
 ## 2026-04-07
 
 - **Removed local Suggested Implementations from CLAUDE.md:**

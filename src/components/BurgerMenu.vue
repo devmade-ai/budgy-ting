@@ -10,11 +10,12 @@
  *   - role="menu" pattern: Rejected — wrong ARIA semantics for navigation
  *   - Slide-out drawer: Rejected — needs animation lib, fights with bottom nav
  *   - Headless UI Disclosure: Viable — adds dependency for a single component
- * Reference: glow-props CLAUDE.md "Burger Menu"
+ * Reference: glow-props docs/implementations/BURGER_MENU.md
  */
 
-import { ref, watch, onMounted, onUnmounted, nextTick, type Component } from 'vue'
+import { ref, computed, watch, onUnmounted, nextTick, type Component } from 'vue'
 import { Menu } from 'lucide-vue-next'
+import { debugLog } from '@/debug/debugLog'
 
 export interface MenuItem {
   label: string
@@ -45,7 +46,11 @@ const menuRef = ref<HTMLElement | null>(null)
 // moving focus to the trigger from wherever the user currently is.
 let hasBeenOpen = false
 
-const visibleItems = () => props.items.filter((item) => item.visible !== false)
+// Track pending action timer for cleanup on unmount — see AI_MISTAKES.md
+// re: setTimeout callbacks outliving components
+let actionTimerId: ReturnType<typeof setTimeout> | null = null
+
+const visibleItems = computed(() => props.items.filter((item) => item.visible !== false))
 
 function close() {
   open.value = false
@@ -58,15 +63,25 @@ function toggle() {
 // Close menu first, then execute action after DOM settles.
 // 50ms accounts for any visual transition — keeps the menu visually
 // closed before the action's side effects (modals, route changes) fire.
+// Errors routed to debug system per glow-props BURGER_MENU pattern.
 function handleItem(item: MenuItem) {
   if (item.disabled) return
   close()
-  setTimeout(() => item.action(), 50)
+  if (actionTimerId) clearTimeout(actionTimerId)
+  actionTimerId = setTimeout(async () => {
+    actionTimerId = null
+    try {
+      await item.action()
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      debugLog('global', 'error', `Menu action "${item.label}" failed`, { error: msg })
+    }
+  }, 50)
 }
 
 // Escape key closes menu — only registered while open
 // Requirement: Keyboard accessibility for menu close
-// Reference: glow-props CLAUDE.md "Burger Menu — Escape key closes menu"
+// Reference: glow-props docs/implementations/BURGER_MENU.md
 function handleKeyDown(e: KeyboardEvent) {
   if (e.key === 'Escape') {
     e.preventDefault()
@@ -74,21 +89,42 @@ function handleKeyDown(e: KeyboardEvent) {
   }
 }
 
-// Outside click — close if click is outside the menu container
-function handleOutsideClick(e: MouseEvent) {
-  const container = triggerRef.value?.parentElement
-  if (open.value && container && !container.contains(e.target as Node)) {
-    close()
+// Arrow key + Home/End navigation within menu items
+// Requirement: Keyboard traversal with wrapping for disclosure-pattern menu
+// Reference: glow-props docs/implementations/BURGER_MENU.md
+function handleMenuKeyDown(e: KeyboardEvent) {
+  const items = menuRef.value?.querySelectorAll('button:not([disabled])') as NodeListOf<HTMLElement> | undefined
+  if (!items || items.length === 0) return
+  const idx = Array.from(items).indexOf(document.activeElement as HTMLElement)
+
+  // Guard: if no menu button is focused (idx = -1), ArrowDown → first, ArrowUp → last
+  switch (e.key) {
+    case 'ArrowDown':
+      e.preventDefault()
+      items[idx < 0 ? 0 : (idx + 1) % items.length]?.focus()
+      break
+    case 'ArrowUp':
+      e.preventDefault()
+      items[idx < 0 ? items.length - 1 : (idx - 1 + items.length) % items.length]?.focus()
+      break
+    case 'Home':
+      e.preventDefault()
+      items[0]?.focus()
+      break
+    case 'End':
+      e.preventDefault()
+      items[items.length - 1]?.focus()
+      break
   }
 }
 
-onMounted(() => {
-  document.addEventListener('click', handleOutsideClick)
-})
+// Outside click handled by backdrop @click="close" — no document listener needed.
+// The backdrop covers the full viewport when open (z-40), so all clicks outside
+// the menu dropdown (z-50) hit the backdrop and close the menu.
 
 onUnmounted(() => {
-  document.removeEventListener('click', handleOutsideClick)
   document.removeEventListener('keydown', handleKeyDown)
+  if (actionTimerId) clearTimeout(actionTimerId)
 })
 
 // Focus management: focus first item on open, return to trigger on close.
@@ -131,7 +167,7 @@ watch(open, (isOpen) => {
       <!-- Backdrop — cursor-pointer required for iOS Safari.
            iOS Safari does not fire click events on empty divs without it.
            This is an intentional iOS optimization, not a bug.
-           Reference: glow-props CLAUDE.md "Burger Menu — Key Lessons #2" -->
+           Reference: glow-props docs/implementations/BURGER_MENU.md -->
       <div
         class="fixed inset-0 z-40 cursor-pointer"
         @click="close"
@@ -146,9 +182,10 @@ watch(open, (isOpen) => {
                bg-white dark:bg-[var(--color-surface-elevated)]
                border border-gray-200 dark:border-zinc-700
                py-1 overflow-hidden overscroll-contain"
+        @keydown="handleMenuKeyDown"
       >
         <ul class="list-none m-0 p-0">
-          <template v-for="(item, i) in visibleItems()" :key="item.label">
+          <template v-for="(item, i) in visibleItems" :key="item.label">
             <li v-if="item.separator && i > 0" role="separator">
               <div class="border-t border-gray-100 dark:border-zinc-700 my-1" />
             </li>

@@ -40,7 +40,7 @@
 
 **Why it happened:** `setTimeout` feels "fire and forget" — easy to forget that the callback captures component state and can outlive the component.
 
-**How to prevent it:** Every `setTimeout`, `setInterval`, `addEventListener`, or `subscribe` in a component setup needs a corresponding cleanup in `onUnmounted`. Track timeout IDs in an array and clear them all on unmount. See CLAUDE.md Suggested Implementations for the pattern.
+**How to prevent it:** Every `setTimeout`, `setInterval`, `addEventListener`, or `subscribe` in a component setup needs a corresponding cleanup in `onUnmounted`. Track timeout IDs in an array and clear them all on unmount. See CLAUDE.md Implementation Patterns (Source of Truth) for the pattern.
 
 ## Documentation not updated after renames and migrations (2026-03-02–03)
 

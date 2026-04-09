@@ -11,7 +11,7 @@
   Design: Bold B monogram with two D-shaped bowls (lower slightly wider).
     Even-odd fill rule cuts counter shapes from the outer boundary.
 -->
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" shape-rendering="geometricPrecision">
   <rect width="512" height="512" rx="92" fill="#10b981"/>
   <path fill="white" fill-rule="evenodd" d="
     M 140 108

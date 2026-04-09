@@ -7,7 +7,7 @@
    Alternatives:
      - CSS-only prefers-color-scheme: Rejected — no user override possible
      - Tailwind dark: on every utility: Used as supplement for non-token colors
-   Reference: glow-props CLAUDE.md "Theme & Dark Mode" */
+   Reference: glow-props docs/implementations/THEME_DARK_MODE.md */
 
 /* Tailwind v4 class-based dark mode — targets .dark on <html>.
    Default v4 uses prefers-color-scheme; this overrides to class-based toggling. */
@@ -107,7 +107,7 @@ html.dark {
 }
 
 /* Print overrides — force readable output regardless of dark mode.
-   Reference: glow-props CLAUDE.md "Download as PDF" */
+   Reference: glow-props docs/implementations/DOWNLOAD_PDF.md */
 @media print {
   .no-print {
     display: none !important;

@@ -64,7 +64,7 @@ watch(() => sheetRef.value, () => {
 <template>
   <Teleport to="body">
     <Transition name="sheet">
-      <div v-if="open" class="fixed inset-0 z-50">
+      <div v-if="open" class="fixed inset-0 z-[60]">
         <!-- Backdrop -->
         <div
           class="absolute inset-0 bg-black/40"
