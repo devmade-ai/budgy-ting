@@ -45,6 +45,10 @@ const menuRef = ref<HTMLElement | null>(null)
 // moving focus to the trigger from wherever the user currently is.
 let hasBeenOpen = false
 
+// Track pending action timer for cleanup on unmount — see AI_MISTAKES.md
+// re: setTimeout callbacks outliving components
+let actionTimerId: ReturnType<typeof setTimeout> | null = null
+
 const visibleItems = () => props.items.filter((item) => item.visible !== false)
 
 function close() {
@@ -61,7 +65,11 @@ function toggle() {
 function handleItem(item: MenuItem) {
   if (item.disabled) return
   close()
-  setTimeout(() => item.action(), 50)
+  if (actionTimerId) clearTimeout(actionTimerId)
+  actionTimerId = setTimeout(() => {
+    actionTimerId = null
+    item.action()
+  }, 50)
 }
 
 // Escape key closes menu — only registered while open
@@ -82,14 +90,15 @@ function handleMenuKeyDown(e: KeyboardEvent) {
   if (!items || items.length === 0) return
   const idx = Array.from(items).indexOf(document.activeElement as HTMLElement)
 
+  // Guard: if no menu button is focused (idx = -1), ArrowDown → first, ArrowUp → last
   switch (e.key) {
     case 'ArrowDown':
       e.preventDefault()
-      items[(idx + 1) % items.length].focus()
+      items[idx < 0 ? 0 : (idx + 1) % items.length].focus()
       break
     case 'ArrowUp':
       e.preventDefault()
-      items[(idx - 1 + items.length) % items.length].focus()
+      items[idx < 0 ? items.length - 1 : (idx - 1 + items.length) % items.length].focus()
       break
     case 'Home':
       e.preventDefault()
@@ -117,6 +126,7 @@ onMounted(() => {
 onUnmounted(() => {
   document.removeEventListener('click', handleOutsideClick)
   document.removeEventListener('keydown', handleKeyDown)
+  if (actionTimerId) clearTimeout(actionTimerId)
 })
 
 // Focus management: focus first item on open, return to trigger on close.
