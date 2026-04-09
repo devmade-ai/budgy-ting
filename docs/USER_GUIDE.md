@@ -41,6 +41,16 @@ A workspace is the top-level container for your transactions, recurring patterns
 3. A confirmation dialog will explain what gets deleted: the workspace, all its transactions, patterns, and imported data
 4. Click **Delete workspace** to confirm, or **Cancel** to go back
 
+### Saving as PDF
+
+1. Open the workspace you want to save
+2. Click the **⋮** menu (three dots), then **Save as PDF**
+3. Your browser's print dialog opens with a clean preview of your dashboard
+4. Choose **Save as PDF** as the destination (or your preferred printer)
+5. Click **Save** or **Print**
+
+The PDF includes your workspace name, cashflow graph, metrics grid, and the full transaction list. Interactive controls (buttons, filters, menus) are automatically hidden. If you're using dark mode, the PDF automatically switches to light mode for readability on paper.
+
 ### Exporting a Workspace
 
 1. Open the workspace

@@ -117,9 +117,6 @@ html.dark {
   .print-show {
     display: block !important;
   }
-  .print-show-flex {
-    display: flex !important;
-  }
   body {
     background: white !important;
     color: black !important;

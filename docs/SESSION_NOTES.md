@@ -32,7 +32,7 @@ All work complete and pushed to `claude/add-pdf-print-button-7zGtt`. Build verif
 ## Key context
 
 - Print CSS lives in `src/index.css` `@media print` block
-- `print-show` / `print-show-flex` utility classes exist for elements that need to be visible only in print
+- `print-show` utility class exists for elements that need to be visible only in print
 - `beforeprint`/`afterprint` listeners in two components: AppLayout (dark mode toggle) and TransactionTable (pagination bypass)
 - ApexCharts SVG uses inline styles from computed config — can't be toggled via CSS class, hence separate `@media print` overrides for `.apexcharts-*` selectors
 - glow-props DOWNLOAD_PDF pattern recommends window.print() for text-heavy content (searchable, zero deps) and pdf-lib for canvas-heavy content

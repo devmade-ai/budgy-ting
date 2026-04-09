@@ -193,7 +193,7 @@ function getSuggestions(id: string): TagSuggestion[] {
           </span>
         </div>
       </div>
-      <div v-if="paginatedRows.length === 0" class="py-8 text-center text-gray-400 dark:text-zinc-500 text-sm">
+      <div v-if="displayRows.length === 0" class="py-8 text-center text-gray-400 dark:text-zinc-500 text-sm">
         {{ search || filterTag || filterClassification ? 'No matching transactions' : 'No transactions yet' }}
       </div>
     </div>
@@ -245,7 +245,7 @@ function getSuggestions(id: string): TagSuggestion[] {
               {{ isIncome(txn.amount) ? '+' : '-' }}{{ currencyLabel }}{{ formatAmount(Math.abs(txn.amount)) }}
             </td>
           </tr>
-          <tr v-if="paginatedRows.length === 0">
+          <tr v-if="displayRows.length === 0">
             <td colspan="5" class="py-8 text-center text-gray-400 dark:text-zinc-500">
               {{ search || filterTag || filterClassification ? 'No matching transactions' : 'No transactions yet' }}
             </td>
