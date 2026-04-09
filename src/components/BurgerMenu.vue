@@ -13,7 +13,7 @@
  * Reference: glow-props docs/implementations/BURGER_MENU.md
  */
 
-import { ref, watch, onUnmounted, nextTick, type Component } from 'vue'
+import { ref, computed, watch, onUnmounted, nextTick, type Component } from 'vue'
 import { Menu } from 'lucide-vue-next'
 import { debugLog } from '@/debug/debugLog'
 
@@ -50,7 +50,7 @@ let hasBeenOpen = false
 // re: setTimeout callbacks outliving components
 let actionTimerId: ReturnType<typeof setTimeout> | null = null
 
-const visibleItems = () => props.items.filter((item) => item.visible !== false)
+const visibleItems = computed(() => props.items.filter((item) => item.visible !== false))
 
 function close() {
   open.value = false
@@ -185,7 +185,7 @@ watch(open, (isOpen) => {
         @keydown="handleMenuKeyDown"
       >
         <ul class="list-none m-0 p-0">
-          <template v-for="(item, i) in visibleItems()" :key="item.label">
+          <template v-for="(item, i) in visibleItems" :key="item.label">
             <li v-if="item.separator && i > 0" role="separator">
               <div class="border-t border-gray-100 dark:border-zinc-700 my-1" />
             </li>
