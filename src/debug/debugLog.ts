@@ -2,15 +2,20 @@
  * In-memory debug event store with pub/sub.
  *
  * Requirement: Alpha-phase diagnostic tool for capturing runtime events
- * Approach: Capped array (200 entries, oldest evicted) with subscriber notifications.
- *   Global error/unhandledrejection listeners installed at module load.
- *   No persistence — purely in-memory, intended to be removed post-alpha.
+ * Approach: Circular buffer (200 entries, O(1) insert) with subscriber notifications.
+ *   Console.error/warn interception and global error/unhandledrejection listeners
+ *   installed at module load. No persistence — purely in-memory, removed post-alpha.
  * Alternatives:
  *   - Console-only logging: Rejected — non-technical users can't access devtools
  *   - Remote logging service: Rejected — local-first principle, no server dependency
  *   - Persistent storage: Rejected — debug data is ephemeral, IndexedDB overhead unnecessary
+ *   - Array.shift() eviction: Rejected — O(n) on every insert when buffer full.
+ *     Circular buffer with head/count is O(1).
+ * Reference: glow-props docs/implementations/DEBUG_SYSTEM.md
  */
 
+// Typed sources with string fallback — preserves IDE autocomplete while allowing
+// ad-hoc project-specific sources without modifying the type definition.
 export type DebugSource =
   | 'boot'
   | 'db'
@@ -19,12 +24,13 @@ export type DebugSource =
   | 'engine'
   | 'ml'
   | 'global'
+  | (string & {})
 
 export type DebugSeverity = 'info' | 'success' | 'warn' | 'error'
 
 export interface DebugEntry {
   id: number
-  timestamp: string
+  timestamp: number
   source: DebugSource
   severity: DebugSeverity
   event: string
@@ -35,12 +41,17 @@ type Subscriber = (entry: DebugEntry) => void
 
 const MAX_ENTRIES = 200
 
+// Circular buffer: O(1) insert via head/count pointers, no Array.shift().
+// head = next write position, count = number of valid entries.
+const buffer: (DebugEntry | null)[] = new Array(MAX_ENTRIES).fill(null)
+let head = 0
+let count = 0
 let nextId = 1
-const entries: DebugEntry[] = []
+
 const subscribers = new Set<Subscriber>()
 
 /**
- * Log a debug event. Entries beyond MAX_ENTRIES are discarded (oldest first).
+ * Log a debug event. Oldest entries evicted when buffer is full (O(1)).
  */
 export function debugLog(
   source: DebugSource,
@@ -50,17 +61,16 @@ export function debugLog(
 ): void {
   const entry: DebugEntry = {
     id: nextId++,
-    timestamp: new Date().toISOString(),
+    timestamp: Date.now(),
     source,
     severity,
     event,
     details,
   }
 
-  entries.push(entry)
-  if (entries.length > MAX_ENTRIES) {
-    entries.shift()
-  }
+  buffer[head] = entry
+  head = (head + 1) % MAX_ENTRIES
+  if (count < MAX_ENTRIES) count++
 
   for (const sub of subscribers) {
     try {
@@ -72,49 +82,69 @@ export function debugLog(
 }
 
 /**
- * Subscribe to new debug entries. Returns an unsubscribe function.
+ * Subscribe to new debug entries. New subscribers receive current entries
+ * immediately — eliminates timing bugs where a late subscriber misses boot entries.
+ * Returns an unsubscribe function.
  */
 export function subscribe(fn: Subscriber): () => void {
   subscribers.add(fn)
+  const current = getEntries()
+  for (const entry of current) {
+    try { fn(entry) } catch { /* ignore */ }
+  }
   return () => subscribers.delete(fn)
 }
 
 /**
- * Get a snapshot of all current entries.
+ * Get a snapshot of all current entries in chronological order.
  */
-export function getEntries(): readonly DebugEntry[] {
-  return entries
+export function getEntries(): DebugEntry[] {
+  if (count === 0) return []
+  const result: DebugEntry[] = []
+  const start = count < MAX_ENTRIES ? 0 : head
+  for (let i = 0; i < count; i++) {
+    result.push(buffer[(start + i) % MAX_ENTRIES]!)
+  }
+  return result
 }
 
 /**
  * Clear all entries and reset the counter.
  */
 export function clearEntries(): void {
-  entries.length = 0
+  buffer.fill(null)
+  head = 0
+  count = 0
   nextId = 1
 }
 
 /**
  * Generate a full debug report string for clipboard export.
+ * URL query params redacted to prevent token/UTM leaking in shared reports.
  */
 export function generateReport(): string {
+  const all = getEntries()
+  const standalone = window.matchMedia('(display-mode: standalone)').matches
+    || (navigator as any).standalone === true
+
   const env = [
-    `URL: ${window.location.href}`,
+    `URL: ${window.location.origin}${window.location.pathname}${window.location.search ? '?[redacted]' : ''}`,
     `User Agent: ${navigator.userAgent}`,
     `Screen: ${screen.width}x${screen.height}`,
     `Viewport: ${window.innerWidth}x${window.innerHeight}`,
     `Online: ${navigator.onLine}`,
     `Protocol: ${window.location.protocol}`,
-    `Standalone: ${window.matchMedia('(display-mode: standalone)').matches}`,
+    `Standalone: ${standalone}`,
     `Service Worker: ${'serviceWorker' in navigator}`,
     `IndexedDB: ${'indexedDB' in window}`,
     `Timestamp: ${new Date().toISOString()}`,
   ]
 
-  const logs = entries.map((e) => {
-    const time = e.timestamp.slice(11, 23) // HH:MM:SS.mmm
+  const logs = all.map((e) => {
+    const t = new Date(e.timestamp)
+    const ts = `${t.getHours().toString().padStart(2, '0')}:${t.getMinutes().toString().padStart(2, '0')}:${t.getSeconds().toString().padStart(2, '0')}.${t.getMilliseconds().toString().padStart(3, '0')}`
     const detail = e.details ? ` | ${JSON.stringify(e.details)}` : ''
-    return `[${time}] [${e.source}] [${e.severity}] ${e.event}${detail}`
+    return `[${ts}] [${e.severity.toUpperCase()}] [${e.source}] ${e.event}${detail}`
   })
 
   return [
@@ -123,19 +153,43 @@ export function generateReport(): string {
     '--- Environment ---',
     ...env,
     '',
-    `--- Log (${entries.length} entries) ---`,
+    `--- Log (${all.length} entries) ---`,
     ...logs,
     '',
     '=== End Report ===',
   ].join('\n')
 }
 
-// ── Global error listeners (installed once at module load) ──
+// ── Console interception ──
+// Captures Vue warnings, library errors, and any other console output automatically.
+// Must run at module load time to catch early console calls.
+// HMR guard prevents duplicate patching during development.
 
-if (typeof window !== 'undefined') {
+if (typeof window !== 'undefined' && !(window as any).__debugConsolePatched) {
+  (window as any).__debugConsolePatched = true
+
+  const originalError = console.error
+  const originalWarn = console.warn
+
+  console.error = (...args: unknown[]) => {
+    originalError.apply(console, args)
+    debugLog('global', 'error', args.map(String).join(' '))
+  }
+
+  console.warn = (...args: unknown[]) => {
+    originalWarn.apply(console, args)
+    debugLog('global', 'warn', args.map(String).join(' '))
+  }
+}
+
+// ── Global error listeners (installed once at module load) ──
+// HMR guard prevents duplicate listeners during development.
+
+if (typeof window !== 'undefined' && !(window as any).__debugLogListenersAttached) {
+  (window as any).__debugLogListenersAttached = true
+
   window.addEventListener('error', (event) => {
-    debugLog('global', 'error', 'Uncaught error', {
-      message: event.message,
+    debugLog('global', 'error', event.message || 'Unknown error', {
       filename: event.filename,
       line: event.lineno,
       col: event.colno,
@@ -143,8 +197,6 @@ if (typeof window !== 'undefined') {
   })
 
   window.addEventListener('unhandledrejection', (event) => {
-    debugLog('global', 'error', 'Unhandled promise rejection', {
-      reason: String(event.reason),
-    })
+    debugLog('global', 'error', `Unhandled rejection: ${String(event.reason)}`)
   })
 }

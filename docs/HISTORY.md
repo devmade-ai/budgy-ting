@@ -4,6 +4,20 @@
 
 ## 2026-04-09
 
+- **Debug System — Full pattern sync (glow-props DEBUG_SYSTEM sync):**
+  - Circular buffer: replaced Array.shift() O(n) with head/count pointer pattern O(1) in debugLog.ts
+  - Console interception: patched console.error/console.warn at module load with HMR guard
+  - PWA Diagnostics tab: third tab in DebugPill with active health checks (protocol, SW state, manifest, standalone, install prompt)
+  - Inline styles: replaced all Tailwind classes in DebugPill.vue with inline styles (survives CSS load failures)
+  - Pre-framework inline pill: vanilla JS script in index.html with error buffer, __debugPushError(), 20-second loading timeout
+  - URL query param redaction in debug reports
+  - Immediate subscriber delivery (new subscribers get current entries)
+  - DebugSource type accepts ad-hoc string sources via `(string & {})`
+  - Timestamp changed from ISO string to numeric (Date.now()) for consistency
+  - ClipboardItem Blob fallback added to copy
+  - main.ts bridges pre-mount errors and clears loading timer on Vue mount
+  - Global error listener HMR guard to prevent duplicates
+
 - **App Icons — 400 DPI + dedicated maskable icon (glow-props APP_ICONS sync):**
   - Increased Sharp density from 150 to 400 DPI for crisper edge anti-aliasing
   - Added `shape-rendering="geometricPrecision"` to source `icon.svg` (prioritizes accurate geometry for all rasterized icons)

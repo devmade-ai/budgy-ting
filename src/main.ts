@@ -25,6 +25,20 @@ app.mount('#app')
 
 debugLog('boot', 'success', 'Main app mounted')
 
+// Bridge pre-mount errors captured by the inline pill script in index.html.
+// These were collected before any module scripts loaded.
+const preErrors = (window as any).__debugErrors as Array<{ msg: string; stack: string; time: number }> | undefined
+if (preErrors && preErrors.length > 0) {
+  for (const err of preErrors) {
+    debugLog('boot', 'error', `[pre-mount] ${err.msg}`, err.stack ? { stack: err.stack } : undefined)
+  }
+}
+
+// Clear loading timeout — Vue mounted successfully, inline pill no longer needed.
+if (typeof (window as any).__debugClearLoadTimer === 'function') {
+  ;(window as any).__debugClearLoadTimer()
+}
+
 // Mount debug pill in a separate Vue root so it survives main app crashes.
 // Requirement: Diagnostics must remain visible even if the main app errors.
 // Approach: Separate root element + app instance, no router dependency.
