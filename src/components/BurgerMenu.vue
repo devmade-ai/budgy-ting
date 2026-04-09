@@ -101,19 +101,19 @@ function handleMenuKeyDown(e: KeyboardEvent) {
   switch (e.key) {
     case 'ArrowDown':
       e.preventDefault()
-      items[idx < 0 ? 0 : (idx + 1) % items.length].focus()
+      items[idx < 0 ? 0 : (idx + 1) % items.length]?.focus()
       break
     case 'ArrowUp':
       e.preventDefault()
-      items[idx < 0 ? items.length - 1 : (idx - 1 + items.length) % items.length].focus()
+      items[idx < 0 ? items.length - 1 : (idx - 1 + items.length) % items.length]?.focus()
       break
     case 'Home':
       e.preventDefault()
-      items[0].focus()
+      items[0]?.focus()
       break
     case 'End':
       e.preventDefault()
-      items[items.length - 1].focus()
+      items[items.length - 1]?.focus()
       break
   }
 }
