@@ -4,44 +4,39 @@
 
 ## Worked on
 
-glow-props pattern sync — DOWNLOAD_PDF (Save as PDF) and PWA_SYSTEM (full sync).
+DaisyUI v5 migration — full 6-phase migration from custom Tailwind CSS variables to DaisyUI semantic theme system.
 
 ## Accomplished
 
-**Save as PDF (DOWNLOAD_PDF sync):**
-- "Save as PDF" in workspace actions menu, calls `window.print()`
-- Full print output: `no-print`, `print-show`, `beforeprint`/`afterprint` (pagination bypass + dark mode toggle), ApexCharts print CSS, cash-on-hand static display
-- Docs: USER_GUIDE, TESTING_GUIDE, README
+**Phase 0 — Prerequisites:**
+- Installed daisyui@5, configured `@plugin "daisyui"` with 4 themes (lofi, black, emerald, forest)
+- Created `src/config/themes.ts` with named combos (Approach B): "Classic" and "Nature"
+- Updated flash prevention script in index.html for dual-layer theming
 
-**PWA install detection (PWA_SYSTEM sync):**
-- Browser detection: 3 → 7 Chromium browsers (+ opera, samsung, vivaldi, arc)
-- Brave detection: `'brave' in navigator` (UA string unreliable on Brave Mobile)
-- `CHROMIUM_BROWSERS` exported constant (single source of truth)
-- iOS non-Safari: CriOS/FxiOS/EdgiOS detection + Safari redirect instructions
-- `display-mode: standalone` change listener (detects install via browser menu)
-- Install instructions: Chromium fallback, "Why install?" benefits, per-browser warning notes
-- `installed-via-browser` analytics event
+**Phase 2 — CSS Variable Removal:**
+- Deleted all `:root`/`.dark` custom variable definitions from index.css
+- Deleted all custom component classes (btn-primary, btn-secondary, btn-danger, input-field, card, tag-pill, page-title)
 
-**PWA update checks (PWA_SYSTEM sync):**
-- Visibility-based checks, 30s suppression, 1500ms settle delay, error handling
-- `cleanupOutdatedCaches: true`, DebugPill install prompt flag fix
+**Phase 3 — Component Migration (30+ files):**
+- Replaced all `dark:` paired classes with single DaisyUI semantic tokens
+- Migrated buttons to DaisyUI `btn btn-primary`, `btn btn-ghost`, `btn btn-error`
+- Migrated inputs to DaisyUI `input input-bordered`
+- Migrated badges to DaisyUI `badge badge-ghost badge-sm`
+- Migrated all color references: bg-base-100, text-base-content, border-base-300, text-error, text-success, text-info, text-warning, text-primary
 
-**ChunkLoadError prevention:**
-- `lazyRetry()` wrapper on all 5 lazy route imports in router/index.ts
-
-**version.json supplementary detection:**
-- `versionJsonPlugin()` in vite.config.ts emits `version.json` with `buildTime` on every build
-- `checkVersionUpdate()` in usePWAUpdate.ts fetches on visibility change (throttled 60s), compares against localStorage
-- Catches edge case: app changes that don't modify sw.js
+**Phase 5 — Verification:**
+- TypeScript type check passes
+- Vite build succeeds (115KB CSS with DaisyUI)
 
 ## Current state
 
-All work complete and pushed to `claude/add-pdf-print-button-7zGtt`. Build verified.
+All work complete. Build verified. Ready for visual testing.
 
 ## Key context
 
-- `usePWAInstall.ts` exports `CHROMIUM_BROWSERS` constant — use it for any Chromium-specific logic
-- `lazyRetry()` in router uses `sessionStorage` key `farlume:chunk-retry-refreshed` to prevent infinite reloads
-- `usePWAUpdate.ts` has 4 update triggers: 60-min interval, `visibilitychange`, manual check, version.json comparison
-- Print CSS in `src/index.css`, `beforeprint`/`afterprint` in AppLayout + TransactionTable
-- glow-props pattern sync remaining: THEME_DARK_MODE, EVENT_BUS
+- `src/config/themes.ts` — theme combo definitions (add more combos here)
+- `src/composables/useDarkMode.ts` — now handles data-theme + .dark dual-layer
+- Flash prevention script in `index.html` has hardcoded combo map (must stay in sync with themes.ts)
+- Brand colors kept in `@theme` for CashflowGraph chart data (not DaisyUI-controlled)
+- DebugPill uses inline styles — intentionally NOT migrated (CSS-independent by design)
+- glow-props pattern sync remaining: EVENT_BUS

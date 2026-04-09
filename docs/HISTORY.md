@@ -4,6 +4,22 @@
 
 ## 2026-04-09
 
+- **DaisyUI v5 migration — full theming overhaul (glow-props THEME_DARK_MODE sync):**
+  - Installed DaisyUI v5, configured `@plugin "daisyui"` in Tailwind CSS v4 with 4 themes (lofi, black, emerald, forest)
+  - Dual-layer theming: `data-theme` for DaisyUI components + `.dark` class for Tailwind utilities
+  - Named combos (Approach B): "Classic" (lofi/black) and "Nature" (emerald/forest) — stored in `src/config/themes.ts`
+  - Removed all custom `:root`/`.dark` CSS variable definitions (--color-text-default, --color-surface, etc.)
+  - Removed all custom component classes (btn-primary, btn-secondary, btn-danger, input-field, card, tag-pill, page-title) — replaced with DaisyUI `btn`, `input`, `badge` classes
+  - Migrated all 30+ Vue files: replaced ~200+ `dark:` paired classes with single DaisyUI semantic tokens (bg-base-100, text-base-content, border-base-300, text-error, text-success, etc.)
+  - Updated flash prevention script in index.html to set both `.dark` class and `data-theme` attribute
+  - Updated `useDarkMode.ts`: added `data-theme` attribute setting, theme combo support, per-combo meta theme-color
+  - Updated print handler in AppLayout: saves/restores `data-theme` alongside `.dark` class
+  - HelpDrawer prose styles: migrated from `var(--color-*)` to DaisyUI oklch variables (`oklch(var(--bc))`, etc.)
+  - Z-index scale unchanged (already aligned: 10/40/50/60/70/80)
+  - Brand colors retained in `@theme` for chart data visualization (CashflowGraph hex colors intentionally not migrated — ApexCharts requires hardcoded values)
+
+
+
 - **PWA install detection — full pattern sync (glow-props PWA_SYSTEM sync):**
   - Browser detection expanded from 3 → 7 Chromium browsers (+ opera, samsung, vivaldi, arc)
   - Brave detection: `'brave' in navigator` existence check replaces UA string match (Brave Mobile strips "Brave" from UA)

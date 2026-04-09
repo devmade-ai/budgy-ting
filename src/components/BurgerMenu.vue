@@ -154,7 +154,7 @@ watch(open, (isOpen) => {
     <button
       ref="triggerRef"
       type="button"
-      class="w-10 h-10 rounded-full flex items-center justify-center text-gray-400 dark:text-zinc-400 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/30 transition-colors"
+      class="w-10 h-10 rounded-full flex items-center justify-center text-base-content/50 hover:text-primary hover:bg-primary/10 transition-colors"
       aria-label="Menu"
       :aria-expanded="open"
       :aria-controls="menuId"
@@ -179,24 +179,23 @@ watch(open, (isOpen) => {
         aria-label="Main navigation"
         class="absolute right-0 top-full mt-1 z-50
                w-48 max-w-[calc(100vw-1rem)] rounded-lg shadow-lg
-               bg-white dark:bg-[var(--color-surface-elevated)]
-               border border-gray-200 dark:border-zinc-700
+               bg-base-100 border border-base-300
                py-1 overflow-hidden overscroll-contain"
         @keydown="handleMenuKeyDown"
       >
         <ul class="list-none m-0 p-0">
           <template v-for="(item, i) in visibleItems" :key="item.label">
             <li v-if="item.separator && i > 0" role="separator">
-              <div class="border-t border-gray-100 dark:border-zinc-700 my-1" />
+              <div class="border-t border-base-200 my-1" />
             </li>
             <li>
               <button
                 type="button"
                 class="w-full text-left px-4 py-2 min-h-[44px] text-sm truncate
                        transition-colors outline-none
-                       focus-visible:ring-2 focus-visible:ring-brand-500
-                       text-gray-700 dark:text-zinc-200
-                       hover:bg-gray-50 dark:hover:bg-[var(--color-surface-hover)]
+                       focus-visible:ring-2 focus-visible:ring-primary
+                       text-base-content/80
+                       hover:bg-base-200
                        flex items-center gap-2
                        disabled:opacity-50 disabled:cursor-not-allowed"
                 :disabled="item.disabled"
@@ -206,7 +205,7 @@ watch(open, (isOpen) => {
                   v-if="item.icon"
                   :is="item.icon"
                   :size="16"
-                  :class="item.iconClass ?? 'text-gray-400 dark:text-zinc-500'"
+                  :class="item.iconClass ?? 'text-base-content/40'"
                   aria-hidden="true"
                 />
                 {{ item.label }}

@@ -338,7 +338,7 @@ function goBack() {
 <template>
   <div>
     <button
-      class="text-sm text-gray-500 dark:text-zinc-400 hover:text-gray-700 dark:hover:text-zinc-200 mb-4 flex items-center gap-1"
+      class="text-sm text-base-content/60 hover:text-base-content mb-4 flex items-center gap-1"
       @click="goBack"
     >
       <ArrowLeft :size="16" />
@@ -359,16 +359,16 @@ function goBack() {
             <div
               class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium"
               :class="s === step
-                ? 'bg-brand-500 text-white'
+                ? 'bg-primary text-primary-content'
                 : s < step
-                  ? 'bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400'
-                  : 'bg-gray-100 dark:bg-zinc-800 text-gray-400 dark:text-zinc-500'"
+                  ? 'bg-primary/15 text-primary'
+                  : 'bg-base-200 text-base-content/40'"
             >
               {{ s < step ? '✓' : s }}
             </div>
             <span
               class="text-xs mt-1"
-              :class="s === step ? 'text-brand-600 dark:text-brand-400 font-medium' : 'text-gray-400 dark:text-zinc-500'"
+              :class="s === step ? 'text-primary font-medium' : 'text-base-content/40'"
             >
               {{ stepLabels[s - 1] }}
             </span>
@@ -376,11 +376,11 @@ function goBack() {
           <div
             v-if="s < 2"
             class="flex-1 h-0.5 mt-4"
-            :class="s < step ? 'bg-brand-300 dark:bg-brand-700' : 'bg-gray-200 dark:bg-zinc-700'"
+            :class="s < step ? 'bg-primary/40' : 'bg-base-300'"
           />
         </template>
       </div>
-      <p class="text-xs text-gray-400 dark:text-zinc-500 mb-4">
+      <p class="text-xs text-base-content/40 mb-4">
         Step {{ step }} of 2
         <span v-if="step === 2 && parsedRows.length > 10">
           &middot; {{ parsedRows.length }} transactions to review

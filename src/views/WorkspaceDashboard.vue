@@ -163,29 +163,29 @@ async function handleRequestSuggestions(id: string, description: string) {
 
     <!-- Cash on hand input -->
     <div class="flex flex-wrap items-center gap-3 mb-6">
-      <label class="text-sm text-gray-600 dark:text-zinc-300 flex items-center gap-2">
-        <Wallet :size="16" class="text-gray-400 dark:text-zinc-500" />
+      <label class="text-sm text-base-content/70 flex items-center gap-2">
+        <Wallet :size="16" class="text-base-content/40" />
         Cash on hand
       </label>
       <div class="flex items-center gap-1">
-        <span class="text-sm text-gray-500 dark:text-zinc-400">{{ workspace.currencyLabel }}</span>
+        <span class="text-sm text-base-content/60">{{ workspace.currencyLabel }}</span>
         <input
           v-model.number="cashOnHand"
           type="number"
           min="0"
           step="100"
           placeholder="0.00"
-          class="input-field w-32 min-h-[44px] no-print"
+          class="input input-bordered w-32 text-base min-h-[44px] no-print"
         />
         <!-- Print-only: static value replaces the interactive input -->
-        <span class="hidden print-show text-sm font-medium text-gray-900">
+        <span class="hidden print-show text-sm font-medium text-base-content">
           {{ cashOnHand !== null ? formatAmount(cashOnHand) : '—' }}
         </span>
       </div>
-      <span v-if="runway && runway.daysRemaining !== null" class="text-sm text-red-500 dark:text-red-400">
+      <span v-if="runway && runway.daysRemaining !== null" class="text-sm text-error">
         Runs out {{ runway.depletionDate }}
       </span>
-      <span v-else-if="runway" class="text-sm text-green-600 dark:text-green-400">
+      <span v-else-if="runway" class="text-sm text-success">
         Projected {{ workspace.currencyLabel }}{{ formatAmount(runway.endBalance) }}
       </span>
     </div>
@@ -211,7 +211,7 @@ async function handleRequestSuggestions(id: string, description: string) {
     <!-- Transaction table -->
     <div class="mt-2">
       <div class="flex items-center justify-between mb-3">
-        <h2 class="text-lg font-semibold text-gray-900 dark:text-zinc-100">Transactions</h2>
+        <h2 class="text-lg font-semibold text-base-content">Transactions</h2>
       </div>
       <TransactionTable
         :transactions="transactions"

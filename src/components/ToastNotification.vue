@@ -15,9 +15,9 @@ import type { Component } from 'vue'
 const { state, dismiss } = useToast()
 
 const variantClasses: Record<string, string> = {
-  success: 'bg-brand-600 text-white',
-  error: 'bg-red-600 text-white',
-  warning: 'bg-amber-500 text-white',
+  success: 'bg-success text-success-content',
+  error: 'bg-error text-error-content',
+  warning: 'bg-warning text-warning-content',
 }
 
 const variantIcons: Record<string, Component> = {

@@ -25,19 +25,28 @@
     <title>Farlume</title>
     <!-- Requirement: Prevent white flash on dark mode page load
          Approach: Classic (non-module) inline script reads localStorage and applies
-           .dark class before first paint. Same early-capture pattern as PWA
-           beforeinstallprompt script. Must duplicate the localStorage/matchMedia
-           logic from useDarkMode.ts — the composable runs after Vue mount, too late.
+           both .dark class (Tailwind) and data-theme (DaisyUI) before first paint.
+           Duplicates the combo lookup logic from useDarkMode.ts — composable runs
+           after Vue mount, too late for first paint.
          Why classic script: Module scripts are deferred — they run after DOM parse.
          Reference: glow-props docs/implementations/THEME_DARK_MODE.md -->
     <script>
       (function() {
         try {
+          var combos = {
+            classic: { light: 'lofi', dark: 'black' },
+            nature: { light: 'emerald', dark: 'forest' }
+          };
           var stored = localStorage.getItem('darkMode');
           var isDark = stored !== null
             ? stored === 'true'
             : window.matchMedia('(prefers-color-scheme: dark)').matches;
-          if (isDark) document.documentElement.classList.add('dark');
+          var comboId = localStorage.getItem('themeCombo') || 'classic';
+          var combo = combos[comboId] || combos.classic;
+          var theme = isDark ? combo.dark : combo.light;
+          var root = document.documentElement;
+          if (isDark) root.classList.add('dark');
+          root.setAttribute('data-theme', theme);
         } catch(e) {}
       })();
     </script>

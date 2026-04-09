@@ -1,82 +1,99 @@
 /**
- * Requirement: User-controlled dark/light mode with system preference fallback
- * Approach: Module-level singleton state. localStorage persistence, .dark class on <html>,
- *   matchMedia listener for OS preference (fallback only), cross-tab sync via storage event,
- *   dynamic meta theme-color update on toggle.
+ * Requirement: User-controlled dark/light mode with DaisyUI theme combos
+ * Approach: Dual-layer theming — .dark class on <html> for Tailwind utilities,
+ *   data-theme attribute for DaisyUI component colors. Named combos (Approach B)
+ *   pair light+dark DaisyUI themes. localStorage persistence, cross-tab sync,
+ *   dynamic meta theme-color, OS preference fallback.
  * Alternatives:
- *   - CSS-only prefers-color-scheme: Rejected — no user override possible
- *   - Vue provide/inject context: Rejected — overkill for web (DOM class is source of truth)
- *   - Pinia store: Rejected — theme is UI-only state, no cross-component actions needed
+ *   - Per-mode independent themes: Rejected — utility app, combos are simpler
+ *   - Pinia store: Rejected — theme is UI-only state, DOM is source of truth
  * Reference: glow-props docs/implementations/THEME_DARK_MODE.md
  */
 
 import { ref, watch } from 'vue'
 import { safeGetItem, safeSetItem } from '@/composables/useSafeStorage'
 import { debugLog } from '@/debug/debugLog'
+import { themeCombos, validCombo, getCombo } from '@/config/themes'
 
-const STORAGE_KEY = 'darkMode'
-
-// Theme-color uses brand color for both modes — the status bar is a branding
-// surface, not a content surface. A mid-tone brand color (#10b981) provides
-// enough contrast for status bar text in both light and dark OS modes.
-// Using page background colors causes visibility problems when the OS color
-// scheme differs from the app's theme.
-const THEME_COLOR_LIGHT = '#10b981'
-const THEME_COLOR_DARK = '#10b981'
+const DARK_MODE_KEY = 'darkMode'
+const COMBO_KEY = 'themeCombo'
 
 // Module-level singleton — shared across all components that call useDarkMode()
 const isDark = ref(getInitialDarkMode())
+const currentComboId = ref(getInitialCombo())
 
 // Apply immediately at module load (before any component mounts)
-applyTheme(isDark.value)
+applyTheme(isDark.value, currentComboId.value)
 
 function getInitialDarkMode(): boolean {
-  const stored = safeGetItem(STORAGE_KEY)
+  const stored = safeGetItem(DARK_MODE_KEY)
   if (stored !== null) return stored === 'true'
-  // Fall back to OS preference
   return window.matchMedia('(prefers-color-scheme: dark)').matches
 }
 
-function applyTheme(dark: boolean): void {
+function getInitialCombo(): string {
+  return validCombo(safeGetItem(COMBO_KEY))
+}
+
+function applyTheme(dark: boolean, comboId: string, skipPersist = false): void {
   const root = document.documentElement
+  const combo = getCombo(comboId)
+  const themeName = dark ? combo.dark : combo.light
+
+  // Layer 1: Tailwind dark: variant
   if (dark) {
     root.classList.add('dark')
   } else {
     root.classList.remove('dark')
   }
 
-  // Dynamically update ALL meta theme-color tags so Android Chrome address bar
-  // syncs with manual toggles, not just system preference changes.
-  // querySelectorAll (not querySelector) is required because there may be two tags
-  // with different media attributes — querySelector only returns the first one.
-  const color = dark ? THEME_COLOR_DARK : THEME_COLOR_LIGHT
+  // Layer 2: DaisyUI component colors
+  root.setAttribute('data-theme', themeName)
+
+  // Update PWA status bar color
+  const color = dark ? combo.metaColorDark : combo.metaColorLight
   document.querySelectorAll('meta[name="theme-color"]').forEach(meta => {
     meta.setAttribute('content', color)
   })
+
+  if (!skipPersist) {
+    safeSetItem(DARK_MODE_KEY, String(dark))
+    safeSetItem(COMBO_KEY, comboId)
+  }
 }
 
-// Watch isDark and apply changes — runs for any component that imports this
+// Watch isDark and combo changes
 watch(isDark, (dark) => {
-  applyTheme(dark)
-  safeSetItem(STORAGE_KEY, String(dark))
+  applyTheme(dark, currentComboId.value)
   debugLog('boot', 'info', `Theme changed to ${dark ? 'dark' : 'light'}`)
 })
 
-// Cross-tab sync — storage event only fires in OTHER tabs (not the one that wrote),
-// so there's no infinite loop risk. Without this, two tabs show different themes
-// until the stale tab is refreshed.
+watch(currentComboId, (comboId) => {
+  applyTheme(isDark.value, comboId)
+  debugLog('boot', 'info', `Theme combo changed to ${comboId}`)
+})
+
+// Cross-tab sync — storage event only fires in OTHER tabs
 function handleStorageSync(e: StorageEvent): void {
-  if (e.key === STORAGE_KEY && e.newValue !== null) {
-    isDark.value = e.newValue === 'true'
+  if (e.key === DARK_MODE_KEY && e.newValue !== null) {
+    const dark = e.newValue === 'true'
+    const comboId = validCombo(safeGetItem(COMBO_KEY))
+    isDark.value = dark
+    currentComboId.value = comboId
+    applyTheme(dark, comboId, true)
+  }
+  if (e.key === COMBO_KEY && e.newValue !== null) {
+    const comboId = validCombo(e.newValue)
+    currentComboId.value = comboId
+    applyTheme(isDark.value, comboId, true)
   }
 }
 window.addEventListener('storage', handleStorageSync)
 
-// Track OS preference changes — only when user hasn't made an explicit choice.
-// If they've manually toggled, their choice persists and system changes are ignored.
+// Track OS preference changes — only when user hasn't made an explicit choice
 const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
 function handleSystemPreferenceChange(e: MediaQueryListEvent): void {
-  if (safeGetItem(STORAGE_KEY) === null) {
+  if (safeGetItem(DARK_MODE_KEY) === null) {
     isDark.value = e.matches
   }
 }
@@ -87,5 +104,9 @@ export function useDarkMode() {
     isDark.value = !isDark.value
   }
 
-  return { isDark, toggle }
+  function setCombo(comboId: string): void {
+    currentComboId.value = validCombo(comboId)
+  }
+
+  return { isDark, currentComboId, themeCombos, toggle, setCombo }
 }

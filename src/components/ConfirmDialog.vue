@@ -40,24 +40,24 @@ useDialogA11y(dialogRef, () => emit('cancel'))
         role="alertdialog"
         :aria-label="title"
         aria-modal="true"
-        class="relative bg-white dark:bg-[var(--color-surface-elevated)] rounded-xl shadow-xl dark:shadow-none max-w-sm w-full max-w-[calc(100%-2rem)] p-6"
+        class="relative bg-base-100 rounded-xl shadow-xl max-w-sm w-full max-w-[calc(100%-2rem)] p-6"
       >
-        <h3 class="text-lg font-semibold text-gray-900 dark:text-zinc-100 mb-2">{{ title }}</h3>
-        <p class="text-sm text-gray-600 dark:text-zinc-300 mb-6">{{ message }}</p>
+        <h3 class="text-lg font-semibold text-base-content mb-2">{{ title }}</h3>
+        <p class="text-sm text-base-content/70 mb-6">{{ message }}</p>
         <!-- Requirement: Standard button order — Cancel left, Confirm right
              Approach: Cancel (secondary) first, confirm (primary/danger) second
              Alternatives:
                - Confirm-first: Rejected — violates platform convention (macOS, Material, etc.) -->
         <div class="flex gap-3">
           <button
-            class="btn-secondary flex-1"
+            class="btn btn-ghost flex-1"
             @click="emit('cancel')"
           >
             Cancel
           </button>
           <button
-            class="flex-1"
-            :class="danger ? 'btn-danger' : 'btn-primary'"
+            class="btn flex-1"
+            :class="danger ? 'btn-error' : 'btn-primary'"
             @click="hapticConfirm(); emit('confirm')"
           >
             {{ confirmLabel || 'Confirm' }}

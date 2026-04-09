@@ -216,8 +216,8 @@ const hasData = computed(() => actualPoints.value.length > 0 || props.forecastPo
         <button
           class="btn text-xs px-3 py-1.5 rounded"
           :class="chartMode === 'cumulative'
-            ? 'bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 border border-brand-300 dark:border-brand-700'
-            : 'bg-gray-50 dark:bg-zinc-800 text-gray-600 dark:text-zinc-300 border border-gray-200 dark:border-zinc-700'"
+            ? 'bg-primary/10 text-primary border border-primary/30'
+            : 'bg-base-200 text-base-content/70 border border-base-300'"
           @click="chartMode = 'cumulative'"
         >
           Cumulative
@@ -225,8 +225,8 @@ const hasData = computed(() => actualPoints.value.length > 0 || props.forecastPo
         <button
           class="btn text-xs px-3 py-1.5 rounded"
           :class="chartMode === 'daily'
-            ? 'bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 border border-brand-300 dark:border-brand-700'
-            : 'bg-gray-50 dark:bg-zinc-800 text-gray-600 dark:text-zinc-300 border border-gray-200 dark:border-zinc-700'"
+            ? 'bg-primary/10 text-primary border border-primary/30'
+            : 'bg-base-200 text-base-content/70 border border-base-300'"
           @click="chartMode = 'daily'"
         >
           Daily net
@@ -245,9 +245,9 @@ const hasData = computed(() => actualPoints.value.length > 0 || props.forecastPo
       />
     </div>
     <div v-else class="text-center py-12">
-      <LineChart :size="36" class="text-gray-300 dark:text-zinc-600 mx-auto mb-3" />
-      <p class="text-gray-500 dark:text-zinc-400">No data to chart</p>
-      <p class="text-gray-400 dark:text-zinc-500 text-sm mt-1">Import transactions to see your cashflow</p>
+      <LineChart :size="36" class="text-base-content/20 mx-auto mb-3" />
+      <p class="text-base-content/60">No data to chart</p>
+      <p class="text-base-content/40 text-sm mt-1">Import transactions to see your cashflow</p>
     </div>
   </div>
 </template>
