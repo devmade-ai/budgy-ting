@@ -175,8 +175,12 @@ async function handleRequestSuggestions(id: string, description: string) {
           min="0"
           step="100"
           placeholder="0.00"
-          class="input-field w-32 min-h-[44px]"
+          class="input-field w-32 min-h-[44px] no-print"
         />
+        <!-- Print-only: static value replaces the interactive input -->
+        <span class="hidden print-show text-sm font-medium text-gray-900">
+          {{ cashOnHand !== null ? formatAmount(cashOnHand) : '—' }}
+        </span>
       </div>
       <span v-if="runway && runway.daysRemaining !== null" class="text-sm text-red-500 dark:text-red-400">
         Runs out {{ runway.depletionDate }}

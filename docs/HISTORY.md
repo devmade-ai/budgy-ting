@@ -4,11 +4,16 @@
 
 ## 2026-04-09
 
-- **Save as PDF — window.print() trigger (glow-props DOWNLOAD_PDF sync):**
+- **Save as PDF — full print implementation (glow-props DOWNLOAD_PDF sync):**
   - Added "Save as PDF" menu item in workspace actions (kebab menu + mobile bottom sheet)
   - Calls `window.print()` — zero dependencies, native browser PDF export
-  - Added `no-print` class to interactive elements: app header, back button, action buttons, transaction filters, pagination
-  - Added `print-color-adjust: exact` / `-webkit-print-color-adjust: exact` to preserve badge/chart background colors
+  - `no-print` on all interactive elements: app header, banners (update/offline/install), back navigation, action buttons, chart toggle buttons, transaction filters, pagination, cash-on-hand input
+  - `print-show` utility class: forces desktop table layout in print (A4 width < sm breakpoint would show mobile cards)
+  - `beforeprint`/`afterprint` in TransactionTable: bypasses pagination to show ALL transactions in print (not just current 25-row page)
+  - `beforeprint`/`afterprint` in AppLayout: temporarily removes `.dark` class for light-mode print output (direct DOM toggle, no reactive side effects)
+  - Cash-on-hand: print-only static text span replaces interactive `<input type="number">`
+  - ApexCharts print CSS: hides toolbar, forces readable label/legend/grid colors regardless of dark mode
+  - `print-color-adjust: exact` / `-webkit-print-color-adjust: exact` preserves intentional colors (badges, chart areas)
 
 - **Debug System — Full pattern sync (glow-props DEBUG_SYSTEM sync):**
   - Circular buffer: replaced Array.shift() O(n) with head/count pointer pattern O(1) in debugLog.ts

@@ -10,10 +10,6 @@
 - [ ] Import history view — show importBatches table data (already stored, never displayed)
 - [ ] Transaction deletion from import review step (currently only available on dashboard)
 
-## Features — Download as PDF (glow-props sync)
-
-- [x] ~~Print trigger — "Save as PDF" in workspace actions menu, calls `window.print()`~~ → moved to HISTORY.md
-
 ## UX
 
 - [ ] Virtual scrolling for long transaction lists (vue-virtual-scroller) — current pagination filters full array on every change, 10K+ transactions will lag
