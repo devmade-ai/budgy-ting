@@ -16,10 +16,10 @@ It destroys the session — the input modal covers context the user needs to rea
 
 ## Cross-Project Reference
 
-All shared implementation patterns, AI Notes, and process updates are maintained in the **glow-props** repo — the single source of truth:
-```
-https://raw.githubusercontent.com/devmade-ai/glow-props/main/CLAUDE.md
-```
+All shared implementation patterns are maintained in the **glow-props** repo (`docs/implementations/` folder) — the single source of truth. AI Notes and process updates live in glow-props `CLAUDE.md`.
+
+**Pattern files:** `https://raw.githubusercontent.com/devmade-ai/glow-props/main/docs/implementations/{PATTERN_NAME}.md`
+**GitHub Pages:** `https://devmade-ai.github.io/glow-props/patterns/{PATTERN_NAME}.md`
 
 **NEVER copy pattern content into this file or any local file.** Always fetch from the source when you need a pattern. Adapt React examples to Vue 3 Composition API when implementing.
 
@@ -326,35 +326,44 @@ All projects follow this scale to prevent stacking conflicts between the burger 
   - Use `$(printenv GITHUB_ALL_REPO_TOKEN)` not `$GITHUB_ALL_REPO_TOKEN` to avoid shell expansion issues
   - Never clone sibling repos — use the API instead
 - **Discontinued repos — skip entirely:** `plant-fur` and `coin-zapp` are discontinued. Do not check, audit, align, or include them in cross-project operations.
-- **Implementation patterns — no local copies.** All Suggested Implementation patterns live in glow-props CLAUDE.md. Always fetch from `api.github.com/repos/devmade-ai/glow-props/contents/CLAUDE.md` before implementing. Never paste pattern content into this project's CLAUDE.md or any local file. Never reconstruct patterns from memory. If the source is unreachable, defer the work.
+- **Implementation patterns — no local copies.** All implementation patterns live in glow-props `docs/implementations/` folder. Fetch individual patterns from `api.github.com/repos/devmade-ai/glow-props/contents/docs/implementations/{PATTERN_NAME}.md` or list available patterns via `api.github.com/repos/devmade-ai/glow-props/contents/docs/implementations`. Never paste pattern content into this project's CLAUDE.md or any local file. Never reconstruct patterns from memory. If the source is unreachable, defer the work.
 
 ### REMINDER: READ AND FOLLOW THE FUCKING AI NOTES EVERY TIME
 
-## Suggested Implementations
+## Implementation Patterns (Source of Truth)
 
-**DO NOT store implementation patterns locally.** All patterns live in the glow-props source repo and must be fetched from there every time.
+**DO NOT store implementation patterns locally.** All patterns live in the glow-props repo under `docs/implementations/` and must be fetched from there every time.
 
 ### Where to find patterns
 
-The single source of truth for all implementation patterns is the glow-props CLAUDE.md. The list of available patterns changes over time — always check the source for what's current:
+The single source of truth for all implementation patterns is the glow-props `docs/implementations/` folder. Each pattern is a separate `.md` file.
 
+**List available patterns:**
 ```
-https://raw.githubusercontent.com/devmade-ai/glow-props/main/CLAUDE.md
+api.github.com/repos/devmade-ai/glow-props/contents/docs/implementations
 ```
 
-**How to access:** Use `GITHUB_ALL_REPO_TOKEN` with the GitHub API:
+**Fetch a specific pattern:**
 ```
-api.github.com/repos/devmade-ai/glow-props/contents/CLAUDE.md
+api.github.com/repos/devmade-ai/glow-props/contents/docs/implementations/{PATTERN_NAME}.md
 ```
+
+**GitHub Pages (read-only):**
+```
+https://devmade-ai.github.io/glow-props/patterns/{PATTERN_NAME}.md
+```
+
+**How to access via API:** Use `GITHUB_ALL_REPO_TOKEN` with the GitHub API.
 Or use `$(printenv GITHUB_ALL_REPO_TOKEN)` with curl (see AI Notes for proxy handling).
 
 ### Rules
 
-1. **Always fetch from glow-props** — never rely on cached, copied, or memorized versions of patterns
-2. **Never paste pattern content into this file** — this section is a pointer, not a copy
-3. **Adapt React examples to Vue 3 Composition API** when implementing patterns from glow-props
-4. **Check for updates before implementing** — patterns evolve; the source always has the latest version
-5. **If glow-props is unreachable**, note it and defer — do not reconstruct patterns from memory
+1. **Always fetch from glow-props `docs/implementations/`** — never rely on cached, copied, or memorized versions of patterns
+2. **List patterns first** — use the listing endpoint to discover available patterns dynamically
+3. **Never paste pattern content into this file** — this section is a pointer, not a copy
+4. **Adapt React examples to Vue 3 Composition API** when implementing patterns from glow-props
+5. **Check for updates before implementing** — patterns evolve; the source always has the latest version
+6. **If glow-props is unreachable**, note it and defer — do not reconstruct patterns from memory
 
 ## Prohibitions
 

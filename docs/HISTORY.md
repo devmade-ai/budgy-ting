@@ -2,6 +2,16 @@
 
 <!-- Changelog and record of completed work. Organized by date. -->
 
+## 2026-04-09
+
+- **Updated implementation pattern fetch URLs in CLAUDE.md:**
+  - Renamed "Suggested Implementations" → "Implementation Patterns (Source of Truth)"
+  - Changed all fetch URLs from `glow-props/contents/CLAUDE.md` to `glow-props/contents/docs/implementations/{PATTERN_NAME}.md`
+  - Added GitHub Pages URL: `https://devmade-ai.github.io/glow-props/patterns/{PATTERN_NAME}.md`
+  - Added listing endpoint to discover available patterns dynamically
+  - Updated AI Notes entry to reference `docs/implementations/` folder
+  - Updated Cross-Project Reference section with new URLs
+
 ## 2026-04-07
 
 - **Removed local Suggested Implementations from CLAUDE.md:**
