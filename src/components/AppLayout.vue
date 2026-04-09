@@ -9,7 +9,7 @@
  *     separation of concerns and glow-props disclosure pattern compliance
  */
 
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePWAUpdate } from '@/composables/usePWAUpdate'
 import { useTutorial } from '@/composables/useTutorial'
@@ -43,8 +43,37 @@ const showInstructions = ref(false)
 type DrawerContent = 'user-guide' | 'testing-guide' | 'import-format' | 'sample-csv' | null
 const activeDrawer = ref<DrawerContent>(null)
 
+// Requirement: Force light mode in print — dark backgrounds are unreadable on white paper
+// Approach: Directly toggle .dark class on <html> via beforeprint/afterprint events.
+//   Bypasses the reactive useDarkMode system to avoid persisting the temporary change
+//   (no localStorage write, no debug log, no cross-tab sync side effects).
+// Alternatives:
+//   - CSS @media print overrides for all dark variants: Rejected — Tailwind generates too many
+//   - Set isDark.value = false: Rejected — triggers localStorage write + debug log
+function onBeforePrint() {
+  const html = document.documentElement
+  if (html.classList.contains('dark')) {
+    html.dataset.printWasDark = 'true'
+    html.classList.remove('dark')
+  }
+}
+function onAfterPrint() {
+  const html = document.documentElement
+  if (html.dataset.printWasDark === 'true') {
+    html.classList.add('dark')
+    delete html.dataset.printWasDark
+  }
+}
+
 onMounted(() => {
   showIfFirstVisit()
+  window.addEventListener('beforeprint', onBeforePrint)
+  window.addEventListener('afterprint', onAfterPrint)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('beforeprint', onBeforePrint)
+  window.removeEventListener('afterprint', onAfterPrint)
 })
 
 function goHome() {
@@ -84,7 +113,7 @@ const menuItems = computed<MenuItem[]>(() => [
     <!-- Update banner -->
     <div
       v-if="hasUpdate"
-      class="bg-brand-600 text-white text-sm px-4 py-2 flex items-center justify-between"
+      class="bg-brand-600 text-white text-sm px-4 py-2 flex items-center justify-between no-print"
     >
       <span>A new version is available</span>
       <button
@@ -98,16 +127,18 @@ const menuItems = computed<MenuItem[]>(() => [
     <!-- Offline-ready notification (auto-dismisses after 3s) -->
     <div
       v-if="offlineReady"
-      class="bg-green-600 text-white text-sm px-4 py-2 text-center"
+      class="bg-green-600 text-white text-sm px-4 py-2 text-center no-print"
     >
       App is ready for offline use
     </div>
 
     <!-- Install prompt banner -->
-    <InstallPrompt @show-instructions="showInstructions = true" />
+    <div class="no-print">
+      <InstallPrompt @show-instructions="showInstructions = true" />
+    </div>
 
     <!-- Header -->
-    <header class="bg-white dark:bg-[var(--color-surface)] border-b border-gray-200 dark:border-zinc-700 sticky top-0 z-10">
+    <header class="bg-white dark:bg-[var(--color-surface)] border-b border-gray-200 dark:border-zinc-700 sticky top-0 z-10 no-print">
       <div class="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
         <button
           class="text-lg font-bold text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 transition-colors"

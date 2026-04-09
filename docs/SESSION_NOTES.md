@@ -4,54 +4,44 @@
 
 ## Worked on
 
-glow-props pattern sync — CLAUDE.md reference migration, APP_ICONS, BURGER_MENU, DEBUG_SYSTEM.
+glow-props pattern sync — DOWNLOAD_PDF (Save as PDF) and PWA_SYSTEM (full sync).
 
 ## Accomplished
 
-**CLAUDE.md reference migration:**
-- Renamed "Suggested Implementations" → "Implementation Patterns (Source of Truth)"
-- All fetch URLs → `glow-props/contents/docs/implementations/{PATTERN_NAME}.md`
-- Added listing endpoint and GitHub Pages URL
-- Fixed Z-Index Scale reference → `docs/implementations/BURGER_MENU.md`
-- Fixed 10 stale `glow-props CLAUDE.md` code comment references across 6 source files
-- Fixed 1 stale "Suggested Implementations" reference in AI_MISTAKES.md
+**Save as PDF (DOWNLOAD_PDF sync):**
+- "Save as PDF" in workspace actions menu, calls `window.print()`
+- Full print output: `no-print`, `print-show`, `beforeprint`/`afterprint` (pagination bypass + dark mode toggle), ApexCharts print CSS, cash-on-hand static display
+- Docs: USER_GUIDE, TESTING_GUIDE, README
 
-**APP_ICONS (glow-props sync):**
-- Sharp density 150 → 400 DPI
-- `shape-rendering="geometricPrecision"` on source icon.svg
-- Dedicated 1024x1024 maskable icon (no rounded corners, B glyph at 80% safe zone)
-- 48x48 PNG favicon with `<link rel="icon">` + `includeAssets`
-- Manifest: 192/512 purpose "any", 1024 purpose "maskable"
+**PWA install detection (PWA_SYSTEM sync):**
+- Browser detection: 3 → 7 Chromium browsers (+ opera, samsung, vivaldi, arc)
+- Brave detection: `'brave' in navigator` (UA string unreliable on Brave Mobile)
+- `CHROMIUM_BROWSERS` exported constant (single source of truth)
+- iOS non-Safari: CriOS/FxiOS/EdgiOS detection + Safari redirect instructions
+- `display-mode: standalone` change listener (detects install via browser menu)
+- Install instructions: Chromium fallback, "Why install?" benefits, per-browser warning notes
+- `installed-via-browser` analytics event
 
-**BURGER_MENU (glow-props sync):**
-- ArrowDown/ArrowUp (wrapping) + Home/End key navigation with idx=-1 guard
-- Z-index enforced: modals/drawers z-50 → z-[60] across 6 components
-- Error routing: `handleItem` catches errors → `debugLog()` (debug pill)
-- Removed redundant `handleOutsideClick` document listener (backdrop handles it)
-- Timer cleanup: setTimeout tracked + cleared on unmount
-- `visibleItems` → `computed` (was function call in template)
+**PWA update checks (PWA_SYSTEM sync):**
+- Visibility-based checks, 30s suppression, 1500ms settle delay, error handling
+- `cleanupOutdatedCaches: true`, DebugPill install prompt flag fix
 
-**DEBUG_SYSTEM (glow-props sync):**
-- Circular buffer: Array.shift() O(n) → head/count pointer O(1)
-- Console interception: console.error/warn patched at module load with re-entrancy guard
-- PWA Diagnostics tab: 7 health checks (protocol, network, SW, standalone, install prompt, SW state, manifest)
-- Inline styles: all Tailwind replaced in DebugPill.vue (CSS-independent)
-- Pre-framework inline pill: vanilla JS in index.html with error buffer, __debugPushError(), 20s load timeout
-- Error dedup: inline listeners yield to debugLog.ts via __debugLogReady flag
-- Diagnostic indices: hardcoded → label-based findIndex lookup
-- Inline pill: alert() → toggleable DOM error panel
-- URL query param redaction in reports, ClipboardItem Blob fallback
-- DebugSource accepts ad-hoc strings via `(string & {})`
-- main.ts bridges pre-mount errors and clears load timer
+**ChunkLoadError prevention:**
+- `lazyRetry()` wrapper on all 5 lazy route imports in router/index.ts
+
+**version.json supplementary detection:**
+- `versionJsonPlugin()` in vite.config.ts emits `version.json` with `buildTime` on every build
+- `checkVersionUpdate()` in usePWAUpdate.ts fetches on visibility change (throttled 60s), compares against localStorage
+- Catches edge case: app changes that don't modify sw.js
 
 ## Current state
 
-All work complete and pushed to `claude/fix-docs-fetch-urls-B2Gel`. Build verified. TypeScript clean. This session addressed CLAUDE.md, APP_ICONS, BURGER_MENU, and DEBUG_SYSTEM items from glow-props pattern gaps.
+All work complete and pushed to `claude/add-pdf-print-button-7zGtt`. Build verified.
 
 ## Key context
 
-- glow-props `docs/TODO.md` has a "Per-Repo Pattern Implementation Gaps" section with a budgy-ting subsection — this session addressed 4 of 8 categories
-- Remaining categories not yet addressed: DOWNLOAD_PDF, PWA_SYSTEM, THEME_DARK_MODE, EVENT_BUS
-- The implementation pattern docs (`docs/implementations/*.md`) are reference material, not the todo list
-- User's plan: fetch source → break into phases → analyze one at a time → create todos with success measures → execute one at a time with verification
-- Critical constraints: stop between steps, no unapproved work, no assumptions, ask before deciding
+- `usePWAInstall.ts` exports `CHROMIUM_BROWSERS` constant — use it for any Chromium-specific logic
+- `lazyRetry()` in router uses `sessionStorage` key `farlume:chunk-retry-refreshed` to prevent infinite reloads
+- `usePWAUpdate.ts` has 4 update triggers: 60-min interval, `visibilitychange`, manual check, version.json comparison
+- Print CSS in `src/index.css`, `beforeprint`/`afterprint` in AppLayout + TransactionTable
+- glow-props pattern sync remaining: THEME_DARK_MODE, EVENT_BUS

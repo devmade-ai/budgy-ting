@@ -15,6 +15,7 @@ Run through this checklist after any change to verify nothing is broken:
 - [ ] Cash on hand input shows runway result on dashboard
 - [ ] Can import a CSV file through the 2-step wizard (upload, review & import)
 - [ ] Transactions appear in the table after import
+- [ ] Can save workspace as PDF via ⋮ menu → Save as PDF (print preview shows clean output)
 - [ ] Can export a workspace as JSON
 - [ ] Can restore a workspace from exported JSON
 - [ ] Can delete a workspace (confirm dialog appears)
@@ -25,6 +26,7 @@ Run through this checklist after any change to verify nothing is broken:
 - [ ] Import Format drawer opens via menu → "Import Format"
 - [ ] Sample CSV drawer opens via menu → "Sample CSV"
 - [ ] Check for updates button triggers SW update check
+- [ ] Tab regain focus triggers silent SW update check (visibility-based)
 - [ ] Build passes: `npm run build`
 - [ ] Type-check passes: `npm run type-check`
 - [ ] Unit tests pass: `npm run test`
@@ -118,7 +120,31 @@ Run through this checklist after any change to verify nothing is broken:
 5. Redirected to home screen
 6. Deleted workspace no longer in list
 
-#### 1.6 Export and Restore a Workspace
+#### 1.6 Save as PDF
+
+**Steps:**
+1. Open a workspace that has imported transactions and a cash-on-hand value set
+2. Click **⋮** menu → **Save as PDF**
+
+**Expected:**
+- Browser print dialog opens
+- Preview shows workspace name, period type, and currency
+- Cashflow graph is visible with readable axis labels (no dark backgrounds)
+- Metrics grid cards are visible
+- ALL transactions are listed in a table (not just the current page)
+- No interactive elements visible: no header/menu, no Import button, no kebab menu, no chart Cumulative/Daily toggle, no search/filter fields, no pagination buttons, no form inputs
+- Cash on hand shows as plain text (not an input field)
+- If dark mode is active: preview renders in light mode
+
+**Steps (dark mode):**
+3. Turn on dark mode via burger menu
+4. Click **⋮** menu → **Save as PDF**
+
+**Expected:**
+- Print preview shows light mode (white background, dark text)
+- After closing print dialog, dark mode is restored
+
+#### 1.7 Export and Restore a Workspace
 
 **Steps:**
 1. Create a workspace with imported transactions
@@ -131,7 +157,7 @@ Run through this checklist after any change to verify nothing is broken:
 - Workspace restored with all transactions, patterns, and import batches intact
 - Dashboard shows the same data as before export
 
-#### 1.7 Restore Over Existing Workspace
+#### 1.8 Restore Over Existing Workspace
 
 **Steps:**
 1. Have a workspace
@@ -143,7 +169,7 @@ Run through this checklist after any change to verify nothing is broken:
 - Clicking **Replace** overwrites the workspace
 - Clicking **Cancel** keeps the original
 
-#### 1.8 Clear All Data
+#### 1.9 Clear All Data
 
 **Steps:**
 1. Have at least one workspace
@@ -155,7 +181,7 @@ Run through this checklist after any change to verify nothing is broken:
 5. Success message: "All data cleared"
 6. Home screen shows empty state: "No workspaces yet"
 
-#### 1.9 Demo Workspace
+#### 1.10 Demo Workspace
 
 **Steps:**
 1. Clear all data (or use a fresh browser)
@@ -357,7 +383,7 @@ Run through this checklist after any change to verify nothing is broken:
 2. Click the **⋮** (three dots) menu button
 
 **Expected:**
-- Dropdown shows: Export, Edit workspace, Delete workspace
+- Dropdown shows: Save as PDF, Export, Edit workspace, Delete workspace
 - Clicking outside the dropdown closes it
 
 #### 4.3 Help Menu
@@ -462,7 +488,31 @@ Run through this checklist after any change to verify nothing is broken:
 - Returns to "Check for updates" when done
 - If an update is available, the update banner appears
 
-#### 5.4 Offline Use
+#### 5.4 Visibility-Based Update Detection
+
+**Steps:**
+1. Deploy a new version to the server
+2. Background the tab (switch to another tab or minimize)
+3. Wait a few seconds, then bring the tab back to focus
+
+**Expected:**
+- App checks for service worker updates when the tab regains focus
+- If a new version is detected, the update banner appears
+- No visible delay or loading indicator (check happens silently)
+
+#### 5.5 Post-Update Suppression (30 seconds)
+
+**Steps:**
+1. Trigger an update (banner appears → click "Update now")
+2. App reloads with the new version
+3. Observe for 30 seconds after reload
+
+**Expected:**
+- No false "update available" banner during the first 30 seconds after update
+- After 30 seconds, normal update detection resumes
+- Check debug pill → PWA tab for suppression log entry
+
+#### 5.6 Offline Use
 
 **Steps:**
 1. Load the app while online

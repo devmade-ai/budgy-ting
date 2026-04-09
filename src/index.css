@@ -112,9 +112,16 @@ html.dark {
   .no-print {
     display: none !important;
   }
+  /* Requirement: Show elements only in print (e.g. desktop table when hidden by responsive classes)
+     Approach: Utility class that overrides display:none in print context */
+  .print-show {
+    display: block !important;
+  }
   body {
     background: white !important;
     color: black !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
   }
   a {
     color: black !important;
@@ -123,5 +130,23 @@ html.dark {
   section, .card {
     break-inside: avoid;
     page-break-inside: avoid;
+  }
+  /* Requirement: ApexCharts interactive toolbar has no purpose in print
+     Approach: Hide toolbar, force readable text colors for chart labels/legend
+     Alternatives:
+       - Re-render chart in light mode before print: Rejected — complex, timing-sensitive */
+  .apexcharts-toolbar {
+    display: none !important;
+  }
+  .apexcharts-text tspan,
+  .apexcharts-yaxis-label tspan,
+  .apexcharts-xaxis-label tspan {
+    fill: #6b7280 !important;
+  }
+  .apexcharts-legend-text {
+    color: #374151 !important;
+  }
+  .apexcharts-gridline {
+    stroke: #e5e7eb !important;
   }
 }

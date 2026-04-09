@@ -60,12 +60,13 @@ Current working features:
 - Single-screen dashboard (cashflow graph, metrics grid, transaction table)
 - Transaction edit modal with read-only view mode
 - Export/import/restore workspace data as JSON
-- PWA: offline-first, installable, service worker update prompt, manual update check
+- PWA: offline-first, installable, service worker update prompt, manual update check, visibility-based update checks, 30s post-update suppression, 7-browser Chromium detection, iOS non-Safari redirect, ChunkLoadError lazy retry, version.json supplementary detection
 - Debug pill (alpha): floating diagnostic panel with log + environment + PWA diagnostics tabs, inline styles (CSS-independent), console interception, pre-framework inline pill with 20s load timeout
 - Tag autocomplete from tagCache + pattern tags + ML suggestions
 - Duplicate detection on import (date + amount + description)
 - Pull-to-refresh, haptic feedback, bottom sheet modal
 - Dark mode: user-controlled toggle, system preference fallback, localStorage persistence, cross-tab sync, flash prevention, print overrides
+- Save as PDF: window.print() via workspace actions menu, full print CSS (no-print classes, forced light mode, all transactions, table layout, static cash display, ApexCharts overrides)
 
 **Database:** Schema v8 (8 tables: workspaces, transactions, patterns, importBatches, tagCache, embeddingCache + 2 legacy)
 **Tech stack:** Vue 3 + TypeScript + Tailwind CSS v4 + Dexie.js + vite-plugin-pwa + ApexCharts + simple-statistics + Transformers.js (Web Worker)

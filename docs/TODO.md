@@ -10,10 +10,6 @@
 - [ ] Import history view — show importBatches table data (already stored, never displayed)
 - [ ] Transaction deletion from import review step (currently only available on dashboard)
 
-## Features — Download as PDF (glow-props sync)
-
-- [ ] Print trigger — "Download as PDF" button in dashboard header or burger menu, calls `window.print()`
-
 ## UX
 
 - [ ] Virtual scrolling for long transaction lists (vue-virtual-scroller) — current pagination filters full array on every change, 10K+ transactions will lag

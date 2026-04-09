@@ -10,7 +10,7 @@
  *   - Inline row editor: Rejected — cramped, pushes content around
  */
 
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { formatAmount, formatDateForDisplay } from '@/composables/useFormat'
 import { usePagination } from '@/composables/usePagination'
 import { isIncome } from '@/types/models'
@@ -79,6 +79,26 @@ watch([search, filterTag, filterClassification], () => {
   resetPage()
 })
 
+// Requirement: Show all transactions in print — pagination truncates to 25 rows
+// Approach: Listen for beforeprint/afterprint events to bypass pagination.
+//   Browsers drain microtasks (including Vue DOM updates) before rendering print preview.
+// Alternatives:
+//   - Print-only template section: Rejected — duplicates entire table/card markup
+//   - CSS-only: Not possible — pagination is data-driven (.slice()), not CSS-driven
+const printMode = ref(false)
+const displayRows = computed(() => printMode.value ? filtered.value : paginatedRows.value)
+
+function onBeforePrint() { printMode.value = true }
+function onAfterPrint() { printMode.value = false }
+onMounted(() => {
+  window.addEventListener('beforeprint', onBeforePrint)
+  window.addEventListener('afterprint', onAfterPrint)
+})
+onUnmounted(() => {
+  window.removeEventListener('beforeprint', onBeforePrint)
+  window.removeEventListener('afterprint', onAfterPrint)
+})
+
 function openEdit(txn: Transaction) {
   editingTransaction.value = txn
   emit('request-suggestions', txn.id, txn.description)
@@ -113,7 +133,7 @@ function getSuggestions(id: string): TagSuggestion[] {
 <template>
   <div>
     <!-- Filters — touch-friendly input sizing (min-h-44px) -->
-    <div v-if="transactions.length > 5" class="flex flex-wrap gap-2 mb-4">
+    <div v-if="transactions.length > 5" class="flex flex-wrap gap-2 mb-4 no-print">
       <input
         v-model="search"
         type="text"
@@ -137,10 +157,10 @@ function getSuggestions(id: string): TagSuggestion[] {
       </select>
     </div>
 
-    <!-- Mobile card layout (< sm breakpoint) -->
-    <div class="sm:hidden space-y-2">
+    <!-- Mobile card layout (< sm breakpoint) — hidden in print (table is better for PDF) -->
+    <div class="sm:hidden space-y-2 no-print">
       <div
-        v-for="txn in paginatedRows"
+        v-for="txn in displayRows"
         :key="txn.id"
         role="button"
         tabindex="0"
@@ -173,13 +193,13 @@ function getSuggestions(id: string): TagSuggestion[] {
           </span>
         </div>
       </div>
-      <div v-if="paginatedRows.length === 0" class="py-8 text-center text-gray-400 dark:text-zinc-500 text-sm">
+      <div v-if="displayRows.length === 0" class="py-8 text-center text-gray-400 dark:text-zinc-500 text-sm">
         {{ search || filterTag || filterClassification ? 'No matching transactions' : 'No transactions yet' }}
       </div>
     </div>
 
-    <!-- Desktop table (sm+ breakpoint) -->
-    <div class="hidden sm:block overflow-x-auto">
+    <!-- Desktop table (sm+ breakpoint) — forced visible in print via print-show -->
+    <div class="hidden sm:block overflow-x-auto print-show">
       <table class="w-full text-sm">
         <thead>
           <!-- Mobile UX: text-sm for readable table headers (was text-xs) -->
@@ -193,7 +213,7 @@ function getSuggestions(id: string): TagSuggestion[] {
         </thead>
         <tbody>
           <tr
-            v-for="txn in paginatedRows"
+            v-for="txn in displayRows"
             :key="txn.id"
             tabindex="0"
             class="border-b border-gray-100 dark:border-zinc-800 hover:bg-gray-50 dark:hover:bg-[var(--color-surface-hover)] cursor-pointer focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20"
@@ -225,7 +245,7 @@ function getSuggestions(id: string): TagSuggestion[] {
               {{ isIncome(txn.amount) ? '+' : '-' }}{{ currencyLabel }}{{ formatAmount(Math.abs(txn.amount)) }}
             </td>
           </tr>
-          <tr v-if="paginatedRows.length === 0">
+          <tr v-if="displayRows.length === 0">
             <td colspan="5" class="py-8 text-center text-gray-400 dark:text-zinc-500">
               {{ search || filterTag || filterClassification ? 'No matching transactions' : 'No transactions yet' }}
             </td>
@@ -235,7 +255,7 @@ function getSuggestions(id: string): TagSuggestion[] {
     </div>
 
     <!-- Pagination -->
-    <div v-if="totalPages > 1" class="flex items-center justify-between mt-4 text-sm text-gray-500 dark:text-zinc-400">
+    <div v-if="totalPages > 1" class="flex items-center justify-between mt-4 text-sm text-gray-500 dark:text-zinc-400 no-print">
       <span>{{ filtered.length }} transaction{{ filtered.length === 1 ? '' : 's' }}</span>
       <div class="flex gap-1">
         <button

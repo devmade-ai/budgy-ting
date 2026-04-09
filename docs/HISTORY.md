@@ -4,6 +4,47 @@
 
 ## 2026-04-09
 
+- **PWA install detection — full pattern sync (glow-props PWA_SYSTEM sync):**
+  - Browser detection expanded from 3 → 7 Chromium browsers (+ opera, samsung, vivaldi, arc)
+  - Brave detection: `'brave' in navigator` existence check replaces UA string match (Brave Mobile strips "Brave" from UA)
+  - `CHROMIUM_BROWSERS` exported constant — single source of truth for install/diagnostics/analytics
+  - iOS non-Safari detection: CriOS (Chrome), FxiOS (Firefox), EdgiOS (Edge) caught before Safari check
+  - iOS non-Safari install instructions redirect users to Safari with explanation
+  - `display-mode: standalone` change listener detects install-via-browser-menu (not just native prompt)
+  - Chromium fallback: 5s diagnostic timeout enables `chromiumFallback` ref → `needsManualInstructions` → install banner shows manual steps when native prompt was suppressed (Chrome 90-day dismiss)
+  - Chromium fallback instructions in modal for all 7 browsers (address bar icon, browser menu)
+  - Install instructions modal: "Why install?" benefits section + per-browser warning notes (Brave Shields, Firefox desktop)
+  - `installed-via-browser` analytics event type added
+
+- **ChunkLoadError prevention (glow-props PWA_SYSTEM sync):**
+  - `lazyRetry()` wrapper on all lazy route imports — reloads once on 404 during deploy→SW update window
+  - `sessionStorage` flag prevents infinite reload loops
+
+- **version.json supplementary update detection (glow-props PWA_SYSTEM sync):**
+  - Vite plugin (`versionJsonPlugin`) emits `version.json` with ISO `buildTime` on every build
+  - `checkVersionUpdate()` in usePWAUpdate.ts fetches with `cache: 'no-store'`, compares against `localStorage`
+  - Runs on initial load (stores current version) and on visibility change (throttled to once per minute)
+  - Catches app changes that don't modify `sw.js` (edge case where precache manifest stays identical)
+
+- **PWA update checks — visibility + suppression + cleanup (glow-props PWA_SYSTEM sync):**
+  - Visibility-based update checks: `visibilitychange` listener triggers `registration.update()` when tab regains focus (catches deploys while backgrounded)
+  - 30-second post-update suppression: `wasJustUpdated()` checks `sessionStorage` timestamp to prevent false re-detection after applying an update
+  - `checkForUpdate()`: 1500ms settle delay lets SW lifecycle events propagate, error handling with debugLog
+  - `cleanupOutdatedCaches: true` in workbox config — removes stale caches from older Workbox versions across deployments
+  - Fixed DebugPill install prompt diagnostic: `usePWAInstall` now sets `__pwaInstallPromptReceived` flag when consuming the early-captured event (diagnostic was always showing "Not received" because the event was deleted before the pill opened)
+  - PWA diagnostics tab: already wired into debug pill from DEBUG_SYSTEM sync
+
+- **Save as PDF — full print implementation (glow-props DOWNLOAD_PDF sync):**
+  - Added "Save as PDF" menu item in workspace actions (kebab menu + mobile bottom sheet)
+  - Calls `window.print()` — zero dependencies, native browser PDF export
+  - `no-print` on all interactive elements: app header, banners (update/offline/install), back navigation, action buttons, chart toggle buttons, transaction filters, pagination, cash-on-hand input
+  - `print-show` utility class: forces desktop table layout in print (A4 width < sm breakpoint would show mobile cards)
+  - `beforeprint`/`afterprint` in TransactionTable: bypasses pagination to show ALL transactions in print (not just current 25-row page)
+  - `beforeprint`/`afterprint` in AppLayout: temporarily removes `.dark` class for light-mode print output (direct DOM toggle, no reactive side effects)
+  - Cash-on-hand: print-only static text span replaces interactive `<input type="number">`
+  - ApexCharts print CSS: hides toolbar, forces readable label/legend/grid colors regardless of dark mode
+  - `print-color-adjust: exact` / `-webkit-print-color-adjust: exact` preserves intentional colors (badges, chart areas)
+
 - **Debug System — Full pattern sync (glow-props DEBUG_SYSTEM sync):**
   - Circular buffer: replaced Array.shift() O(n) with head/count pointer pattern O(1) in debugLog.ts
   - Console interception: patched console.error/console.warn at module load with HMR guard
