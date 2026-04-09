@@ -4,35 +4,30 @@
 
 ## Worked on
 
-Save as PDF — full print implementation (glow-props DOWNLOAD_PDF sync).
+glow-props pattern sync — DOWNLOAD_PDF (Save as PDF) and PWA_SYSTEM (visibility checks + update suppression).
 
 ## Accomplished
 
-**Save as PDF button:**
-- Added "Save as PDF" to workspace actions menu (kebab dropdown + mobile bottom sheet)
-- Uses `window.print()` — zero dependencies, native browser PDF export
+**Save as PDF (DOWNLOAD_PDF sync):**
+- "Save as PDF" in workspace actions menu (kebab + bottom sheet), calls `window.print()`
+- Full print output quality: `no-print` on all interactive elements, `print-show` forces table layout, `beforeprint`/`afterprint` bypasses pagination (all rows) and toggles dark mode off
+- ApexCharts print CSS: toolbar hidden, forced readable colors
+- Docs: USER_GUIDE, TESTING_GUIDE (scenario 1.6), README, regression checklist
 
-**Print output quality:**
-- `no-print` on all interactive elements: app header, banners (update/offline/install), back navigation, action buttons (Import, kebab), chart toggle buttons (Cumulative/Daily net), transaction filters, pagination, cash-on-hand input
-- `beforeprint`/`afterprint` in TransactionTable: bypasses 25-row pagination to show ALL transactions
-- `print-show` CSS utility: forces desktop table layout in print (A4 width < sm breakpoint would show mobile cards)
-- Cash-on-hand: print-only static `<span>` replaces interactive `<input type="number">`
-- ApexCharts: hides toolbar, forces readable label/legend/grid colors in print CSS
-- `print-color-adjust: exact` preserves intentional colors (badges, chart areas)
-
-**Dark mode in print:**
-- `beforeprint`/`afterprint` in AppLayout: temporarily removes `.dark` class from `<html>` for light-mode print
-- Direct DOM manipulation (bypasses reactive useDarkMode to avoid localStorage write / debug log side effects)
-- ApexCharts inline SVG colors handled separately via `@media print` CSS overrides
+**PWA update checks (PWA_SYSTEM sync):**
+- Visibility-based update checks: `visibilitychange` listener on `document` triggers `registration.update()` when tab regains focus
+- 30-second post-update suppression: `wasJustUpdated()` checks `sessionStorage` timestamp, suppresses false re-detection in `watch(hasUpdate, ...)`
+- PWA diagnostics tab: already complete from DEBUG_SYSTEM sync (7 health checks in DebugPill)
 
 ## Current state
 
-All work complete and pushed to `claude/add-pdf-print-button-7zGtt`. Build verified. Print output covers: workspace title, cashflow graph (light mode colors), metrics grid, full transaction table (all rows, table layout).
+All work complete and pushed to `claude/add-pdf-print-button-7zGtt`. Build verified.
 
 ## Key context
 
+- `usePWAUpdate.ts` now has 3 update triggers: 60-min interval, `visibilitychange`, manual "Check for updates"
+- Suppression uses `sessionStorage` key `farlume:pwa-update-applied` — survives reload but not session close
+- `hasUpdate.value = false` in the watcher resets the `needRefresh` ref from `useRegisterSW` when suppressed
 - Print CSS lives in `src/index.css` `@media print` block
-- `print-show` utility class exists for elements that need to be visible only in print
-- `beforeprint`/`afterprint` listeners in two components: AppLayout (dark mode toggle) and TransactionTable (pagination bypass)
-- ApexCharts SVG uses inline styles from computed config — can't be toggled via CSS class, hence separate `@media print` overrides for `.apexcharts-*` selectors
-- glow-props DOWNLOAD_PDF pattern recommends window.print() for text-heavy content (searchable, zero deps) and pdf-lib for canvas-heavy content
+- `beforeprint`/`afterprint` listeners in AppLayout (dark mode) and TransactionTable (pagination bypass)
+- glow-props pattern sync remaining: THEME_DARK_MODE, EVENT_BUS

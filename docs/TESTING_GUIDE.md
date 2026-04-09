@@ -26,6 +26,7 @@ Run through this checklist after any change to verify nothing is broken:
 - [ ] Import Format drawer opens via menu → "Import Format"
 - [ ] Sample CSV drawer opens via menu → "Sample CSV"
 - [ ] Check for updates button triggers SW update check
+- [ ] Tab regain focus triggers silent SW update check (visibility-based)
 - [ ] Build passes: `npm run build`
 - [ ] Type-check passes: `npm run type-check`
 - [ ] Unit tests pass: `npm run test`
@@ -487,7 +488,31 @@ Run through this checklist after any change to verify nothing is broken:
 - Returns to "Check for updates" when done
 - If an update is available, the update banner appears
 
-#### 5.4 Offline Use
+#### 5.4 Visibility-Based Update Detection
+
+**Steps:**
+1. Deploy a new version to the server
+2. Background the tab (switch to another tab or minimize)
+3. Wait a few seconds, then bring the tab back to focus
+
+**Expected:**
+- App checks for service worker updates when the tab regains focus
+- If a new version is detected, the update banner appears
+- No visible delay or loading indicator (check happens silently)
+
+#### 5.5 Post-Update Suppression (30 seconds)
+
+**Steps:**
+1. Trigger an update (banner appears → click "Update now")
+2. App reloads with the new version
+3. Observe for 30 seconds after reload
+
+**Expected:**
+- No false "update available" banner during the first 30 seconds after update
+- After 30 seconds, normal update detection resumes
+- Check debug pill → PWA tab for suppression log entry
+
+#### 5.6 Offline Use
 
 **Steps:**
 1. Load the app while online
