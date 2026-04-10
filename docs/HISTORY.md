@@ -4,6 +4,12 @@
 
 ## 2026-04-10
 
+- **Fixed debug pill not scaling to screen width:**
+  - Expanded panel: `w-[360px]` → `w-[calc(100vw-2rem)] max-w-[360px]` so it shrinks on narrow viewports
+  - Env tab values: replaced fixed `max-w-[220px]` with `min-w-0 truncate` for fluid sizing
+  - PWA diagnostics detail: replaced fixed `max-w-[180px]` with `min-w-0 truncate`
+  - Added `shrink-0` to labels so they don't compress, values truncate instead
+
 - **Removed "Clear all data" button from workspace list:**
   - Deleted the nuclear delete-everything button, `handleClearAll()` function, `showClearConfirm` ref, and confirmation dialog from WorkspaceListView
   - Too dangerous to expose on the main screen — individual workspace deletion is available from each workspace's own view
