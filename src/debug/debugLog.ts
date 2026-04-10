@@ -83,9 +83,20 @@ export function debugLog(
 
 /**
  * Subscribe to new debug entries. Returns an unsubscribe function.
+ * Replays all existing entries to the new subscriber immediately,
+ * so subscribers don't miss events logged before they subscribed.
  */
 export function subscribe(fn: Subscriber): () => void {
   subscribers.add(fn)
+  // Replay existing entries to new subscriber
+  const existing = getEntries()
+  for (const entry of existing) {
+    try {
+      fn(entry)
+    } catch {
+      // Subscriber errors must not break the log system
+    }
+  }
   return () => subscribers.delete(fn)
 }
 

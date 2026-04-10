@@ -9,19 +9,22 @@
  *     separation of concerns and glow-props disclosure pattern compliance
  */
 
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, provide, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePWAUpdate } from '@/composables/usePWAUpdate'
 import { useTutorial } from '@/composables/useTutorial'
 import { useDarkMode } from '@/composables/useDarkMode'
+import { useRestoreWorkspace } from '@/composables/useRestoreWorkspace'
 import BurgerMenu from '@/components/BurgerMenu.vue'
 import type { MenuItem } from '@/components/BurgerMenu.vue'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
+import ErrorAlert from '@/components/ErrorAlert.vue'
 import InstallPrompt from '@/components/InstallPrompt.vue'
 import InstallInstructionsModal from '@/components/InstallInstructionsModal.vue'
 import TutorialModal from '@/components/TutorialModal.vue'
 import HelpDrawer from '@/components/HelpDrawer.vue'
 import ToastNotification from '@/components/ToastNotification.vue'
-import { CircleHelp, BookOpen, TestTubes, FileText, FileSpreadsheet, RefreshCw, Sun, Moon } from 'lucide-vue-next'
+import { CircleHelp, BookOpen, TestTubes, FileText, FileSpreadsheet, FolderOpen, RefreshCw, Sun, Moon } from 'lucide-vue-next'
 
 // Build-time markdown imports — bundled as strings, no runtime fetch
 import userGuideMd from '../../docs/USER_GUIDE.md?raw'
@@ -36,6 +39,20 @@ const router = useRouter()
 const { hasUpdate, offlineReady, checking, updateApp, checkForUpdate } = usePWAUpdate()
 const { showTutorial, showIfFirstVisit, openTutorial, dismissTutorial } = useTutorial()
 const { isDark, toggle: toggleDarkMode } = useDarkMode()
+
+// Restore from backup — composable handles file picking, validation, import.
+// onSuccess: navigate to workspace list. If already there, the router push
+// is a no-op so we also reload to show the imported workspace.
+const restore = useRestoreWorkspace(async () => {
+  const alreadyOnList = router.currentRoute.value.name === 'workspace-list'
+  if (!alreadyOnList) {
+    await router.push({ name: 'workspace-list' })
+  }
+  // Reload to refresh the workspace list (component doesn't re-mount on same-route push)
+  window.location.reload()
+})
+// Provide trigger for child components (e.g. WorkspaceListView empty state)
+provide('triggerRestore', restore.triggerFilePicker)
 
 const showInstructions = ref(false)
 
@@ -97,6 +114,7 @@ const menuItems = computed<MenuItem[]>(() => [
   { label: 'Test Scenarios', icon: TestTubes, action: () => { activeDrawer.value = 'testing-guide' } },
   { label: 'Import Format', icon: FileText, action: () => { activeDrawer.value = 'import-format' }, separator: true },
   { label: 'Sample CSV', icon: FileSpreadsheet, action: () => { activeDrawer.value = 'sample-csv' } },
+  { label: 'Restore from backup', icon: FolderOpen, action: () => restore.triggerFilePicker(), separator: true },
   {
     label: isDark.value ? 'Light mode' : 'Dark mode',
     icon: isDark.value ? Sun : Moon,
@@ -146,7 +164,7 @@ const menuItems = computed<MenuItem[]>(() => [
     <header class="bg-base-100 border-b border-base-300 sticky top-0 z-10 no-print">
       <div class="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
         <button
-          class="text-lg font-bold text-primary hover:text-primary/80 transition-colors"
+          class="text-lg font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent hover:opacity-80 transition-opacity"
           @click="goHome"
         >
           Farlume
@@ -198,6 +216,20 @@ const menuItems = computed<MenuItem[]>(() => [
       :markdown="sampleCsvMd"
       @close="closeDrawer"
     />
+    <!-- Restore from backup: error + replace confirm -->
+    <div v-if="restore.importError.value" class="fixed bottom-20 left-4 right-4 z-[70] max-w-md mx-auto">
+      <ErrorAlert :message="restore.importError.value" @dismiss="restore.importError.value = ''" />
+    </div>
+    <ConfirmDialog
+      v-if="restore.showReplaceConfirm.value && restore.pendingImportData.value"
+      title="Replace existing workspace?"
+      :message="`A workspace named '${restore.pendingImportData.value.workspace.name}' already exists. Replacing it will overwrite all its transactions, patterns, and imported data.`"
+      confirm-label="Replace"
+      :danger="true"
+      @confirm="restore.confirmReplace"
+      @cancel="restore.cancelReplace"
+    />
+
     <!-- Toast notifications -->
     <ToastNotification />
   </div>

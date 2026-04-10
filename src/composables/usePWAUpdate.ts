@@ -109,8 +109,13 @@ async function checkVersionUpdate(): Promise<boolean> {
   } catch { return false }
 }
 
-// Store current version on initial load (no-op if already stored)
-checkVersionUpdate()
+// Check version on initial load — if a new build was deployed since last visit,
+// show the update banner immediately instead of waiting for visibilitychange.
+checkVersionUpdate().then(changed => {
+  if (changed && !hasUpdate.value) {
+    hasUpdate.value = true
+  }
+})
 
 // ── Visibility-based checks ──
 // Requirement: Detect updates when tab regains focus
@@ -147,10 +152,25 @@ watch(hasUpdate, (ready) => {
   }
 })
 
+// Requirement: "Update now" must always result in a visible refresh
+// Approach: Try SW skipWaiting first, fall back to hard reload after 2s.
+//   When version.json detected the change (not the SW lifecycle), there's no
+//   waiting SW — updateServiceWorker(true) sends SKIP_WAITING to nothing.
+//   The timeout ensures the user always gets the new version.
+// Alternatives:
+//   - Track detection source: Rejected — adds state for a rare edge case
+//   - Always hard reload: Rejected — SW skipWaiting is cleaner when available
+const UPDATE_RELOAD_FALLBACK_MS = 2000
+
 function updateApp() {
   debugLog('pwa', 'info', 'User triggered SW update')
   try { sessionStorage.setItem(SUPPRESSION_KEY, String(Date.now())) } catch {}
   updateServiceWorker(true)
+  // Fallback: if SW update doesn't reload within 2s (e.g., version.json
+  // detected the change but no new SW is waiting), hard reload
+  setTimeout(() => {
+    window.location.reload()
+  }, UPDATE_RELOAD_FALLBACK_MS)
 }
 
 /**

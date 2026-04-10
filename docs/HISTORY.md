@@ -4,6 +4,52 @@
 
 ## 2026-04-10
 
+- **Fixed runway depletion log severity:** Changed from `warn` to `info` — depletion is a data outcome, not an app problem. Debug log severities reflect app health, not user finances
+
+- **Fixed PWA update banner not showing + button not working:**
+  - Bug 1: `checkVersionUpdate()` on initial load detected new version but return value was discarded — `hasUpdate` never set. Now acts on the result immediately.
+  - Bug 2: When version.json detected the change (no waiting SW), `updateServiceWorker(true)` sent SKIP_WAITING to nothing. Added 2s fallback to `location.reload()`.
+
+- **Header "Farlume" gradient text:** `bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent` — matches canva-grid pattern, uses DaisyUI tokens so it auto-syncs with theme combos
+
+- **Moved "Restore from backup" to burger menu:**
+  - Extracted restore logic into `useRestoreWorkspace` composable (file picking, validation, import, replace confirm)
+  - Added "Restore from backup" item to burger menu in AppLayout — always accessible from any page
+  - Removed Restore button from workspace list header — declutters to just "New Workspace"
+  - Empty state "Restore from file" button kept as discovery affordance, calls injected trigger from AppLayout via provide/inject
+  - ConfirmDialog and ErrorAlert for restore flow now render in AppLayout (global)
+
+- **Updated app icon to match Farlume branding:**
+  - Changed from green (#10b981) B monogram to blue (#45aeee) rising chart line with endpoint dot
+  - Conveys finance/growth — dip then rise, reads clearly at all sizes including 32px favicon
+  - Fixed generate-icons.mjs maskable transform to wrap all content elements (not just `<path>`)
+  - Regenerated all PNGs: 512, 192, 180 (apple-touch), 48, maskable 1024, favicon.ico
+
+- **Tightened pattern compliance after review:**
+  - BurgerMenu: removed redundant `truncate` from button (inner span handles it correctly for flex layout)
+  - Inline pill embed skip: wrapped load timer + pill creation in `window.self === window.top` guard, matching the Vue DebugPill skip in main.ts — prevents orphaned inline pill in iframes
+
+- **glow-props pattern compliance — closed remaining gaps:**
+  - BURGER_MENU: Added `destructive` and `external` properties to MenuItem interface + template styling (red text for destructive, ExternalLink icon for external)
+  - DEBUG_SYSTEM: Added static `#debug-root` div to index.html (was created dynamically in main.ts)
+  - DEBUG_SYSTEM: Added subscriber replay — new subscribers immediately receive existing entries
+  - DEBUG_SYSTEM: Added embed mode skip — debug pill not mounted in iframe/embed contexts
+  - DOWNLOAD_PDF: Already complete (window.print() trigger exists in WorkspaceDetailView)
+  - EVENT_BUS: Already evaluated and skipped (no service-layer pub/sub needs)
+
+- **Fixed inline debug pill (index.html) same width overflow:** `width:320px` → `width:calc(100vw - 2rem);max-width:320px` — mirrors the DebugPill.vue fix
+
+- **Fixed debug pill not scaling to screen width:**
+  - Expanded panel: `w-[360px]` → `w-[calc(100vw-2rem)] max-w-[360px]` so it shrinks on narrow viewports
+  - Env tab values: replaced fixed `max-w-[220px]` with `min-w-0 truncate` for fluid sizing
+  - PWA diagnostics detail: replaced fixed `max-w-[180px]` with `min-w-0 truncate`
+  - Added `shrink-0` to labels so they don't compress, values truncate instead
+
+- **Removed "Clear all data" button from workspace list:**
+  - Deleted the nuclear delete-everything button, `handleClearAll()` function, `showClearConfirm` ref, and confirmation dialog from WorkspaceListView
+  - Too dangerous to expose on the main screen — individual workspace deletion is available from each workspace's own view
+  - Updated TESTING_GUIDE.md, USER_GUIDE.md, README.md, and PRODUCT_DEFINITION.md to remove references
+
 - **Theme: single "Vivid" combo (cmyk/night) as default:**
   - Added cmyk (light) + night (dark) combo, removed classic (lofi/black) and nature (emerald/forest)
   - Combo system kept functional — ThemeCombo interface, validCombo(), getCombo(), setCombo() all intact for future expansion

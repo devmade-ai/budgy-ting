@@ -47,11 +47,15 @@ for (const { name, size } of sizes) {
 //   - Reuse same image for maskable: Rejected — rounded corners create visible
 //     artifacts when OS applies its own mask shape on top
 //   - Separate hand-crafted SVG: Rejected — drift risk, single source preferred
+// Wrap all content after the background <rect> in a safe-zone <g> transform.
+// Approach: Insert <g> after the closing > of the first <rect.../> element,
+//   and close </g> before </svg>. Works regardless of content elements
+//   (path, polyline, circle, etc.) — no assumption about element types.
 const svgString = svg.toString('utf8')
 const maskableSvg = Buffer.from(
   svgString
     .replace(/ rx="92"/, '')
-    .replace('<path ', '<g transform="translate(51.2 51.2) scale(0.8)"><path ')
+    .replace(/(<rect[^/]*\/>)/, '$1<g transform="translate(51.2 51.2) scale(0.8)">')
     .replace('</svg>', '</g></svg>')
 )
 

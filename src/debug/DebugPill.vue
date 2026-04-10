@@ -40,7 +40,7 @@ let unsubscribe: (() => void) | null = null
 let copyFeedbackTimer: ReturnType<typeof setTimeout> | null = null
 
 onMounted(() => {
-  entries.value = [...getEntries()]
+  // subscribe() replays existing entries automatically — no manual getEntries() needed
   unsubscribe = subscribe(() => {
     entries.value = [...getEntries()]
   })
@@ -304,7 +304,7 @@ function toggle() {
     <!-- Expanded panel -->
     <div
       v-else
-      class="bg-neutral text-neutral-content rounded-xl shadow-2xl w-[360px] max-h-[70vh] flex flex-col overflow-hidden"
+      class="bg-neutral text-neutral-content rounded-xl shadow-2xl w-[calc(100vw-2rem)] max-w-[360px] max-h-[70vh] flex flex-col overflow-hidden"
     >
       <!-- Header -->
       <div class="flex items-center justify-between px-3 py-2 border-b border-neutral-content/10">
@@ -376,8 +376,8 @@ function toggle() {
           :key="item.label"
           class="flex justify-between py-1.5 border-b border-neutral-content/10"
         >
-          <span class="text-neutral-content/50">{{ item.label }}</span>
-          <span class="text-neutral-content/80 text-right max-w-[220px] overflow-hidden text-ellipsis whitespace-nowrap ml-2">{{ item.value }}</span>
+          <span class="text-neutral-content/50 shrink-0">{{ item.label }}</span>
+          <span class="text-neutral-content/80 text-right min-w-0 truncate ml-2">{{ item.value }}</span>
         </div>
       </div>
 
@@ -394,9 +394,9 @@ function toggle() {
           :key="diag.label"
           class="flex justify-between items-center py-1.5 border-b border-neutral-content/10"
         >
-          <span class="text-neutral-content/50">{{ diag.label }}</span>
-          <div class="flex items-center gap-2">
-            <span class="text-neutral-content/80 text-[11px] max-w-[180px] overflow-hidden text-ellipsis whitespace-nowrap">{{ diag.detail }}</span>
+          <span class="text-neutral-content/50 shrink-0">{{ diag.label }}</span>
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="text-neutral-content/80 text-[11px] min-w-0 truncate">{{ diag.detail }}</span>
             <span
               class="font-bold text-[10px] min-w-[32px] text-right"
               :style="{ color: statusIndicators[diag.status]?.color ?? '' }"

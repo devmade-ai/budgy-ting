@@ -14,7 +14,7 @@
  */
 
 import { ref, computed, watch, onUnmounted, nextTick, type Component } from 'vue'
-import { Menu } from 'lucide-vue-next'
+import { Menu, ExternalLink } from 'lucide-vue-next'
 import { debugLog } from '@/debug/debugLog'
 
 export interface MenuItem {
@@ -26,6 +26,10 @@ export interface MenuItem {
   visible?: boolean
   separator?: boolean
   disabled?: boolean
+  /** Renders item in error/red color for dangerous actions (e.g. delete) */
+  destructive?: boolean
+  /** Shows external link indicator — for items that navigate away from the app */
+  external?: boolean
 }
 
 const props = defineProps<{
@@ -191,13 +195,14 @@ watch(open, (isOpen) => {
             <li>
               <button
                 type="button"
-                class="w-full text-left px-4 py-2 min-h-[44px] text-sm truncate
+                class="w-full text-left px-4 py-2 min-h-[44px] text-sm
                        transition-colors outline-none
                        focus-visible:ring-2 focus-visible:ring-primary
-                       text-base-content/80
-                       hover:bg-base-200
                        flex items-center gap-2
                        disabled:opacity-50 disabled:cursor-not-allowed"
+                :class="item.destructive
+                  ? 'text-error hover:bg-error/10'
+                  : 'text-base-content/80 hover:bg-base-200'"
                 :disabled="item.disabled"
                 @click="handleItem(item)"
               >
@@ -205,10 +210,16 @@ watch(open, (isOpen) => {
                   v-if="item.icon"
                   :is="item.icon"
                   :size="16"
-                  :class="item.iconClass ?? 'text-base-content/40'"
+                  :class="item.iconClass ?? (item.destructive ? 'text-error/60' : 'text-base-content/40')"
                   aria-hidden="true"
                 />
-                {{ item.label }}
+                <span class="truncate">{{ item.label }}</span>
+                <ExternalLink
+                  v-if="item.external"
+                  :size="12"
+                  class="shrink-0 opacity-40"
+                  aria-hidden="true"
+                />
               </button>
             </li>
           </template>

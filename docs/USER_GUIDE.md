@@ -60,17 +60,10 @@ The PDF includes your workspace name, cashflow graph, metrics grid, and the full
 
 ### Restoring from a Backup
 
-1. From the home screen, click **Restore** (or **Restore from file** if you have no workspaces)
+1. Open the menu (hamburger icon, top-right) and tap **Restore from backup** — or use the **Restore from file** button if you have no workspaces
 2. Select a previously exported JSON file
 3. If a workspace with the same ID already exists, you'll be asked whether to **Replace** it or **Cancel**
 4. The workspace and all its data will be restored
-
-### Clearing All Data
-
-1. From the home screen, scroll to the bottom and click **Clear all data**
-2. A confirmation dialog warns that this deletes everything permanently
-3. Click **Clear everything** to confirm
-4. Make sure you've exported anything you want to keep first
 
 ---
 

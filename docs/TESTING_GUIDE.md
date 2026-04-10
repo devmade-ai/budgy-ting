@@ -19,7 +19,7 @@ Run through this checklist after any change to verify nothing is broken:
 - [ ] Can export a workspace as JSON
 - [ ] Can restore a workspace from exported JSON
 - [ ] Can delete a workspace (confirm dialog appears)
-- [ ] Menu opens via hamburger icon, shows 6 items (with dividers)
+- [ ] Menu opens via hamburger icon, shows 7 items (with dividers)
 - [ ] Tutorial opens via menu → "How it works"
 - [ ] User Guide drawer opens via menu → "User Guide"
 - [ ] Test Scenarios drawer opens via menu → "Test Scenarios"
@@ -150,7 +150,7 @@ Run through this checklist after any change to verify nothing is broken:
 1. Create a workspace with imported transactions
 2. Click **⋮** menu → **Export** — JSON file downloads
 3. Delete the workspace
-4. From home screen, click **Restore**
+4. Open the menu (hamburger icon) → **Restore from backup**
 5. Select the exported JSON file
 
 **Expected:**
@@ -161,7 +161,7 @@ Run through this checklist after any change to verify nothing is broken:
 
 **Steps:**
 1. Have a workspace
-2. Click **Restore** and select a file for a workspace with the same ID
+2. Open the menu → **Restore from backup** and select a file for a workspace with the same ID
 
 **Expected:**
 - Dialog asks: "Replace existing workspace?"
@@ -169,22 +169,10 @@ Run through this checklist after any change to verify nothing is broken:
 - Clicking **Replace** overwrites the workspace
 - Clicking **Cancel** keeps the original
 
-#### 1.9 Clear All Data
+#### 1.9 Demo Workspace
 
 **Steps:**
-1. Have at least one workspace
-2. From home screen, click **Clear all data**
-3. Confirmation dialog appears
-
-**Expected (Confirm):**
-4. Click **Clear everything**
-5. Success message: "All data cleared"
-6. Home screen shows empty state: "No workspaces yet"
-
-#### 1.10 Demo Workspace
-
-**Steps:**
-1. Clear all data (or use a fresh browser)
+1. Use a fresh browser (or delete all workspaces individually)
 2. Reload the app
 
 **Expected:**

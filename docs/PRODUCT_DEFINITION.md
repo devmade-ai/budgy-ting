@@ -320,7 +320,6 @@ All phases are **complete**. Preserved here as architectural reference.
 
 - Export workspace + expenses + actuals + comparison snapshot as JSON (schema v2)
 - Restore from backup with schema validation and v1→v2 backward compatibility
-- Clear all data with confirmation
 - Workspace-level delete with cascade
 
 #### Phase 7: PWA Polish and Offline — COMPLETE
