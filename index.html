@@ -32,16 +32,14 @@
       (function() {
         try {
           var combos = {
-            vivid: { light: 'cmyk', dark: 'night', mcL: '#45aeee', mcD: '#0f172a' },
-            classic: { light: 'lofi', dark: 'black', mcL: '#0d0d0d', mcD: '#000000' },
-            nature: { light: 'emerald', dark: 'forest', mcL: '#66cc8a', mcD: '#1b1717' }
+            vivid: { light: 'cmyk', dark: 'night', mcL: '#45aeee', mcD: '#0f172a' }
           };
           var stored = localStorage.getItem('darkMode');
           var isDark = stored !== null
             ? stored === 'true'
             : window.matchMedia('(prefers-color-scheme: dark)').matches;
           var comboId = localStorage.getItem('themeCombo') || 'vivid';
-          var combo = combos[comboId] || combos.classic;
+          var combo = combos[comboId] || combos.vivid;
           var theme = isDark ? combo.dark : combo.light;
           var root = document.documentElement;
           if (isDark) root.classList.add('dark');

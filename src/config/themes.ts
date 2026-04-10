@@ -13,7 +13,9 @@ export interface ThemeCombo {
   label: string
   light: string
   dark: string
+  /** PWA status bar hex color for light mode — computed from DaisyUI theme oklch values */
   metaColorLight: string
+  /** PWA status bar hex color for dark mode — computed from DaisyUI theme oklch values */
   metaColorDark: string
 }
 
@@ -26,22 +28,11 @@ export const themeCombos: ThemeCombo[] = [
     metaColorLight: '#45aeee',
     metaColorDark: '#0f172a',
   },
-  {
-    id: 'classic',
-    label: 'Classic',
-    light: 'lofi',
-    dark: 'black',
-    metaColorLight: '#0d0d0d',
-    metaColorDark: '#000000',
-  },
-  {
-    id: 'nature',
-    label: 'Nature',
-    light: 'emerald',
-    dark: 'forest',
-    metaColorLight: '#66CC8A',
-    metaColorDark: '#1b1717',
-  },
+  // To add more combos:
+  // 1. Add entry here
+  // 2. Register both DaisyUI theme names in src/index.css @plugin "daisyui" { themes: ... }
+  // 3. Add to index.html flash prevention script combos object (vanilla JS, must mirror this file)
+  // 4. Update vite.config.ts manifest theme_color if changing the default
 ]
 
 export const DEFAULT_COMBO = 'vivid'

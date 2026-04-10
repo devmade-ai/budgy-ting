@@ -4,10 +4,12 @@
 
 ## 2026-04-10
 
-- **New default theme combo "Vivid" (cmyk/night):**
-  - Added cmyk (light) + night (dark) combo as "Vivid", set as DEFAULT_COMBO
-  - Registered cmyk and night in @plugin daisyui themes (cmyk --default, night --prefersdark)
+- **Theme: single "Vivid" combo (cmyk/night) as default:**
+  - Added cmyk (light) + night (dark) combo, removed classic (lofi/black) and nature (emerald/forest)
+  - Combo system kept functional — ThemeCombo interface, validCombo(), getCombo(), setCombo() all intact for future expansion
+  - Registered only cmyk and night in @plugin daisyui themes
   - All 4 sync points updated: themes.ts, index.css, index.html flash script, vite.config.ts manifest
+  - Meta colors computed from actual DaisyUI oklch values: #45aeee (cmyk primary), #0f172a (night base-100)
 
 - **Meta theme-color sync with DaisyUI combo system:**
   - Fixed `<meta name="theme-color">` tags in index.html — were hardcoded to old brand color `#10b981`, now match default combo (classic: `#808080` light / `#000000` dark)

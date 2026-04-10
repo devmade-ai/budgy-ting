@@ -65,7 +65,7 @@ Current working features:
 - Tag autocomplete from tagCache + pattern tags + ML suggestions
 - Duplicate detection on import (date + amount + description)
 - Pull-to-refresh, haptic feedback, bottom sheet modal
-- Dark mode: DaisyUI dual-layer theming (data-theme + .dark class), named combos (Approach B), user-controlled toggle, system preference fallback, localStorage persistence, cross-tab sync, flash prevention, print overrides
+- Dark mode: DaisyUI dual-layer theming (data-theme + .dark class), named combos (Approach B, single "Vivid" combo: cmyk/night), user-controlled toggle, system preference fallback, localStorage persistence, cross-tab sync, flash prevention, print overrides
 - Save as PDF: window.print() via workspace actions menu, full print CSS (no-print classes, forced light mode, all transactions, table layout, static cash display, ApexCharts overrides)
 
 **Database:** Schema v8 (8 tables: workspaces, transactions, patterns, importBatches, tagCache, embeddingCache + 2 legacy)
