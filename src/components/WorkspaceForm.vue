@@ -67,58 +67,54 @@ function handleSubmit() {
   <form class="space-y-5" @submit.prevent="handleSubmit">
     <!-- Workspace name -->
     <div>
-      <label class="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1" for="workspace-name">
+      <label class="block text-sm font-medium text-base-content/80 mb-1" for="workspace-name">
         Workspace name
       </label>
       <input
         id="workspace-name"
         v-model="name"
         type="text"
-        class="input-field"
+        class="input input-bordered w-full text-base min-h-[44px]"
         placeholder="e.g. Household, Side Hustle, Wedding"
         autofocus
       />
-      <p v-if="errors['name']" class="text-sm text-red-500 dark:text-red-400 mt-1">{{ errors['name'] }}</p>
+      <p v-if="errors['name']" class="text-sm text-error mt-1">{{ errors['name'] }}</p>
     </div>
 
     <!-- Currency label -->
     <div>
-      <label class="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1" for="currency-label">
+      <label class="block text-sm font-medium text-base-content/80 mb-1" for="currency-label">
         Currency symbol
       </label>
       <input
         id="currency-label"
         v-model="currencyLabel"
         type="text"
-        class="input-field w-20"
+        class="input input-bordered w-20 text-base min-h-[44px]"
         placeholder="R"
         maxlength="5"
       />
-      <p class="text-sm text-gray-400 dark:text-zinc-500 mt-1">Display only — shown next to amounts</p>
+      <p class="text-sm text-base-content/40 mt-1">Display only — shown next to amounts</p>
     </div>
 
     <!-- Period type -->
     <div>
-      <label class="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-2">
+      <label class="block text-sm font-medium text-base-content/80 mb-2">
         Period
       </label>
-      <div class="flex gap-2">
+      <div class="join w-full">
         <button
           type="button"
-          class="btn flex-1"
-          :class="periodType === 'monthly'
-            ? 'bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 border border-brand-300 dark:border-brand-700'
-            : 'bg-gray-50 dark:bg-zinc-800 text-gray-600 dark:text-zinc-300 border border-gray-200 dark:border-zinc-700 hover:bg-gray-100 dark:hover:bg-zinc-700'"
+          class="join-item btn flex-1"
+          :class="periodType === 'monthly' ? 'btn-active' : ''"
           @click="periodType = 'monthly'"
         >
           Monthly
         </button>
         <button
           type="button"
-          class="btn flex-1"
-          :class="periodType === 'custom'
-            ? 'bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 border border-brand-300 dark:border-brand-700'
-            : 'bg-gray-50 dark:bg-zinc-800 text-gray-600 dark:text-zinc-300 border border-gray-200 dark:border-zinc-700 hover:bg-gray-100 dark:hover:bg-zinc-700'"
+          class="join-item btn flex-1"
+          :class="periodType === 'custom' ? 'btn-active' : ''"
           @click="periodType = 'custom'"
         >
           Custom dates
@@ -129,26 +125,26 @@ function handleSubmit() {
     <!-- Custom date range -->
     <div v-if="periodType === 'custom'" class="space-y-3">
       <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1" for="start-date">
+        <label class="block text-sm font-medium text-base-content/80 mb-1" for="start-date">
           Start date
         </label>
         <DateInput id="start-date" v-model="startDate" />
       </div>
       <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1" for="end-date">
+        <label class="block text-sm font-medium text-base-content/80 mb-1" for="end-date">
           End date
         </label>
         <DateInput id="end-date" v-model="endDate" :min="startDate" />
       </div>
-      <p v-if="errors['dates']" class="text-sm text-red-500 dark:text-red-400">{{ errors['dates'] }}</p>
+      <p v-if="errors['dates']" class="text-sm text-error">{{ errors['dates'] }}</p>
     </div>
 
     <!-- Actions -->
     <div class="flex gap-3 pt-2">
-      <button type="submit" class="btn-primary flex-1">
+      <button type="submit" class="btn btn-primary flex-1">
         {{ isEditing ? 'Save changes' : 'Create workspace' }}
       </button>
-      <button type="button" class="btn-secondary" @click="emit('cancel')">
+      <button type="button" class="btn btn-ghost" @click="emit('cancel')">
         Cancel
       </button>
     </div>

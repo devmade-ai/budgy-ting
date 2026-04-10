@@ -2,7 +2,55 @@
 
 <!-- Changelog and record of completed work. Organized by date. -->
 
+## 2026-04-10
+
+- **Theme: single "Vivid" combo (cmyk/night) as default:**
+  - Added cmyk (light) + night (dark) combo, removed classic (lofi/black) and nature (emerald/forest)
+  - Combo system kept functional — ThemeCombo interface, validCombo(), getCombo(), setCombo() all intact for future expansion
+  - Registered only cmyk and night in @plugin daisyui themes
+  - All 4 sync points updated: themes.ts, index.css, index.html flash script, vite.config.ts manifest
+  - Meta colors computed from actual DaisyUI oklch values: #45aeee (cmyk primary), #0f172a (night base-100)
+
+- **Meta theme-color sync with DaisyUI combo system:**
+  - Fixed `<meta name="theme-color">` tags in index.html — were hardcoded to old brand color `#10b981`, now match default combo (classic: `#808080` light / `#000000` dark)
+  - Flash prevention script now also updates meta theme-color before first paint (previously only set by Vue composable on mount — status bar color flashed wrong color)
+  - Manifest `theme_color` in vite.config.ts updated from `#10b981` to `#808080` (default combo's light metaColor)
+  - CLAUDE.md sync points updated: now 4 locations (was 3), including manifest theme_color
+
 ## 2026-04-09
+
+- **DaisyUI v5 migration — full theming overhaul (glow-props THEME_DARK_MODE sync):**
+  - Installed DaisyUI v5, configured `@plugin "daisyui"` in Tailwind CSS v4 with 4 themes (lofi, black, emerald, forest)
+  - Dual-layer theming: `data-theme` for DaisyUI components + `.dark` class for Tailwind utilities
+  - Named combos (Approach B): "Classic" (lofi/black) and "Nature" (emerald/forest) — stored in `src/config/themes.ts`
+  - Removed all custom `:root`/`.dark` CSS variable definitions (--color-text-default, --color-surface, etc.)
+  - Removed all custom component classes (btn-primary, btn-secondary, btn-danger, input-field, card, tag-pill, page-title) — replaced with DaisyUI `btn`, `input`, `badge` classes
+  - Migrated all 30+ Vue files: replaced ~200+ `dark:` paired classes with single DaisyUI semantic tokens (bg-base-100, text-base-content, border-base-300, text-error, text-success, etc.)
+  - Updated flash prevention script in index.html to set both `.dark` class and `data-theme` attribute
+  - Updated `useDarkMode.ts`: added `data-theme` attribute setting, theme combo support, per-combo meta theme-color
+  - Updated print handler in AppLayout: saves/restores `data-theme` alongside `.dark` class
+  - HelpDrawer prose styles: migrated from `var(--color-*)` to DaisyUI oklch variables (`oklch(var(--bc))`, etc.)
+  - Z-index scale unchanged (already aligned: 10/40/50/60/70/80)
+  - Brand colors initially retained in `@theme` for charts — later removed (see below)
+
+- **DaisyUI migration cleanup — strengthening pass:**
+  - Fixed 4 `<select>` elements using `input input-bordered` → `select select-bordered` (TransactionTable, TransactionEditModal)
+  - Fixed `--color-neutral` in @theme conflicting with DaisyUI's `neutral` semantic color — renamed to `--color-data-neutral` (later removed entirely when @theme block was deleted)
+  - Fixed cross-tab sync in useDarkMode.ts — added `syncing` guard flag to prevent watchers from redundantly calling applyTheme() and re-persisting values that came FROM another tab
+  - Fixed ImportStepReview duplicated classes (`w-full w-48`, `text-base text-xs`)
+  - Updated print CSS: broadened `.card` selector to `.card, .rounded-xl` for card-like containers
+
+- **DaisyUI component adoption — replace custom patterns with DaisyUI utilities:**
+  - `steps` — NewImportWizard: replaced 25-line custom circle + connecting line step indicator
+  - `skeleton` — SkeletonLoader: replaced `animate-pulse` + `bg-base-300` boxes with DaisyUI skeleton class
+  - `join` + `join-item` — CashflowGraph, WorkspaceForm: replaced custom toggle button groups with conditional class overrides
+  - `divider` — BurgerMenu, WorkspaceDetailView, WorkspaceListView, InstallInstructionsModal: replaced `border-t border-base-*` separators
+  - `progress` — WorkspaceListView (pull-to-refresh), ImportStepReview (ML model loading): replaced custom progress bar divs
+  - `modal` + `modal-box` — ConfirmDialog, TutorialModal, InstallInstructionsModal, TransactionEditModal: replaced `fixed inset-0 z-[60]` + manual backdrop + positioning with DaisyUI modal/modal-box/modal-backdrop
+  - `loading loading-spinner` — TransactionEditModal: replaced Lucide Loader2 + animate-spin, removed unused Loader2 import
+  - HelpDrawer drawer: Skipped — DaisyUI drawer is for page-level sidebars, not modal overlay panels with custom animation timing
+
+
 
 - **PWA install detection — full pattern sync (glow-props PWA_SYSTEM sync):**
   - Browser detection expanded from 3 → 7 Chromium browsers (+ opera, samsung, vivaldi, arc)

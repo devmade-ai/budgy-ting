@@ -24,12 +24,12 @@ defineProps<{
       :id="id"
       v-model="model"
       type="date"
-      class="input-field pr-9"
+      class="input input-bordered w-full text-base min-h-[44px] pr-9"
       :min="min"
     />
     <Calendar
       :size="16"
-      class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-zinc-500 pointer-events-none"
+      class="absolute right-3 top-1/2 -translate-y-1/2 text-base-content/40 pointer-events-none"
       aria-hidden="true"
     />
   </div>

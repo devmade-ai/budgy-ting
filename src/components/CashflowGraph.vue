@@ -12,6 +12,7 @@ import { computed, ref, onMounted, onUnmounted } from 'vue'
 import VueApexCharts from 'vue3-apexcharts'
 import { LineChart } from 'lucide-vue-next'
 import { useDarkMode } from '@/composables/useDarkMode'
+import { resolveThemeColor } from '@/composables/useThemeColor'
 import type { Transaction } from '@/types/models'
 import type { DailyForecastPoint } from '@/engine/forecast'
 import type { RunwayResult } from '@/engine/runway'
@@ -130,20 +131,20 @@ const chartOptions = computed(() => {
   const seriesCount = series.value.length
   const strokeWidths = Array(seriesCount).fill(2) as number[]
   const dashArray = series.value.map((s) => s.name === 'Forecast' ? 5 : 0)
+  // Requirement: Chart colors must come from DaisyUI theme tokens
+  // Approach: resolveThemeColor reads computed oklch values from <html> and
+  //   converts to hex via canvas pixel — ApexCharts can't use CSS variables.
+  //   Colors re-resolve on every chartOptions recompute (isDark triggers this).
   const colors = series.value.map((s) => {
-    if (s.name === 'Actuals') return '#3b82f6'
-    if (s.name === 'Forecast') return '#f59e0b'
-    if (s.name === 'Cash balance') return '#10b981'
-    return '#6b7280'
+    if (s.name === 'Actuals') return resolveThemeColor('--color-info', '#3b82f6')
+    if (s.name === 'Forecast') return resolveThemeColor('--color-warning', '#f59e0b')
+    if (s.name === 'Cash balance') return resolveThemeColor('--color-success', '#10b981')
+    return resolveThemeColor('--color-base-content', '#6b7280')
   })
 
-  // Chart colors adapt to dark mode — hardcoded hex values required by ApexCharts
-  // (it doesn't support CSS variables in config objects)
-  const labelColor = isDark.value ? '#a1a1aa' : '#9ca3af'
-  const titleColor = isDark.value ? '#a1a1aa' : '#6b7280'
-  const gridColor = isDark.value ? '#27272a' : '#f3f4f6'
+  const labelColor = resolveThemeColor('--color-base-content', '#9ca3af')
+  const gridColor = resolveThemeColor('--color-base-300', '#e5e7eb')
   const tooltipTheme = isDark.value ? 'dark' : 'light'
-  const legendColor = isDark.value ? '#d4d4d8' : undefined
 
   return {
     chart: {
@@ -176,7 +177,7 @@ const chartOptions = computed(() => {
       },
       title: {
         text: chartMode.value === 'cumulative' ? 'Cumulative' : 'Daily Net',
-        style: { fontSize: '12px', color: titleColor },
+        style: { fontSize: '12px', color: labelColor },
       },
     },
     tooltip: {
@@ -196,7 +197,7 @@ const chartOptions = computed(() => {
       position: 'top' as const,
       horizontalAlign: 'left' as const,
       fontSize: '12px',
-      labels: { colors: legendColor },
+      labels: { colors: labelColor },
     },
     noData: {
       text: 'No data for selected period',
@@ -212,21 +213,17 @@ const hasData = computed(() => actualPoints.value.length > 0 || props.forecastPo
   <div class="mb-6">
     <!-- Chart controls — hidden in print (interactive toggles, no value on paper) -->
     <div class="flex flex-wrap items-center gap-2 mb-4 no-print">
-      <div class="flex gap-1">
+      <div class="join">
         <button
-          class="btn text-xs px-3 py-1.5 rounded"
-          :class="chartMode === 'cumulative'
-            ? 'bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 border border-brand-300 dark:border-brand-700'
-            : 'bg-gray-50 dark:bg-zinc-800 text-gray-600 dark:text-zinc-300 border border-gray-200 dark:border-zinc-700'"
+          class="join-item btn btn-sm"
+          :class="chartMode === 'cumulative' ? 'btn-active' : ''"
           @click="chartMode = 'cumulative'"
         >
           Cumulative
         </button>
         <button
-          class="btn text-xs px-3 py-1.5 rounded"
-          :class="chartMode === 'daily'
-            ? 'bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 border border-brand-300 dark:border-brand-700'
-            : 'bg-gray-50 dark:bg-zinc-800 text-gray-600 dark:text-zinc-300 border border-gray-200 dark:border-zinc-700'"
+          class="join-item btn btn-sm"
+          :class="chartMode === 'daily' ? 'btn-active' : ''"
           @click="chartMode = 'daily'"
         >
           Daily net
@@ -245,9 +242,9 @@ const hasData = computed(() => actualPoints.value.length > 0 || props.forecastPo
       />
     </div>
     <div v-else class="text-center py-12">
-      <LineChart :size="36" class="text-gray-300 dark:text-zinc-600 mx-auto mb-3" />
-      <p class="text-gray-500 dark:text-zinc-400">No data to chart</p>
-      <p class="text-gray-400 dark:text-zinc-500 text-sm mt-1">Import transactions to see your cashflow</p>
+      <LineChart :size="36" class="text-base-content/20 mx-auto mb-3" />
+      <p class="text-base-content/60">No data to chart</p>
+      <p class="text-base-content/40 text-sm mt-1">Import transactions to see your cashflow</p>
     </div>
   </div>
 </template>

@@ -18,9 +18,9 @@ const emit = defineEmits<{
 }>()
 
 const variantClasses: Record<string, { wrapper: string; button: string }> = {
-  error: { wrapper: 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400', button: 'text-red-400 hover:text-red-600 dark:hover:text-red-300' },
-  success: { wrapper: 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400', button: 'text-green-500 hover:text-green-700 dark:hover:text-green-300' },
-  warning: { wrapper: 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400', button: 'text-amber-500 hover:text-amber-700 dark:hover:text-amber-300' },
+  error: { wrapper: 'bg-error/10 text-error', button: 'text-error/60 hover:text-error' },
+  success: { wrapper: 'bg-success/10 text-success', button: 'text-success/60 hover:text-success' },
+  warning: { wrapper: 'bg-warning/10 text-warning', button: 'text-warning/60 hover:text-warning' },
 }
 </script>
 

@@ -4,44 +4,29 @@
 
 ## Worked on
 
-glow-props pattern sync — DOWNLOAD_PDF (Save as PDF) and PWA_SYSTEM (full sync).
+DaisyUI v5 migration — full migration + strengthening + component adoption + theme consolidation.
 
 ## Accomplished
 
-**Save as PDF (DOWNLOAD_PDF sync):**
-- "Save as PDF" in workspace actions menu, calls `window.print()`
-- Full print output: `no-print`, `print-show`, `beforeprint`/`afterprint` (pagination bypass + dark mode toggle), ApexCharts print CSS, cash-on-hand static display
-- Docs: USER_GUIDE, TESTING_GUIDE, README
-
-**PWA install detection (PWA_SYSTEM sync):**
-- Browser detection: 3 → 7 Chromium browsers (+ opera, samsung, vivaldi, arc)
-- Brave detection: `'brave' in navigator` (UA string unreliable on Brave Mobile)
-- `CHROMIUM_BROWSERS` exported constant (single source of truth)
-- iOS non-Safari: CriOS/FxiOS/EdgiOS detection + Safari redirect instructions
-- `display-mode: standalone` change listener (detects install via browser menu)
-- Install instructions: Chromium fallback, "Why install?" benefits, per-browser warning notes
-- `installed-via-browser` analytics event
-
-**PWA update checks (PWA_SYSTEM sync):**
-- Visibility-based checks, 30s suppression, 1500ms settle delay, error handling
-- `cleanupOutdatedCaches: true`, DebugPill install prompt flag fix
-
-**ChunkLoadError prevention:**
-- `lazyRetry()` wrapper on all 5 lazy route imports in router/index.ts
-
-**version.json supplementary detection:**
-- `versionJsonPlugin()` in vite.config.ts emits `version.json` with `buildTime` on every build
-- `checkVersionUpdate()` in usePWAUpdate.ts fetches on visibility change (throttled 60s), compares against localStorage
-- Catches edge case: app changes that don't modify sw.js
+- Full 6-phase DaisyUI migration from custom CSS variables
+- Strengthening pass (selects, neutral conflict, cross-tab sync, accessibility)
+- DaisyUI component adoption (steps, skeleton, join, modal, progress, divider, loading)
+- Consolidated to single "Vivid" combo (cmyk/night), removed classic and nature combos
+- Meta colors computed from actual DaisyUI oklch theme values
+- Combo system kept functional for future expansion (ThemeCombo interface, validCombo, getCombo, setCombo all intact)
 
 ## Current state
 
-All work complete and pushed to `claude/add-pdf-print-button-7zGtt`. Build verified.
+All work complete and pushed. TypeScript + Vite build + 106 tests pass.
 
 ## Key context
 
-- `usePWAInstall.ts` exports `CHROMIUM_BROWSERS` constant — use it for any Chromium-specific logic
-- `lazyRetry()` in router uses `sessionStorage` key `farlume:chunk-retry-refreshed` to prevent infinite reloads
-- `usePWAUpdate.ts` has 4 update triggers: 60-min interval, `visibilitychange`, manual check, version.json comparison
-- Print CSS in `src/index.css`, `beforeprint`/`afterprint` in AppLayout + TransactionTable
-- glow-props pattern sync remaining: THEME_DARK_MODE, EVENT_BUS
+- **4 sync points** when adding combos: `src/config/themes.ts` (source of truth) ↔ `src/index.css` @plugin themes ↔ `index.html` flash script combos object ↔ `vite.config.ts` manifest theme_color
+- `src/composables/useDarkMode.ts` — dual-layer (data-theme + .dark), `syncing` guard for cross-tab, combo system functional
+- Only registered DaisyUI themes: `cmyk --default, night --prefersdark`
+- Flash prevention script also updates meta theme-color pre-paint
+- `@theme` block removed entirely — all colors from DaisyUI tokens
+- CashflowGraph reads theme colors at runtime via `useThemeColor.ts` (canvas pixel conversion)
+- DebugPill migrated to Tailwind/DaisyUI classes + resolveThemeColor for log colors
+- Pre-framework inline pill in index.html stays hardcoded (handles CSS-not-loaded case)
+- glow-props patterns: all complete. EVENT_BUS evaluated and skipped (no service-layer pub/sub needs)

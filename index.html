@@ -5,15 +5,13 @@
     <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png" />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- Requirement: Status bar is a branding surface, not a content surface
-         Approach: Brand color (#10b981) for both light and dark meta tags.
-           A mid-tone brand color provides enough contrast for status bar text
-           (time, battery, wifi icons) in both light and dark OS modes.
-           Using page background colors causes visibility problems when the OS
-           color scheme differs from the app's theme (e.g. light text on light bg).
+    <!-- Requirement: PWA status bar color must match active theme combo
+         Approach: Initial values match default combo (vivid = cmyk/night). Flash prevention
+           script updates these before first paint. useDarkMode.ts composable
+           updates them on subsequent toggles/combo changes.
          Reference: glow-props docs/implementations/THEME_DARK_MODE.md -->
-    <meta name="theme-color" content="#10b981" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#10b981" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#45aeee" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)" />
     <meta name="description" content="Plan and track expenses against budgets" />
     <!-- Requirement: Improve iOS standalone PWA appearance
          Approach: apple-mobile-web-app meta tags for status bar, title, and splash -->
@@ -25,19 +23,30 @@
     <title>Farlume</title>
     <!-- Requirement: Prevent white flash on dark mode page load
          Approach: Classic (non-module) inline script reads localStorage and applies
-           .dark class before first paint. Same early-capture pattern as PWA
-           beforeinstallprompt script. Must duplicate the localStorage/matchMedia
-           logic from useDarkMode.ts — the composable runs after Vue mount, too late.
+           both .dark class (Tailwind) and data-theme (DaisyUI) before first paint.
+           Duplicates the combo lookup logic from useDarkMode.ts — composable runs
+           after Vue mount, too late for first paint.
          Why classic script: Module scripts are deferred — they run after DOM parse.
          Reference: glow-props docs/implementations/THEME_DARK_MODE.md -->
     <script>
       (function() {
         try {
+          var combos = {
+            vivid: { light: 'cmyk', dark: 'night', mcL: '#45aeee', mcD: '#0f172a' }
+          };
           var stored = localStorage.getItem('darkMode');
           var isDark = stored !== null
             ? stored === 'true'
             : window.matchMedia('(prefers-color-scheme: dark)').matches;
-          if (isDark) document.documentElement.classList.add('dark');
+          var comboId = localStorage.getItem('themeCombo') || 'vivid';
+          var combo = combos[comboId] || combos.vivid;
+          var theme = isDark ? combo.dark : combo.light;
+          var root = document.documentElement;
+          if (isDark) root.classList.add('dark');
+          root.setAttribute('data-theme', theme);
+          var mc = isDark ? combo.mcD : combo.mcL;
+          var metas = document.querySelectorAll('meta[name="theme-color"]');
+          for (var i = 0; i < metas.length; i++) metas[i].setAttribute('content', mc);
         } catch(e) {}
       })();
     </script>

@@ -338,7 +338,7 @@ function goBack() {
 <template>
   <div>
     <button
-      class="text-sm text-gray-500 dark:text-zinc-400 hover:text-gray-700 dark:hover:text-zinc-200 mb-4 flex items-center gap-1"
+      class="text-sm text-base-content/60 hover:text-base-content mb-4 flex items-center gap-1"
       @click="goBack"
     >
       <ArrowLeft :size="16" />
@@ -350,37 +350,20 @@ function goBack() {
     <LoadingSpinner v-if="loading" />
 
     <template v-else-if="workspace">
-      <!-- Step indicator — 2 steps: Upload → Review
+      <!-- Step indicator — DaisyUI steps component
            Requirement: Step numbers + text labels for non-technical users
-           Approach: Circle + label below each step, connected by line -->
-      <div class="flex items-start gap-2 mb-6">
-        <template v-for="s in [1, 2]" :key="s">
-          <div class="flex flex-col items-center min-w-0">
-            <div
-              class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium"
-              :class="s === step
-                ? 'bg-brand-500 text-white'
-                : s < step
-                  ? 'bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400'
-                  : 'bg-gray-100 dark:bg-zinc-800 text-gray-400 dark:text-zinc-500'"
-            >
-              {{ s < step ? '✓' : s }}
-            </div>
-            <span
-              class="text-xs mt-1"
-              :class="s === step ? 'text-brand-600 dark:text-brand-400 font-medium' : 'text-gray-400 dark:text-zinc-500'"
-            >
-              {{ stepLabels[s - 1] }}
-            </span>
-          </div>
-          <div
-            v-if="s < 2"
-            class="flex-1 h-0.5 mt-4"
-            :class="s < step ? 'bg-brand-300 dark:bg-brand-700' : 'bg-gray-200 dark:bg-zinc-700'"
-          />
-        </template>
-      </div>
-      <p class="text-xs text-gray-400 dark:text-zinc-500 mb-4">
+           Approach: DaisyUI `steps` with step-primary for completed/active steps -->
+      <ul class="steps steps-horizontal w-full mb-2">
+        <li
+          v-for="(label, i) in stepLabels"
+          :key="i"
+          class="step"
+          :class="{ 'step-primary': i + 1 <= step }"
+        >
+          {{ label }}
+        </li>
+      </ul>
+      <p class="text-xs text-base-content/40 mb-4">
         Step {{ step }} of 2
         <span v-if="step === 2 && parsedRows.length > 10">
           &middot; {{ parsedRows.length }} transactions to review

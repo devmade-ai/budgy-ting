@@ -7,16 +7,18 @@
  *   separate Vue root).
  * Approach: Collapsed pill shows entry count + error/warning badges. Expanded
  *   state has Log, Environment, and PWA Diagnostics tabs with Copy/Clear actions.
- *   Uses inline styles instead of Tailwind — survives stylesheet load failures
- *   since the pill runs in an isolated root where app CSS may not be loaded.
+ *   Uses DaisyUI semantic tokens via Tailwind classes. The pre-framework inline
+ *   pill in index.html handles the CSS-not-loaded case — this Vue component only
+ *   mounts after Vue is running (CSS is guaranteed loaded).
  * Alternatives:
  *   - Console-only: Rejected — inaccessible to target users
  *   - External error service (Sentry): Rejected — local-first principle
- *   - Tailwind classes: Rejected — pill must render if CSS fails to load
  * Reference: glow-props docs/implementations/DEBUG_SYSTEM.md
  */
 
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
+import { resolveThemeColor } from '@/composables/useThemeColor'
+import { useDarkMode } from '@/composables/useDarkMode'
 import {
   subscribe,
   getEntries,
@@ -30,6 +32,9 @@ const activeTab = ref<'log' | 'env' | 'pwa'>('log')
 const entries = ref<DebugEntry[]>([])
 const logContainer = ref<HTMLElement | null>(null)
 const copyFeedback = ref(false)
+
+// isDark triggers recompute of resolved colors when theme changes
+const { isDark } = useDarkMode()
 
 let unsubscribe: (() => void) | null = null
 let copyFeedbackTimer: ReturnType<typeof setTimeout> | null = null
@@ -66,24 +71,42 @@ const entryCount = computed(() => entries.value.length)
 const errorCount = computed(() => entries.value.filter((e) => e.severity === 'error').length)
 const warnCount = computed(() => entries.value.filter((e) => e.severity === 'warn').length)
 
-// ── Color mappings (inline style values) ──
+// ── Color mappings — resolved from DaisyUI theme tokens ──
+// Recompute when isDark changes (forces resolveThemeColor to re-read CSS vars)
 
-const sourceColors: Record<string, string> = {
-  boot: '#9333ea',
-  db: '#2563eb',
-  pwa: '#0d9488',
-  import: '#d97706',
-  engine: '#4f46e5',
-  ml: '#ea580c',
-  global: '#6b7280',
-}
+const sourceColors = computed(() => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+  isDark.value // dependency — triggers recompute on theme change
+  return {
+    boot: resolveThemeColor('--color-secondary', '#9333ea'),
+    db: resolveThemeColor('--color-info', '#2563eb'),
+    pwa: resolveThemeColor('--color-accent', '#0d9488'),
+    import: resolveThemeColor('--color-warning', '#d97706'),
+    engine: resolveThemeColor('--color-primary', '#4f46e5'),
+    ml: resolveThemeColor('--color-error', '#ea580c'),
+    global: resolveThemeColor('--color-base-content', '#6b7280'),
+  } as Record<string, string>
+})
 
-const severityColors: Record<string, string> = {
-  info: '#6b7280',
-  success: '#16a34a',
-  warn: '#ca8a04',
-  error: '#dc2626',
-}
+const severityColors = computed(() => {
+  isDark.value
+  return {
+    info: resolveThemeColor('--color-base-content', '#6b7280'),
+    success: resolveThemeColor('--color-success', '#16a34a'),
+    warn: resolveThemeColor('--color-warning', '#ca8a04'),
+    error: resolveThemeColor('--color-error', '#dc2626'),
+  } as Record<string, string>
+})
+
+const statusIndicators = computed(() => {
+  isDark.value
+  return {
+    pass: { symbol: 'OK', color: resolveThemeColor('--color-success', '#16a34a') },
+    fail: { symbol: 'FAIL', color: resolveThemeColor('--color-error', '#dc2626') },
+    warn: { symbol: 'WARN', color: resolveThemeColor('--color-warning', '#ca8a04') },
+    running: { symbol: '...', color: resolveThemeColor('--color-base-content', '#6b7280') },
+  } as Record<string, { symbol: string; color: string }>
+})
 
 function formatTime(ts: number): string {
   const t = new Date(ts)
@@ -120,13 +143,6 @@ interface DiagnosticResult {
 const diagnostics = ref<DiagnosticResult[]>([])
 let diagnosticRunId = 0
 
-const statusIndicators: Record<string, { symbol: string; color: string }> = {
-  pass: { symbol: 'OK', color: '#16a34a' },
-  fail: { symbol: 'FAIL', color: '#dc2626' },
-  warn: { symbol: 'WARN', color: '#ca8a04' },
-  running: { symbol: '...', color: '#6b7280' },
-}
-
 async function runDiagnostics() {
   const runId = ++diagnosticRunId
   const results: DiagnosticResult[] = []
@@ -154,8 +170,6 @@ async function runDiagnostics() {
   results.push({ label: 'Standalone', status: standalone ? 'pass' : 'warn', detail: String(standalone) })
 
   // Install prompt
-  // Check both: __pwaInstallPromptEvent (early capture, before composable runs)
-  // and __pwaInstallPromptReceived (flag set by usePWAInstall after consuming the event)
   const hasPrompt = !!(window as any).__pwaInstallPromptEvent || !!(window as any).__pwaInstallPromptReceived
   results.push({ label: 'Install Prompt', status: hasPrompt ? 'pass' : 'warn', detail: hasPrompt ? 'Captured' : 'Not received' })
 
@@ -164,7 +178,6 @@ async function runDiagnostics() {
   results.push({ label: 'Manifest', status: 'running', detail: 'Checking...' })
   diagnostics.value = [...results]
 
-  // Helper: update result by label (avoids fragile hardcoded indices)
   function set(label: string, result: DiagnosticResult) {
     const idx = results.findIndex((r) => r.label === label)
     if (idx >= 0) results[idx] = result
@@ -222,16 +235,13 @@ watch(activeTab, (tab) => {
 async function copyReport() {
   const report = generateReport()
 
-  // Method 1: ClipboardItem Blob — works in contexts where writeText is blocked
   try {
     const blob = new Blob([report], { type: 'text/plain' })
     await navigator.clipboard.write([new ClipboardItem({ 'text/plain': blob })])
   } catch {
-    // Method 2: writeText
     try {
       await navigator.clipboard.writeText(report)
     } catch {
-      // Method 3: Textarea fallback for mobile PWA webviews
       const textarea = document.createElement('textarea')
       textarea.value = report
       textarea.style.cssText = 'position:fixed;left:-9999px;top:-9999px'
@@ -264,72 +274,28 @@ function toggle() {
     })
   }
 }
-
-// ── Inline style helpers ──
-// All styles are inline — no Tailwind dependency. The pill renders in an isolated
-// Vue root where app CSS may not be loaded (e.g. stylesheet load failure).
-
-function tabBtnStyle(tab: string): Record<string, string> {
-  const active = activeTab.value === tab
-  return {
-    fontSize: '12px',
-    padding: '4px 8px',
-    borderRadius: '4px',
-    border: 'none',
-    cursor: 'pointer',
-    transition: 'background 0.15s',
-    background: active ? '#374151' : 'transparent',
-    color: active ? '#fff' : '#9ca3af',
-  }
-}
 </script>
 
 <template>
-  <!-- z-80 per Z-Index Scale in CLAUDE.md — highest layer, debug must be visible above all UI -->
-  <div :style="{ position: 'fixed', bottom: '16px', right: '16px', zIndex: 80, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace' }">
+  <!-- z-[80] per Z-Index Scale in CLAUDE.md — highest layer, debug must be visible above all UI -->
+  <div class="fixed bottom-4 right-4 z-[80] font-mono">
     <!-- Collapsed pill -->
     <button
       v-if="!expanded"
-      :style="{
-        background: '#111827',
-        color: '#fff',
-        fontSize: '12px',
-        padding: '6px 12px',
-        borderRadius: '9999px',
-        border: 'none',
-        cursor: 'pointer',
-        boxShadow: '0 10px 15px -3px rgba(0,0,0,.3), 0 4px 6px -4px rgba(0,0,0,.2)',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '6px',
-      }"
+      class="bg-neutral text-neutral-content text-xs px-3 py-1.5 rounded-full border-none cursor-pointer shadow-lg flex items-center gap-1.5"
       @click="toggle"
     >
       <span>dbg</span>
-      <span :style="{ color: '#9ca3af' }">{{ entryCount }}</span>
+      <span class="text-neutral-content/50">{{ entryCount }}</span>
       <span
         v-if="errorCount > 0"
-        :style="{
-          background: '#ef4444',
-          color: '#fff',
-          fontSize: '10px',
-          padding: '0 6px',
-          borderRadius: '9999px',
-          lineHeight: '16px',
-        }"
+        class="bg-error text-error-content text-[10px] px-1.5 rounded-full leading-4"
       >
         {{ errorCount }}
       </span>
       <span
         v-if="warnCount > 0"
-        :style="{
-          background: '#eab308',
-          color: '#fff',
-          fontSize: '10px',
-          padding: '0 6px',
-          borderRadius: '9999px',
-          lineHeight: '16px',
-        }"
+        class="bg-warning text-warning-content text-[10px] px-1.5 rounded-full leading-4"
       >
         {{ warnCount }}
       </span>
@@ -338,40 +304,36 @@ function tabBtnStyle(tab: string): Record<string, string> {
     <!-- Expanded panel -->
     <div
       v-else
-      :style="{
-        background: '#111827',
-        color: '#fff',
-        borderRadius: '12px',
-        boxShadow: '0 25px 50px -12px rgba(0,0,0,.5)',
-        width: '360px',
-        maxHeight: '70vh',
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
-      }"
+      class="bg-neutral text-neutral-content rounded-xl shadow-2xl w-[360px] max-h-[70vh] flex flex-col overflow-hidden"
     >
       <!-- Header -->
-      <div :style="{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', borderBottom: '1px solid #374151' }">
-        <div :style="{ display: 'flex', gap: '4px' }">
-          <button :style="tabBtnStyle('log')" @click="activeTab = 'log'">Log</button>
-          <button :style="tabBtnStyle('env')" @click="activeTab = 'env'">Env</button>
-          <button :style="tabBtnStyle('pwa')" @click="activeTab = 'pwa'">PWA</button>
-        </div>
-        <div :style="{ display: 'flex', gap: '4px' }">
+      <div class="flex items-center justify-between px-3 py-2 border-b border-neutral-content/10">
+        <div class="flex gap-1">
           <button
-            :style="{ fontSize: '12px', padding: '4px 8px', borderRadius: '4px', border: 'none', cursor: 'pointer', background: 'transparent', color: '#9ca3af' }"
+            v-for="tab in (['log', 'env', 'pwa'] as const)"
+            :key="tab"
+            class="text-xs px-2 py-1 rounded border-none cursor-pointer transition-colors"
+            :class="activeTab === tab ? 'bg-neutral-content/20 text-neutral-content' : 'bg-transparent text-neutral-content/50'"
+            @click="activeTab = tab"
+          >
+            {{ tab === 'log' ? 'Log' : tab === 'env' ? 'Env' : 'PWA' }}
+          </button>
+        </div>
+        <div class="flex gap-1">
+          <button
+            class="text-xs px-2 py-1 rounded border-none cursor-pointer bg-transparent text-neutral-content/50"
             @click="copyReport"
           >
             {{ copyFeedback ? 'Copied!' : 'Copy' }}
           </button>
           <button
-            :style="{ fontSize: '12px', padding: '4px 8px', borderRadius: '4px', border: 'none', cursor: 'pointer', background: 'transparent', color: '#9ca3af' }"
+            class="text-xs px-2 py-1 rounded border-none cursor-pointer bg-transparent text-neutral-content/50"
             @click="handleClear"
           >
             Clear
           </button>
           <button
-            :style="{ fontSize: '12px', padding: '4px 8px', borderRadius: '4px', border: 'none', cursor: 'pointer', background: 'transparent', color: '#9ca3af' }"
+            class="text-xs px-2 py-1 rounded border-none cursor-pointer bg-transparent text-neutral-content/50"
             @click="toggle"
           >
             Close
@@ -383,21 +345,21 @@ function tabBtnStyle(tab: string): Record<string, string> {
       <div
         v-if="activeTab === 'log'"
         ref="logContainer"
-        :style="{ flex: '1', overflowY: 'auto', padding: '8px', fontSize: '11px', lineHeight: '1.6', minHeight: '200px', maxHeight: '50vh' }"
+        class="flex-1 overflow-y-auto p-2 text-[11px] leading-relaxed min-h-[200px] max-h-[50vh]"
       >
-        <div v-if="entries.length === 0" :style="{ color: '#6b7280', textAlign: 'center', padding: '32px 0' }">
+        <div v-if="entries.length === 0" class="text-neutral-content/40 text-center py-8">
           No entries yet
         </div>
         <div
           v-for="entry in entries"
           :key="entry.id"
-          :style="{ padding: '2px 4px', display: 'flex', gap: '6px', alignItems: 'flex-start', borderRadius: '4px' }"
+          class="px-1 py-0.5 flex gap-1.5 items-start rounded"
         >
-          <span :style="{ color: '#6b7280', flexShrink: '0' }">{{ formatTime(entry.timestamp) }}</span>
-          <span :style="{ color: sourceColors[entry.source] ?? '#6b7280', flexShrink: '0' }">[{{ entry.source }}]</span>
-          <span :style="{ color: severityColors[entry.severity] ?? '#6b7280', wordBreak: 'break-all' }">
+          <span class="text-neutral-content/40 shrink-0">{{ formatTime(entry.timestamp) }}</span>
+          <span class="shrink-0" :style="{ color: sourceColors[entry.source] ?? '' }">[{{ entry.source }}]</span>
+          <span :style="{ color: severityColors[entry.severity] ?? '' }" class="break-all">
             {{ entry.event }}
-            <span v-if="entry.details" :style="{ color: '#6b7280' }">
+            <span v-if="entry.details" class="text-neutral-content/40">
               {{ JSON.stringify(entry.details) }}
             </span>
           </span>
@@ -407,42 +369,45 @@ function tabBtnStyle(tab: string): Record<string, string> {
       <!-- Environment tab -->
       <div
         v-else-if="activeTab === 'env'"
-        :style="{ flex: '1', overflowY: 'auto', padding: '12px', fontSize: '12px', minHeight: '200px', maxHeight: '50vh' }"
+        class="flex-1 overflow-y-auto p-3 text-xs min-h-[200px] max-h-[50vh]"
       >
         <div
           v-for="item in envData"
           :key="item.label"
-          :style="{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #1f2937' }"
+          class="flex justify-between py-1.5 border-b border-neutral-content/10"
         >
-          <span :style="{ color: '#9ca3af' }">{{ item.label }}</span>
-          <span :style="{ color: '#e5e7eb', textAlign: 'right', maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginLeft: '8px' }">{{ item.value }}</span>
+          <span class="text-neutral-content/50">{{ item.label }}</span>
+          <span class="text-neutral-content/80 text-right max-w-[220px] overflow-hidden text-ellipsis whitespace-nowrap ml-2">{{ item.value }}</span>
         </div>
       </div>
 
       <!-- PWA Diagnostics tab -->
       <div
         v-else
-        :style="{ flex: '1', overflowY: 'auto', padding: '12px', fontSize: '12px', minHeight: '200px', maxHeight: '50vh' }"
+        class="flex-1 overflow-y-auto p-3 text-xs min-h-[200px] max-h-[50vh]"
       >
-        <div v-if="diagnostics.length === 0" :style="{ color: '#6b7280', textAlign: 'center', padding: '32px 0' }">
+        <div v-if="diagnostics.length === 0" class="text-neutral-content/40 text-center py-8">
           Loading diagnostics...
         </div>
         <div
           v-for="diag in diagnostics"
           :key="diag.label"
-          :style="{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #1f2937' }"
+          class="flex justify-between items-center py-1.5 border-b border-neutral-content/10"
         >
-          <span :style="{ color: '#9ca3af' }">{{ diag.label }}</span>
-          <div :style="{ display: 'flex', alignItems: 'center', gap: '8px' }">
-            <span :style="{ color: '#e5e7eb', fontSize: '11px', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }">{{ diag.detail }}</span>
-            <span :style="{ color: statusIndicators[diag.status]?.color ?? '#6b7280', fontWeight: 'bold', fontSize: '10px', minWidth: '32px', textAlign: 'right' }">
+          <span class="text-neutral-content/50">{{ diag.label }}</span>
+          <div class="flex items-center gap-2">
+            <span class="text-neutral-content/80 text-[11px] max-w-[180px] overflow-hidden text-ellipsis whitespace-nowrap">{{ diag.detail }}</span>
+            <span
+              class="font-bold text-[10px] min-w-[32px] text-right"
+              :style="{ color: statusIndicators[diag.status]?.color ?? '' }"
+            >
               {{ statusIndicators[diag.status]?.symbol ?? '?' }}
             </span>
           </div>
         </div>
         <button
           v-if="diagnostics.length > 0"
-          :style="{ marginTop: '12px', fontSize: '11px', padding: '4px 8px', borderRadius: '4px', border: 'none', cursor: 'pointer', background: '#374151', color: '#9ca3af', width: '100%' }"
+          class="mt-3 text-[11px] px-2 py-1 rounded border-none cursor-pointer bg-neutral-content/10 text-neutral-content/50 w-full"
           @click="runDiagnostics"
         >
           Re-run diagnostics

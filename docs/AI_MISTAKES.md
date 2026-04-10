@@ -84,7 +84,7 @@ This is explicitly documented in CLAUDE.md Documentation section: "Update them a
 
 **Why it happened:** Followed the glow-props pattern too literally. The glow-props docs say "values should match your palette" and show surface colors as examples — but the intent is theme-appropriate colors, not necessarily page backgrounds. The status bar is a branding surface, not a content surface.
 
-**How to prevent it:** When implementing theme-color meta tags, use a mid-tone brand color that provides sufficient contrast for status bar text in both light and dark OS modes. Don't assume the status bar should "blend into" the page — it should carry brand identity. Test by asking: "If the OS is in opposite color scheme from the app, will the status bar text be readable?"
+**How to prevent it:** Meta theme-color values must provide sufficient contrast for status bar text (time, battery, wifi icons) in both light and dark OS modes. With DaisyUI, meta colors are computed from the active theme's oklch values (primary for light themes, base-100 for dark themes) — defined per-combo in `src/config/themes.ts`. Don't use page background colors — they cause visibility problems when the OS color scheme differs from the app's theme. Test by asking: "If the OS is in opposite color scheme from the app, will the status bar text be readable?"
 
 ## Fetched wrong source, then built 107 phases on wrong foundation (2026-04-08)
 

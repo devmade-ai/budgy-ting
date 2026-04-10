@@ -41,9 +41,6 @@ interface InstructionSet {
 }
 
 const instructions = computed<InstructionSet>(() => {
-  // iOS non-Safari: Chrome/Firefox/Edge on iOS use WebKit but can't install PWAs.
-  // Redirect to Safari with explanation.
-  // Reference: glow-props docs/implementations/PWA_SYSTEM.md (Key Lesson #9)
   if (isIOS && !['safari-ios'].includes(browser.value)) {
     return {
       title: 'Install on iPhone / iPad',
@@ -101,8 +98,6 @@ const instructions = computed<InstructionSet>(() => {
         note: 'Firefox removed desktop PWA support in 2021. Mobile Firefox still supports it.',
       }
 
-    // Chromium fallback — shown when the native prompt was suppressed (Chrome hides it
-    // for 90 days after dismissal) or didn't fire for other reasons.
     case 'chrome':
     case 'edge':
     case 'brave':
@@ -136,9 +131,9 @@ const instructions = computed<InstructionSet>(() => {
 
 <template>
   <Teleport to="body">
-    <div class="fixed inset-0 z-[60] flex items-center justify-center p-4">
+    <div class="modal modal-open z-[60]">
       <!-- Backdrop -->
-      <div class="absolute inset-0 bg-black/40" aria-hidden="true" @click="emit('close')" />
+      <div class="modal-backdrop" aria-hidden="true" @click="emit('close')" />
 
       <!-- Dialog -->
       <div
@@ -146,9 +141,9 @@ const instructions = computed<InstructionSet>(() => {
         role="dialog"
         :aria-label="instructions.title"
         aria-modal="true"
-        class="relative bg-white dark:bg-[var(--color-surface-elevated)] rounded-xl shadow-xl dark:shadow-none max-w-sm w-full p-6"
+        class="modal-box max-w-sm"
       >
-        <h3 class="text-lg font-semibold text-gray-900 dark:text-zinc-100 mb-4">
+        <h3 class="text-lg font-semibold text-base-content mb-4">
           {{ instructions.title }}
         </h3>
 
@@ -159,47 +154,47 @@ const instructions = computed<InstructionSet>(() => {
             class="flex items-start gap-3"
           >
             <span
-              class="w-6 h-6 rounded-full bg-brand-100 dark:bg-brand-900/40 text-brand-700 dark:text-brand-300 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5"
+              class="w-6 h-6 rounded-full bg-primary/15 text-primary text-xs font-bold flex items-center justify-center shrink-0 mt-0.5"
             >
               {{ step.step }}
             </span>
-            <div class="flex items-center gap-2 text-sm text-gray-700 dark:text-zinc-300">
-              <component v-if="step.icon" :is="step.icon" :size="16" class="text-gray-400 dark:text-zinc-500 shrink-0" aria-hidden="true" />
+            <div class="flex items-center gap-2 text-sm text-base-content/80">
+              <component v-if="step.icon" :is="step.icon" :size="16" class="text-base-content/40 shrink-0" aria-hidden="true" />
               <span>{{ step.text }}</span>
             </div>
           </li>
         </ol>
 
-        <!-- Warning note — browser-specific caveats (Brave Shields, Firefox desktop, iOS non-Safari) -->
-        <div v-if="instructions.note" class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 mt-4">
+        <!-- Warning note — browser-specific caveats -->
+        <div v-if="instructions.note" class="bg-warning/10 border border-warning/20 rounded-lg p-3 mt-4">
           <div class="flex items-start gap-2">
-            <AlertTriangle :size="14" class="text-amber-500 shrink-0 mt-0.5" aria-hidden="true" />
-            <p class="text-xs text-amber-700 dark:text-amber-300">{{ instructions.note }}</p>
+            <AlertTriangle :size="14" class="text-warning shrink-0 mt-0.5" aria-hidden="true" />
+            <p class="text-xs text-warning">{{ instructions.note }}</p>
           </div>
         </div>
 
-        <!-- Benefits — helps non-technical users understand WHY to install.
-             Reference: glow-props docs/implementations/PWA_SYSTEM.md -->
-        <div class="border-t border-gray-100 dark:border-zinc-800 pt-3 mt-4">
-          <p class="text-xs text-gray-500 dark:text-zinc-400 mb-1.5">Why install?</p>
-          <ul class="text-xs text-gray-400 dark:text-zinc-500 space-y-1">
+        <!-- Benefits — helps non-technical users understand WHY to install -->
+        <div class="divider"></div>
+        <div>
+          <p class="text-xs text-base-content/60 mb-1.5">Why install?</p>
+          <ul class="text-xs text-base-content/40 space-y-1">
             <li class="flex items-center gap-2">
-              <Check :size="12" class="text-brand-500 shrink-0" aria-hidden="true" />
+              <Check :size="12" class="text-primary shrink-0" aria-hidden="true" />
               Works offline — no internet needed
             </li>
             <li class="flex items-center gap-2">
-              <Check :size="12" class="text-brand-500 shrink-0" aria-hidden="true" />
+              <Check :size="12" class="text-primary shrink-0" aria-hidden="true" />
               Opens from your home screen or dock
             </li>
             <li class="flex items-center gap-2">
-              <Check :size="12" class="text-brand-500 shrink-0" aria-hidden="true" />
+              <Check :size="12" class="text-primary shrink-0" aria-hidden="true" />
               Full-screen experience without browser controls
             </li>
           </ul>
         </div>
 
         <button
-          class="btn-secondary w-full mt-4"
+          class="btn btn-ghost w-full mt-4"
           @click="emit('close')"
         >
           Got it

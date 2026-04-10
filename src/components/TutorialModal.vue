@@ -63,7 +63,6 @@ const dialogRef = ref<HTMLElement | null>(null)
 
 useDialogA11y(dialogRef, () => emit('close'))
 
-// Computed to safely access the active step, avoiding TS2532 "possibly undefined" on array index
 const activeStep = computed(() => steps[currentStep.value] as TutorialStep)
 
 const isFirst = computed(() => currentStep.value === 0)
@@ -90,10 +89,10 @@ function goToStep(index: number) {
 
 <template>
   <Teleport to="body">
-    <div class="fixed inset-0 z-[60] flex items-center justify-center p-4">
+    <div class="modal modal-open z-[60]">
       <!-- Backdrop -->
       <div
-        class="absolute inset-0 bg-black/40"
+        class="modal-backdrop"
         aria-hidden="true"
         @click="emit('close')"
       />
@@ -104,11 +103,11 @@ function goToStep(index: number) {
         role="dialog"
         aria-label="How it works"
         aria-modal="true"
-        class="relative bg-white dark:bg-[var(--color-surface-elevated)] rounded-xl shadow-xl dark:shadow-none max-w-sm w-full p-6"
+        class="modal-box max-w-sm"
       >
         <!-- Skip/close button -->
         <button
-          class="absolute top-3 right-3 text-gray-400 dark:text-zinc-400 hover:text-gray-600 dark:hover:text-zinc-200 transition-colors"
+          class="absolute top-3 right-3 text-base-content/40 hover:text-base-content/70 transition-colors"
           aria-label="Close tutorial"
           @click="emit('close')"
         >
@@ -120,13 +119,13 @@ function goToStep(index: number) {
           <component
             :is="activeStep.icon"
             :size="36"
-            class="text-brand-500 mx-auto mb-4"
+            class="text-primary mx-auto mb-4"
             aria-hidden="true"
           />
-          <h3 class="text-lg font-semibold text-gray-900 dark:text-zinc-100 mb-2">
+          <h3 class="text-lg font-semibold text-base-content mb-2">
             {{ activeStep.title }}
           </h3>
-          <p class="text-sm text-gray-600 dark:text-zinc-300 leading-relaxed">
+          <p class="text-sm text-base-content/70 leading-relaxed">
             {{ activeStep.description }}
           </p>
         </div>
@@ -140,7 +139,7 @@ function goToStep(index: number) {
             :aria-selected="index === currentStep"
             :aria-label="`Step ${index + 1}: ${s.title}`"
             class="w-2 h-2 rounded-full transition-colors"
-            :class="index === currentStep ? 'bg-brand-500' : 'bg-gray-200 dark:bg-zinc-600 hover:bg-gray-300 dark:hover:bg-zinc-500'"
+            :class="index === currentStep ? 'bg-primary' : 'bg-base-300 hover:bg-base-content/30'"
             @click="goToStep(index)"
           />
         </div>
@@ -149,21 +148,21 @@ function goToStep(index: number) {
         <div class="flex gap-3">
           <button
             v-if="!isFirst"
-            class="btn-secondary flex-1"
+            class="btn btn-ghost flex-1"
             @click="prev"
           >
             Back
           </button>
           <button
             v-if="!isLast"
-            class="btn-primary flex-1"
+            class="btn btn-primary flex-1"
             @click="next"
           >
             Next
           </button>
           <button
             v-if="isLast"
-            class="btn-primary flex-1"
+            class="btn btn-primary flex-1"
             @click="emit('close')"
           >
             Get started

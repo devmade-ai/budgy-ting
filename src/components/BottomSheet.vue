@@ -13,6 +13,8 @@ import { useDialogA11y } from '@/composables/useDialogA11y'
 
 defineProps<{
   open: boolean
+  /** Accessible label for screen readers — required for role="dialog" */
+  ariaLabel?: string
 }>()
 
 const emit = defineEmits<{
@@ -76,8 +78,9 @@ watch(() => sheetRef.value, () => {
         <div
           ref="sheetRef"
           role="dialog"
+          :aria-label="ariaLabel"
           aria-modal="true"
-          class="absolute bottom-0 left-0 right-0 bg-white dark:bg-[var(--color-surface-elevated)] rounded-t-2xl shadow-xl dark:shadow-none
+          class="absolute bottom-0 left-0 right-0 bg-base-100 rounded-t-2xl shadow-xl
                  max-h-[70vh] overflow-y-auto pb-safe
                  sm:bottom-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2
                  sm:rounded-xl sm:max-w-sm sm:w-full"
@@ -90,7 +93,7 @@ watch(() => sheetRef.value, () => {
             @touchmove="onTouchMove"
             @touchend="onTouchEnd"
           >
-            <div class="w-10 h-1 bg-gray-300 dark:bg-zinc-600 rounded-full" />
+            <div class="w-10 h-1 bg-base-300 rounded-full" />
           </div>
 
           <div class="px-4 pb-4">
