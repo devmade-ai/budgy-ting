@@ -11,8 +11,9 @@
   - Bug 2: When version.json detected the change (no waiting SW), `updateServiceWorker(true)` sent SKIP_WAITING to nothing. Added 2s fallback to `location.reload()`.
 
 - **Updated app icon to match Farlume branding:**
-  - Changed from green (#10b981) B monogram to blue (#45aeee) F monogram
-  - Geometric bold F — top bar, crossbar, vertical stem, optically centered
+  - Changed from green (#10b981) B monogram to blue (#45aeee) rising chart line with endpoint dot
+  - Conveys finance/growth — dip then rise, reads clearly at all sizes including 32px favicon
+  - Fixed generate-icons.mjs maskable transform to wrap all content elements (not just `<path>`)
   - Regenerated all PNGs: 512, 192, 180 (apple-touch), 48, maskable 1024, favicon.ico
 
 - **Tightened pattern compliance after review:**

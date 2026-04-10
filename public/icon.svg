@@ -2,29 +2,23 @@
   App icon source — rasterized by scripts/generate-icons.mjs via sharp.
 
   Requirement: Icon must render identically in CI (Ubuntu) and locally.
-  Approach: Geometric F built from SVG rect paths — no font dependency at all.
+  Approach: Geometric rising chart line — no font dependency at all.
   Alternatives:
-    - <text> with serif font: Rejected — renders differently across OS/CI (Ubuntu
-      lacks Georgia; generic serif varies).
-    - Outlined font via fontforge: Rejected — external tooling dependency for a
-      single glyph; hand-tuned paths are simpler and more controllable.
-  Design: Bold F monogram — top bar, crossbar, vertical stem.
-    Slightly right-shifted to optically center the left-heavy letterform.
-    Background uses cmyk theme primary (#45aeee) to match Farlume branding.
+    - Letter monogram (F/B): Rejected — chart line better represents a finance app
+    - Wallet/coin illustrations: Rejected — too detailed for small favicon sizes
+  Design: Upward trend line with endpoint dot on cmyk blue (#45aeee).
+    Line dips then rises to convey growth. Thick rounded stroke for legibility
+    at small sizes. Dot marks the current position.
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" shape-rendering="geometricPrecision">
   <rect width="512" height="512" rx="92" fill="#45aeee"/>
-  <path fill="white" d="
-    M 146 108
-    H 366
-    V 168
-    H 210
-    V 232
-    H 334
-    V 292
-    H 210
-    V 404
-    H 146
-    Z
-  "/>
+  <polyline
+    points="100,360 190,300 260,340 400,140"
+    fill="none"
+    stroke="white"
+    stroke-width="40"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <circle cx="400" cy="140" r="32" fill="white"/>
 </svg>
