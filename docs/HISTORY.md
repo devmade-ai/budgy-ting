@@ -4,6 +4,11 @@
 
 ## 2026-04-10
 
+- **New default theme combo "Vivid" (cmyk/night):**
+  - Added cmyk (light) + night (dark) combo as "Vivid", set as DEFAULT_COMBO
+  - Registered cmyk and night in @plugin daisyui themes (cmyk --default, night --prefersdark)
+  - All 4 sync points updated: themes.ts, index.css, index.html flash script, vite.config.ts manifest
+
 - **Meta theme-color sync with DaisyUI combo system:**
   - Fixed `<meta name="theme-color">` tags in index.html — were hardcoded to old brand color `#10b981`, now match default combo (classic: `#808080` light / `#000000` dark)
   - Flash prevention script now also updates meta theme-color before first paint (previously only set by Vue composable on mount — status bar color flashed wrong color)

@@ -12,7 +12,7 @@
 
 /* Register DaisyUI themes — matches combos in src/config/themes.ts */
 @plugin "daisyui" {
-  themes: lofi --default, black --prefersdark, emerald, forest;
+  themes: cmyk --default, night --prefersdark, lofi, black, emerald, forest;
 }
 
 /* Class-based dark mode for Tailwind v4 — targets .dark on <html>.

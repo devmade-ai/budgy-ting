@@ -19,6 +19,14 @@ export interface ThemeCombo {
 
 export const themeCombos: ThemeCombo[] = [
   {
+    id: 'vivid',
+    label: 'Vivid',
+    light: 'cmyk',
+    dark: 'night',
+    metaColorLight: '#45b5e6',
+    metaColorDark: '#0f1729',
+  },
+  {
     id: 'classic',
     label: 'Classic',
     light: 'lofi',
@@ -36,7 +44,7 @@ export const themeCombos: ThemeCombo[] = [
   },
 ]
 
-export const DEFAULT_COMBO = 'classic'
+export const DEFAULT_COMBO = 'vivid'
 
 const comboIds = new Set(themeCombos.map(c => c.id))
 

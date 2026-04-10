@@ -10,8 +10,8 @@
            script updates these before first paint. useDarkMode.ts composable
            updates them on subsequent toggles/combo changes.
          Reference: glow-props docs/implementations/THEME_DARK_MODE.md -->
-    <meta name="theme-color" content="#808080" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#45b5e6" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0f1729" media="(prefers-color-scheme: dark)" />
     <meta name="description" content="Plan and track expenses against budgets" />
     <!-- Requirement: Improve iOS standalone PWA appearance
          Approach: apple-mobile-web-app meta tags for status bar, title, and splash -->
@@ -32,6 +32,7 @@
       (function() {
         try {
           var combos = {
+            vivid: { light: 'cmyk', dark: 'night', mcL: '#45b5e6', mcD: '#0f1729' },
             classic: { light: 'lofi', dark: 'black', mcL: '#808080', mcD: '#000000' },
             nature: { light: 'emerald', dark: 'forest', mcL: '#66CC8A', mcD: '#1a2e1a' }
           };
@@ -39,7 +40,7 @@
           var isDark = stored !== null
             ? stored === 'true'
             : window.matchMedia('(prefers-color-scheme: dark)').matches;
-          var comboId = localStorage.getItem('themeCombo') || 'classic';
+          var comboId = localStorage.getItem('themeCombo') || 'vivid';
           var combo = combos[comboId] || combos.classic;
           var theme = isDark ? combo.dark : combo.light;
           var root = document.documentElement;
