@@ -35,7 +35,7 @@
 
 - **DaisyUI migration cleanup — strengthening pass:**
   - Fixed 4 `<select>` elements using `input input-bordered` → `select select-bordered` (TransactionTable, TransactionEditModal)
-  - Fixed `--color-neutral` in @theme conflicting with DaisyUI's `neutral` semantic color — renamed to `--color-data-neutral`
+  - Fixed `--color-neutral` in @theme conflicting with DaisyUI's `neutral` semantic color — renamed to `--color-data-neutral` (later removed entirely when @theme block was deleted)
   - Fixed cross-tab sync in useDarkMode.ts — added `syncing` guard flag to prevent watchers from redundantly calling applyTheme() and re-persisting values that came FROM another tab
   - Fixed ImportStepReview duplicated classes (`w-full w-48`, `text-base text-xs`)
   - Updated print CSS: broadened `.card` selector to `.card, .rounded-xl` for card-like containers
