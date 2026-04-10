@@ -272,7 +272,8 @@ const hasData = computed(() => actualPoints.value.length > 0 || props.forecastPo
 <template>
   <div class="mb-6">
     <!-- Chart controls — hidden in print (interactive toggles, no value on paper) -->
-    <div class="flex flex-wrap items-center gap-2 mb-4 no-print">
+    <!-- Stacks vertically on mobile, single row on desktop -->
+    <div class="flex flex-col sm:flex-row sm:items-center gap-2 mb-4 no-print">
       <div class="join">
         <button
           class="join-item btn btn-sm"
@@ -290,14 +291,13 @@ const hasData = computed(() => actualPoints.value.length > 0 || props.forecastPo
         </button>
       </div>
 
-      <div class="flex flex-wrap items-center gap-2 ml-auto">
-        <!-- Lookback range -->
-        <span class="text-xs text-base-content/50">History</span>
-        <div class="join">
+      <div class="flex items-center gap-2 sm:ml-auto overflow-x-auto">
+        <span class="text-xs text-base-content/50 shrink-0">History</span>
+        <div class="join shrink-0">
           <button
             v-for="opt in timeRangeOptions"
             :key="opt.value"
-            class="join-item btn btn-sm"
+            class="join-item btn btn-xs sm:btn-sm"
             :class="timeRange === opt.value ? 'btn-active' : ''"
             @click="timeRange = opt.value"
           >
@@ -305,13 +305,12 @@ const hasData = computed(() => actualPoints.value.length > 0 || props.forecastPo
           </button>
         </div>
 
-        <!-- Forecast horizon -->
-        <span class="text-xs text-base-content/50">Forecast</span>
-        <div class="join">
+        <span class="text-xs text-base-content/50 shrink-0">Forecast</span>
+        <div class="join shrink-0">
           <button
             v-for="opt in forecastHorizonOptions"
             :key="opt.value"
-            class="join-item btn btn-sm"
+            class="join-item btn btn-xs sm:btn-sm"
             :class="forecastMonths === opt.value ? 'btn-active' : ''"
             @click="emit('update:forecastMonths', opt.value)"
           >
