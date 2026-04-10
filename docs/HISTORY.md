@@ -4,6 +4,8 @@
 
 ## 2026-04-10
 
+- **Fixed runway depletion log severity:** Changed from `warn` to `error` — cash hitting zero is the bad outcome, not a heads-up
+
 - **Fixed debug pill not scaling to screen width:**
   - Expanded panel: `w-[360px]` → `w-[calc(100vw-2rem)] max-w-[360px]` so it shrinks on narrow viewports
   - Env tab values: replaced fixed `max-w-[220px]` with `min-w-0 truncate` for fluid sizing
