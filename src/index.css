@@ -2,7 +2,7 @@
 
 /* Requirement: Migrate from custom CSS variable tokens to DaisyUI semantic theme system
    Approach: DaisyUI v5 @plugin directive with named combos (Approach B).
-     Two combos registered: classic (lofi/black), nature (emerald/forest).
+     Single "Vivid" combo registered: cmyk (light) / night (dark).
      DaisyUI handles dark/light color switching via data-theme attribute.
      Tailwind dark: variant still works via .dark class for custom overrides.
    Alternatives:

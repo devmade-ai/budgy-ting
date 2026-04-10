@@ -56,8 +56,8 @@ function onBeforePrint() {
     html.dataset.printWasDark = 'true'
     html.dataset.printTheme = html.getAttribute('data-theme') || ''
     html.classList.remove('dark')
-    // Set a light DaisyUI theme for print — lofi is the default light theme
-    html.setAttribute('data-theme', 'lofi')
+    // Set the light DaisyUI theme for print — must match LIGHT_THEME in themes.ts
+    html.setAttribute('data-theme', 'cmyk')
   }
 }
 function onAfterPrint() {
