@@ -25,7 +25,7 @@ All work complete and pushed. TypeScript + Vite build + 106 tests pass.
 - `src/composables/useDarkMode.ts` — dual-layer (data-theme + .dark), `syncing` guard for cross-tab, combo system functional
 - Only registered DaisyUI themes: `cmyk --default, night --prefersdark`
 - Flash prevention script also updates meta theme-color pre-paint
-- Brand colors in `@theme` for CashflowGraph only (not DaisyUI-controlled)
-- `--color-data-neutral` (renamed from `--color-neutral` to avoid DaisyUI conflict)
+- `@theme` block removed entirely — all colors from DaisyUI tokens
+- CashflowGraph reads theme colors at runtime via `useThemeColor.ts` (canvas pixel conversion)
 - DebugPill intentionally NOT migrated (inline styles, CSS-independent)
 - glow-props pattern sync remaining: EVENT_BUS

@@ -31,7 +31,7 @@
   - Updated print handler in AppLayout: saves/restores `data-theme` alongside `.dark` class
   - HelpDrawer prose styles: migrated from `var(--color-*)` to DaisyUI oklch variables (`oklch(var(--bc))`, etc.)
   - Z-index scale unchanged (already aligned: 10/40/50/60/70/80)
-  - Brand colors retained in `@theme` for chart data visualization (CashflowGraph hex colors intentionally not migrated — ApexCharts requires hardcoded values)
+  - Brand colors initially retained in `@theme` for charts — later removed (see below)
 
 - **DaisyUI migration cleanup — strengthening pass:**
   - Fixed 4 `<select>` elements using `input input-bordered` → `select select-bordered` (TransactionTable, TransactionEditModal)
