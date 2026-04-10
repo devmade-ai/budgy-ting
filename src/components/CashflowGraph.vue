@@ -27,6 +27,40 @@ const props = defineProps<{
 const chartMode = ref<'cumulative' | 'daily'>('cumulative')
 const { isDark } = useDarkMode()
 
+// Requirement: Preset timeline ranges instead of drag-to-zoom
+// Approach: Button group with lookback periods from today. Forecast (future data)
+//   is always visible. xaxis min/max constrain the visible window.
+// Alternatives:
+//   - Drag-to-zoom: Rejected — user prefers explicit preset options
+//   - Date picker inputs: Rejected — presets are faster and less cluttered
+type TimeRange = '1W' | '1M' | '3M' | '6M' | '1Y' | 'ALL'
+const timeRange = ref<TimeRange>('ALL')
+
+const timeRangeOptions: { value: TimeRange; label: string }[] = [
+  { value: '1W', label: '1W' },
+  { value: '1M', label: '1M' },
+  { value: '3M', label: '3M' },
+  { value: '6M', label: '6M' },
+  { value: '1Y', label: '1Y' },
+  { value: 'ALL', label: 'All' },
+]
+
+const xaxisRange = computed<{ min?: number; max?: number }>(() => {
+  if (timeRange.value === 'ALL') return {}
+
+  const now = new Date()
+  const lookbackMs: Record<Exclude<TimeRange, 'ALL'>, number> = {
+    '1W': 7 * 24 * 60 * 60 * 1000,
+    '1M': 30 * 24 * 60 * 60 * 1000,
+    '3M': 91 * 24 * 60 * 60 * 1000,
+    '6M': 182 * 24 * 60 * 60 * 1000,
+    '1Y': 365 * 24 * 60 * 60 * 1000,
+  }
+
+  const min = now.getTime() - lookbackMs[timeRange.value as Exclude<TimeRange, 'ALL'>]
+  return { min }
+})
+
 // Requirement: Responsive chart height — smaller on mobile, larger on desktop
 // Approach: Track window width and compute height from breakpoints.
 // Alternatives:
@@ -151,13 +185,11 @@ const chartOptions = computed(() => {
       id: 'cashflow-graph',
       type: 'line' as const,
       height: chartHeight.value,
-      // Requirement: Hide toolbar but keep x-axis drag-to-zoom functional
-      // Approach: toolbar hidden, zoom restricted to x-axis only
-      // Alternatives:
-      //   - Keep toolbar visible: Rejected — user prefers cleaner look
-      //   - Disable zoom entirely: Rejected — x-axis zoom is useful for date ranges
+      // Requirement: No drag-to-zoom — timeline presets handle date range selection
+      // Approach: Zoom disabled, toolbar hidden. Preset buttons (1W/1M/3M/6M/1Y/All)
+      //   set xaxis min/max instead.
       toolbar: { show: false },
-      zoom: { enabled: true, type: 'x' as const },
+      zoom: { enabled: false },
       fontFamily: 'inherit',
       background: 'transparent',
     },
@@ -170,6 +202,7 @@ const chartOptions = computed(() => {
     colors,
     xaxis: {
       type: 'datetime' as const,
+      ...(xaxisRange.value.min !== undefined ? { min: xaxisRange.value.min } : {}),
       labels: {
         format: 'dd MMM',
         style: { fontSize: '11px', colors: labelColor },
@@ -241,12 +274,24 @@ const hasData = computed(() => actualPoints.value.length > 0 || props.forecastPo
           Daily net
         </button>
       </div>
+
+      <div class="join ml-auto">
+        <button
+          v-for="opt in timeRangeOptions"
+          :key="opt.value"
+          class="join-item btn btn-sm"
+          :class="timeRange === opt.value ? 'btn-active' : ''"
+          @click="timeRange = opt.value"
+        >
+          {{ opt.label }}
+        </button>
+      </div>
     </div>
 
     <!-- Chart -->
     <div v-if="hasData">
       <VueApexCharts
-        :key="`${chartMode}-${chartHeight}-${isDark}`"
+        :key="`${chartMode}-${chartHeight}-${isDark}-${timeRange}`"
         type="line"
         :height="chartHeight"
         :options="chartOptions"
