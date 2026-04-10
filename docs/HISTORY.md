@@ -6,6 +6,10 @@
 
 - **Fixed runway depletion log severity:** Changed from `warn` to `info` — depletion is a data outcome, not an app problem. Debug log severities reflect app health, not user finances
 
+- **Fixed PWA update banner not showing + button not working:**
+  - Bug 1: `checkVersionUpdate()` on initial load detected new version but return value was discarded — `hasUpdate` never set. Now acts on the result immediately.
+  - Bug 2: When version.json detected the change (no waiting SW), `updateServiceWorker(true)` sent SKIP_WAITING to nothing. Added 2s fallback to `location.reload()`.
+
 - **Tightened pattern compliance after review:**
   - BurgerMenu: removed redundant `truncate` from button (inner span handles it correctly for flex layout)
   - Inline pill embed skip: wrapped load timer + pill creation in `window.self === window.top` guard, matching the Vue DebugPill skip in main.ts — prevents orphaned inline pill in iframes
