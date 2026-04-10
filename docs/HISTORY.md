@@ -4,6 +4,9 @@
 
 ## 2026-04-10
 
+- **Fixed demo workspace not showing on first load:**
+  Race condition in `main.ts` — `seedDemoWorkspace()` ran non-blocking (`.then()`) while `app.mount()` fired synchronously. `WorkspaceListView.onMounted` queried the DB before seeding committed, returning an empty array. Fix: wrapped boot sequence in async IIFE, `await seedDemoWorkspace()` before `app.mount()`. DebugPill import changed from static to dynamic (`await import()`) to work inside the async IIFE. ~100ms first-visit cost (subsequent visits skip seeding immediately).
+
 - **Fixed runway depletion log severity:** Changed from `warn` to `info` — depletion is a data outcome, not an app problem. Debug log severities reflect app health, not user finances
 
 - **Fixed PWA update banner not showing + button not working:**
