@@ -5,7 +5,7 @@
 ## 2026-04-10
 
 - **Chart UX improvements (CashflowGraph):**
-  - Moved legend from top to bottom (centered) for cleaner layout
+  - Legend stays at top (left-aligned) — toolbar hidden frees up that space
   - Hidden toolbar (download/zoom/pan/reset buttons) for minimal look
   - Restricted zoom to x-axis only (drag-to-zoom on date range still works)
   - Added hover-only markers (zero-size, expand +4px on hover) for interaction feedback without clutter

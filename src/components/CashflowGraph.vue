@@ -198,10 +198,10 @@ const chartOptions = computed(() => {
       borderColor: gridColor,
       strokeDashArray: 4,
     },
-    // Requirement: Legend below chart for cleaner layout
+    // Requirement: Legend at top — toolbar hidden so top space is free
     legend: {
-      position: 'bottom' as const,
-      horizontalAlign: 'center' as const,
+      position: 'top' as const,
+      horizontalAlign: 'left' as const,
       fontSize: '12px',
       labels: { colors: labelColor },
     },
