@@ -35,7 +35,7 @@
   - Bug 1: `checkVersionUpdate()` on initial load detected new version but return value was discarded — `hasUpdate` never set. Now acts on the result immediately.
   - Bug 2: When version.json detected the change (no waiting SW), `updateServiceWorker(true)` sent SKIP_WAITING to nothing. Added 2s fallback to `location.reload()`.
 
-- **Header "Farlume" gradient text:** `bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent` — matches canva-grid pattern, uses DaisyUI tokens so it auto-syncs with theme combos
+- **Header "Farlume" gradient text:** Added then reverted — gradient (`bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent`) replaced with plain `text-base-content`
 
 - **Moved "Restore from backup" to burger menu:**
   - Extracted restore logic into `useRestoreWorkspace` composable (file picking, validation, import, replace confirm)
