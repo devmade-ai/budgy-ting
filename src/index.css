@@ -19,24 +19,14 @@
    Required alongside DaisyUI's data-theme for Tailwind dark: utilities. */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Brand palette — the app's visual identity. Constant across DaisyUI themes.
-   Available as Tailwind utilities (bg-brand-500, text-brand-600, etc.).
-   Chart series use hardcoded hex directly (ApexCharts doesn't support CSS vars). */
+/* Chart data colors — fixed semantic meanings, constant across DaisyUI themes.
+   These are NOT brand colors — DaisyUI's theme (primary, secondary, etc.) IS the brand.
+   Chart series use hardcoded hex directly (ApexCharts doesn't support CSS vars).
+   These exist for potential non-chart UI that needs fixed data-meaning colors. */
 @theme {
-  --color-brand-50: #ecfdf5;
-  --color-brand-100: #d1fae5;
-  --color-brand-200: #a7f3d0;
-  --color-brand-300: #6ee7b7;
-  --color-brand-400: #34d399;
-  --color-brand-500: #10b981;
-  --color-brand-600: #059669;
-  --color-brand-700: #047857;
-  --color-brand-800: #065f46;
-  --color-brand-900: #064e3b;
   --color-overspend: #ef4444;
   --color-underspend: #22c55e;
-  /* Renamed from --color-neutral to avoid conflict with DaisyUI's `neutral` semantic color.
-     DaisyUI uses `neutral` for buttons/badges; this is for chart data visualization only. */
+  /* Renamed from --color-neutral to avoid conflict with DaisyUI's `neutral` semantic color. */
   --color-data-neutral: #6b7280;
 }
 
