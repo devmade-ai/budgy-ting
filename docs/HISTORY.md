@@ -10,6 +10,13 @@
   - Bug 1: `checkVersionUpdate()` on initial load detected new version but return value was discarded — `hasUpdate` never set. Now acts on the result immediately.
   - Bug 2: When version.json detected the change (no waiting SW), `updateServiceWorker(true)` sent SKIP_WAITING to nothing. Added 2s fallback to `location.reload()`.
 
+- **Moved "Restore from backup" to burger menu:**
+  - Extracted restore logic into `useRestoreWorkspace` composable (file picking, validation, import, replace confirm)
+  - Added "Restore from backup" item to burger menu in AppLayout — always accessible from any page
+  - Removed Restore button from workspace list header — declutters to just "New Workspace"
+  - Empty state "Restore from file" button kept as discovery affordance, calls injected trigger from AppLayout via provide/inject
+  - ConfirmDialog and ErrorAlert for restore flow now render in AppLayout (global)
+
 - **Updated app icon to match Farlume branding:**
   - Changed from green (#10b981) B monogram to blue (#45aeee) rising chart line with endpoint dot
   - Conveys finance/growth — dip then rise, reads clearly at all sizes including 32px favicon

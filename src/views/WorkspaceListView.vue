@@ -1,33 +1,30 @@
 <script setup lang="ts">
 /**
- * Requirement: Workspace list with restore-from-backup flow
- * Approach: FileReader + JSON validation for import, with replace-or-skip
- *   confirmation when a matching workspace already exists
- * Alternatives:
- *   - Drag-and-drop import: Rejected — file-input is simpler on mobile
+ * Requirement: Workspace list view
+ * Approach: Lists workspaces with summary data (transaction count, monthly spend).
+ *   Restore-from-backup lives in the burger menu (AppLayout) and is provided via
+ *   inject for the empty state discovery button.
  */
 
-import { ref, onMounted } from 'vue'
+import { ref, inject, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { db } from '@/db'
-import { validateImport, importWorkspace } from '@/engine/exportImport'
-import { useToast } from '@/composables/useToast'
 import { usePullToRefresh } from '@/composables/usePullToRefresh'
-import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import ErrorAlert from '@/components/ErrorAlert.vue'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import { formatAmount } from '@/composables/useFormat'
 import { useInstallReminder } from '@/composables/useInstallReminder'
 import { estimateMonthlySpend } from '@/engine/transactionMath'
-import { FolderOpen, Plus, Smartphone, Wallet, ChevronRight } from 'lucide-vue-next'
+import { Plus, Smartphone, Wallet, ChevronRight } from 'lucide-vue-next'
 import type { Workspace } from '@/types/models'
-import type { ExportSchema } from '@/engine/exportImport'
 
 const router = useRouter()
-const { show: showToast } = useToast()
 const workspaces = ref<Workspace[]>([])
 const loading = ref(true)
+
+// Restore trigger provided by AppLayout (burger menu owns the restore flow)
+const triggerRestore = inject<() => void>('triggerRestore')
 
 // Pull-to-refresh for mobile
 const { pulling, pullDistance, pullProgress, canRelease, refreshing } = usePullToRefresh(refreshList)
@@ -50,11 +47,6 @@ async function loadSummaries(wsList: Workspace[]) {
   }
   workspaceSummaries.value = summaries
 }
-
-// Restore state
-const importError = ref('')
-const showReplaceConfirm = ref(false)
-const pendingImportData = ref<ExportSchema | null>(null)
 
 // General error state for DB failures
 const error = ref('')
@@ -88,68 +80,6 @@ function createWorkspace() {
   router.push({ name: 'workspace-create' })
 }
 
-function handleRestoreFile(event: Event) {
-  const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
-  if (!file) return
-
-  importError.value = ''
-
-  const reader = new FileReader()
-  reader.onload = async (e) => {
-    const content = e.target?.result as string
-    let data: unknown
-    try {
-      data = JSON.parse(content)
-    } catch {
-      importError.value = 'Invalid file — could not parse JSON'
-      return
-    }
-
-    const result = validateImport(data)
-    if (!result.valid || !result.data) {
-      importError.value = result.error ?? 'Invalid export file'
-      return
-    }
-
-    // Check if workspace already exists
-    try {
-      const existing = await db.workspaces.get(result.data.workspace.id)
-      if (existing) {
-        pendingImportData.value = result.data
-        showReplaceConfirm.value = true
-      } else {
-        const importResult = await importWorkspace(result.data, 'merge')
-        showToast(importResult.message)
-        await refreshList()
-      }
-    } catch {
-      importError.value = 'Couldn\'t restore the backup. Please try again.'
-    }
-  }
-  reader.onerror = () => {
-    importError.value = 'Failed to read file'
-  }
-  reader.readAsText(file)
-
-  // Reset input so same file can be selected again
-  input.value = ''
-}
-
-async function confirmReplace() {
-  if (!pendingImportData.value) return
-  try {
-    const result = await importWorkspace(pendingImportData.value, 'replace')
-    showToast(result.message)
-    pendingImportData.value = null
-    showReplaceConfirm.value = false
-    await refreshList()
-  } catch {
-    importError.value = 'Couldn\'t replace the workspace. Please try again.'
-    showReplaceConfirm.value = false
-  }
-}
-
 const { showInstallReminder, checkInstallReminder, dismissInstallReminder } = useInstallReminder()
 </script>
 
@@ -157,22 +87,10 @@ const { showInstallReminder, checkInstallReminder, dismissInstallReminder } = us
   <div>
     <div class="flex flex-wrap items-center justify-between gap-y-3 mb-6">
       <h1 class="text-2xl font-bold text-base-content">Workspaces</h1>
-      <div class="flex gap-2">
-        <label class="btn btn-ghost text-sm cursor-pointer">
-          <FolderOpen :size="16" class="mr-1 inline-block" />
-          Restore
-          <input
-            type="file"
-            accept=".json"
-            class="hidden"
-            @change="handleRestoreFile"
-          />
-        </label>
-        <button class="btn btn-primary" @click="createWorkspace">
-          <Plus :size="16" class="mr-1 inline-block" />
-          New Workspace
-        </button>
-      </div>
+      <button class="btn btn-primary" @click="createWorkspace">
+        <Plus :size="16" class="mr-1 inline-block" />
+        New Workspace
+      </button>
     </div>
 
     <!-- Install reminder for repeat users -->
@@ -193,7 +111,6 @@ const { showInstallReminder, checkInstallReminder, dismissInstallReminder } = us
     </div>
 
     <ErrorAlert v-if="error" :message="error" @dismiss="error = ''" />
-    <ErrorAlert v-if="importError" :message="importError" @dismiss="importError = ''" />
 
     <!-- Pull-to-refresh indicator with visual progress -->
     <div
@@ -224,15 +141,9 @@ const { showInstallReminder, checkInstallReminder, dismissInstallReminder } = us
         <button class="btn btn-primary" @click="createWorkspace">
           Create your first workspace
         </button>
-        <label class="btn btn-ghost cursor-pointer">
+        <button class="btn btn-ghost" @click="triggerRestore?.()">
           Restore from file
-          <input
-            type="file"
-            accept=".json"
-            class="hidden"
-            @change="handleRestoreFile"
-          />
-        </label>
+        </button>
       </div>
     </EmptyState>
 
@@ -266,17 +177,6 @@ const { showInstallReminder, checkInstallReminder, dismissInstallReminder } = us
         </button>
       </div>
     </template>
-
-    <!-- Replace confirm dialog -->
-    <ConfirmDialog
-      v-if="showReplaceConfirm && pendingImportData"
-      title="Replace existing workspace?"
-      :message="`A workspace named '${pendingImportData.workspace.name}' already exists. Replacing it will overwrite all its transactions, patterns, and imported data.`"
-      confirm-label="Replace"
-      :danger="true"
-      @confirm="confirmReplace"
-      @cancel="showReplaceConfirm = false; pendingImportData = null"
-    />
 
   </div>
 </template>
