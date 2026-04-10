@@ -32,9 +32,10 @@ All work complete and pushed. TypeScript + Vite build + 106 tests pass.
 
 ## Key context
 
-- `src/config/themes.ts` — theme combos. Flash prevention script in index.html MUST stay in sync.
+- **4 sync points** for theme combos: `src/config/themes.ts` (source of truth) ↔ `src/index.css` @plugin themes ↔ `index.html` flash script combos object ↔ `vite.config.ts` manifest theme_color
 - `src/composables/useDarkMode.ts` — dual-layer (data-theme + .dark), `syncing` guard for cross-tab
 - DaisyUI registered themes: `lofi --default, black --prefersdark, emerald, forest`
+- Flash prevention script also updates meta theme-color pre-paint (added in fix commit)
 - Brand colors in `@theme` for CashflowGraph only (not DaisyUI-controlled)
 - `--color-data-neutral` (renamed from `--color-neutral` to avoid DaisyUI conflict)
 - DebugPill intentionally NOT migrated (inline styles, CSS-independent)

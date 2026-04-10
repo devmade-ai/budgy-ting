@@ -51,7 +51,8 @@ export default defineConfig({
         // Approach: Explicit id so Chrome doesn't derive it from start_url
         //   (which can cause mismatches on path changes).
         id: '/',
-        theme_color: '#10b981',
+        // Must match default combo's light metaColor (classic = lofi → #808080)
+        theme_color: '#808080',
         background_color: '#ffffff',
         display: 'standalone',
         scope: '/',

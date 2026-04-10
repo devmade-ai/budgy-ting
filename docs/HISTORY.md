@@ -2,6 +2,14 @@
 
 <!-- Changelog and record of completed work. Organized by date. -->
 
+## 2026-04-10
+
+- **Meta theme-color sync with DaisyUI combo system:**
+  - Fixed `<meta name="theme-color">` tags in index.html — were hardcoded to old brand color `#10b981`, now match default combo (classic: `#808080` light / `#000000` dark)
+  - Flash prevention script now also updates meta theme-color before first paint (previously only set by Vue composable on mount — status bar color flashed wrong color)
+  - Manifest `theme_color` in vite.config.ts updated from `#10b981` to `#808080` (default combo's light metaColor)
+  - CLAUDE.md sync points updated: now 4 locations (was 3), including manifest theme_color
+
 ## 2026-04-09
 
 - **DaisyUI v5 migration — full theming overhaul (glow-props THEME_DARK_MODE sync):**
