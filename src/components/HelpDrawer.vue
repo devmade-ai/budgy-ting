@@ -95,23 +95,3 @@ onUnmounted(() => {
     </div>
   </Teleport>
 </template>
-
-<style scoped>
-/* Minimal prose styles for rendered markdown — keeps it readable without a full typography plugin.
-   Uses DaisyUI semantic color variables (oklch) for automatic dark/light switching. */
-:deep(.prose) h1 { font-size: 1.5rem; font-weight: 700; margin: 1.5rem 0 0.75rem; color: oklch(var(--bc)); }
-:deep(.prose) h2 { font-size: 1.25rem; font-weight: 600; margin: 1.25rem 0 0.5rem; color: oklch(var(--bc)); border-bottom: 1px solid oklch(var(--b3)); padding-bottom: 0.25rem; }
-:deep(.prose) h3 { font-size: 1.1rem; font-weight: 600; margin: 1rem 0 0.5rem; color: oklch(var(--bc) / 0.7); }
-:deep(.prose) h4 { font-size: 1rem; font-weight: 600; margin: 0.75rem 0 0.25rem; color: oklch(var(--bc) / 0.7); }
-:deep(.prose) p { margin: 0.5rem 0; line-height: 1.6; color: oklch(var(--bc) / 0.7); }
-:deep(.prose) ul, :deep(.prose) ol { margin: 0.5rem 0; padding-left: 1.5rem; color: oklch(var(--bc) / 0.7); }
-:deep(.prose) li { margin: 0.25rem 0; line-height: 1.5; }
-:deep(.prose) li > ul, :deep(.prose) li > ol { margin: 0.125rem 0; }
-:deep(.prose) strong { font-weight: 600; color: oklch(var(--bc)); }
-:deep(.prose) code { background: oklch(var(--b2)); padding: 0.125rem 0.375rem; border-radius: 0.25rem; font-size: 0.85em; color: oklch(var(--bc)); }
-:deep(.prose) pre { background: oklch(var(--b2)); padding: 0.75rem 1rem; border-radius: 0.5rem; overflow-x: auto; margin: 0.5rem 0; }
-:deep(.prose) pre code { background: none; padding: 0; }
-:deep(.prose) hr { border: none; border-top: 1px solid oklch(var(--b3)); margin: 1.5rem 0; }
-:deep(.prose) a { color: oklch(var(--p)); text-decoration: underline; }
-:deep(.prose) input[type="checkbox"] { margin-right: 0.5rem; }
-</style>

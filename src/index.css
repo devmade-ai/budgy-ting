@@ -15,6 +15,10 @@
   themes: cmyk --default, night --prefersdark;
 }
 
+/* Typography plugin — renders markdown v-html content with theme-aware colors.
+   Replaces 16 lines of custom :deep(.prose) scoped styles in HelpDrawer. */
+@plugin "@tailwindcss/typography";
+
 /* Class-based dark mode for Tailwind v4 — targets .dark on <html>.
    Required alongside DaisyUI's data-theme for Tailwind dark: utilities. */
 @custom-variant dark (&:where(.dark, .dark *));
