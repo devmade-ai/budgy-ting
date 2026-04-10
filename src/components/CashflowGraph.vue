@@ -60,20 +60,25 @@ const timeRangeOptions: { value: TimeRange; label: string }[] = [
   { value: 'ALL', label: 'All' },
 ]
 
-const xaxisRange = computed<{ min?: number; max?: number }>(() => {
+// Requirement: Compute xaxis min from the selected lookback preset
+// Approach: Use Date arithmetic for proper calendar-aware boundaries.
+//   setMonth/setFullYear handle varying month lengths and leap years correctly
+//   (e.g., Mar 31 → setMonth(-1) → Feb 28/29, not a fixed 30 days).
+// Alternatives:
+//   - Fixed ms constants (7*86400000, 30*86400000, etc.): Rejected — "1M" back
+//     from Mar 31 should land on Feb 28, not Mar 1. Calendar months vary.
+const xaxisRange = computed<{ min?: number }>(() => {
   if (timeRange.value === 'ALL') return {}
 
-  const now = new Date()
-  const lookbackMs: Record<Exclude<TimeRange, 'ALL'>, number> = {
-    '1W': 7 * 24 * 60 * 60 * 1000,
-    '1M': 30 * 24 * 60 * 60 * 1000,
-    '3M': 91 * 24 * 60 * 60 * 1000,
-    '6M': 182 * 24 * 60 * 60 * 1000,
-    '1Y': 365 * 24 * 60 * 60 * 1000,
+  const d = new Date()
+  switch (timeRange.value) {
+    case '1W': d.setDate(d.getDate() - 7); break
+    case '1M': d.setMonth(d.getMonth() - 1); break
+    case '3M': d.setMonth(d.getMonth() - 3); break
+    case '6M': d.setMonth(d.getMonth() - 6); break
+    case '1Y': d.setFullYear(d.getFullYear() - 1); break
   }
-
-  const min = now.getTime() - lookbackMs[timeRange.value as Exclude<TimeRange, 'ALL'>]
-  return { min }
+  return { min: d.getTime() }
 })
 
 // Requirement: Responsive chart height — smaller on mobile, larger on desktop
