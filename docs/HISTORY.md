@@ -6,6 +6,10 @@
 
 - **Fixed runway depletion log severity:** Changed from `warn` to `info` — depletion is a data outcome, not an app problem. Debug log severities reflect app health, not user finances
 
+- **Tightened pattern compliance after review:**
+  - BurgerMenu: removed redundant `truncate` from button (inner span handles it correctly for flex layout)
+  - Inline pill embed skip: wrapped load timer + pill creation in `window.self === window.top` guard, matching the Vue DebugPill skip in main.ts — prevents orphaned inline pill in iframes
+
 - **glow-props pattern compliance — closed remaining gaps:**
   - BURGER_MENU: Added `destructive` and `external` properties to MenuItem interface + template styling (red text for destructive, ExternalLink icon for external)
   - DEBUG_SYSTEM: Added static `#debug-root` div to index.html (was created dynamically in main.ts)

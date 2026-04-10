@@ -195,7 +195,7 @@ watch(open, (isOpen) => {
             <li>
               <button
                 type="button"
-                class="w-full text-left px-4 py-2 min-h-[44px] text-sm truncate
+                class="w-full text-left px-4 py-2 min-h-[44px] text-sm
                        transition-colors outline-none
                        focus-visible:ring-2 focus-visible:ring-primary
                        flex items-center gap-2
