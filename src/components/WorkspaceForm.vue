@@ -74,7 +74,7 @@ function handleSubmit() {
         id="workspace-name"
         v-model="name"
         type="text"
-        class="input input-bordered w-full text-base"
+        class="input input-bordered w-full text-base min-h-[44px]"
         placeholder="e.g. Household, Side Hustle, Wedding"
         autofocus
       />
@@ -90,7 +90,7 @@ function handleSubmit() {
         id="currency-label"
         v-model="currencyLabel"
         type="text"
-        class="input input-bordered w-20 text-base"
+        class="input input-bordered w-20 text-base min-h-[44px]"
         placeholder="R"
         maxlength="5"
       />
