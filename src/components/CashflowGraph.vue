@@ -323,7 +323,7 @@ const hasData = computed(() => actualPoints.value.length > 0 || props.forecastPo
     <!-- Chart -->
     <div v-if="hasData">
       <VueApexCharts
-        :key="`${chartMode}-${chartHeight}-${isDark}-${timeRange}`"
+        :key="`${chartMode}-${chartHeight}-${isDark}-${timeRange}-${forecastMonths}`"
         type="line"
         :height="chartHeight"
         :options="chartOptions"

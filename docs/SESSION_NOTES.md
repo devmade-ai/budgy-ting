@@ -4,21 +4,24 @@
 
 ## Worked on
 
-Fix: demo workspace not appearing on first load (race condition in boot sequence).
+Chart UX — timeline presets + forecast horizon controls. PWA update banner bug.
 
 ## Accomplished
 
-- Fixed race condition in `main.ts` where `seedDemoWorkspace()` ran non-blocking while `app.mount()` fired synchronously — `WorkspaceListView` queried the empty DB before seeding committed
-- Wrapped entire boot sequence in async IIFE, `await seedDemoWorkspace()` before `app.mount()`
-- Changed DebugPill from static import to dynamic `await import()` (required inside async IIFE)
+- Fixed PWA update banner re-appearing after applying update — `checkVersionUpdate()` wasn't persisting buildTime to localStorage on the change-detected path, so every subsequent check re-detected the same "update"
+- Replaced drag-to-zoom with History preset buttons (1W, 1M, 3M, 6M, 1Y, All) controlling xaxis lookback
+- Added Forecast horizon preset buttons (1M, 3M, 6M, 1Y) — user-selectable, default 3M. State owned by WorkspaceDashboard, emitted from CashflowGraph
+- Mobile layout: controls stack vertically (flex-col → sm:flex-row), btn-xs on mobile, overflow-x-auto safety
+- Added `forecastMonths` to chart `:key` for consistent re-render
+- Updated all docs: CLAUDE.md project status, USER_GUIDE, TESTING_GUIDE (new 2.2 scenario + renumbered), HISTORY.md
 
 ## Current state
 
-Fix implemented. Boot sequence now guarantees demo data is in DB before any view mounts.
+All changes working, build clean. Three commits on `claude/update-check-frequency-M0Zl1` branch, pushed.
 
 ## Key context
 
-- `main.ts` boot is now an async IIFE — all post-seed logic (mount, debug pill, error bridging) runs inside it
-- `seedDemoWorkspace()` returns `false` immediately when workspaces exist (no latency on return visits)
-- `pruneStaleTagCache()` stays non-blocking (`.then()`) since it's not needed before mount
-- DebugPill is now dynamically imported — no functional change, just required for async IIFE scope
+- `forecastMonths` is not persisted — resets to 3M on navigation. Noted but not addressed (pre-release, low priority)
+- History lookback uses fixed day counts (30d/91d/182d/365d), not calendar months — intentional for chart simplicity
+- Chart zoom is fully disabled — presets are the only way to change visible range
+- CashflowGraph manages `chartMode` + `timeRange` internally; `forecastMonths` comes from parent via prop/emit because it drives forecast computation in WorkspaceDashboard
