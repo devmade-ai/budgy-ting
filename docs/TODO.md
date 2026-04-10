@@ -14,6 +14,7 @@
 
 - [ ] Virtual scrolling for long transaction lists (vue-virtual-scroller) — current pagination filters full array on every change, 10K+ transactions will lag
 - [ ] Keyboard shortcuts for common actions
+- [ ] Theme combo picker UI in burger menu — useDarkMode() exposes setCombo() + themeCombos but no UI exists yet. Currently only "Classic" (lofi/black) pair is active.
 
 ## Technical
 

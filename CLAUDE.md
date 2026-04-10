@@ -321,6 +321,11 @@ All projects follow this scale to prevent stacking conflicts between the burger 
 - **NEVER use the AskUserQuestion tool.** It breaks the session UI — the input modal covers context, gets stuck awaiting input, and disrupts workflow. If you need user input, list options as numbered text in your response and let the user reply with a number or text. This is a hard rule with zero exceptions.
 - **Development phase:** App is pre-release with zero users. Features added now are provisional and will be changed or removed later. Don't over-polish or over-engineer — keep things easy to swap out. Don't push back on feature ideas based on "users don't need this" — there are no users yet, and the goal is exploration.
 - **Check build tools before building.** Run `npm install` or verify `node_modules/.bin/vite` exists before attempting `npm run build`. The `sharp` package may not be installed (used by prebuild icon generation), so use `./node_modules/.bin/vite build` directly to skip the prebuild step if sharp fails.
+- **DaisyUI theme sync points.** Three locations must stay in sync when adding/removing theme combos:
+  1. `src/config/themes.ts` — combo definitions (source of truth)
+  2. `src/index.css` — `@plugin "daisyui" { themes: ... }` (must list every DaisyUI theme name used by any combo)
+  3. `index.html` flash prevention script — hardcoded `combos` object (must mirror themes.ts, vanilla JS)
+- **DaisyUI modal z-index.** DaisyUI's `.modal` class sets `z-index: 999` internally. Our `z-[60]` override works because Tailwind `@layer utilities` takes precedence over `@layer daisyui.*`. Do NOT remove the `z-[60]` — it keeps modals within our z-index scale (modal=60, toast=70, debug=80).
 - **Claude Code mobile/web — accessing sibling repos:**
   - Use `GITHUB_ALL_REPO_TOKEN` with the GitHub API (`api.github.com/repos/devmade-ai/{repo}/contents/{path}`) to read files from other devmade-ai repos
   - Use `$(printenv GITHUB_ALL_REPO_TOKEN)` not `$GITHUB_ALL_REPO_TOKEN` to avoid shell expansion issues
