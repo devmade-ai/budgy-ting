@@ -4,10 +4,25 @@
 
 ## 2026-04-10
 
+- **Chart timeline presets replace drag-to-zoom:**
+  Disabled x-axis drag-to-zoom. Added preset timeline buttons (1W, 1M, 3M, 6M, 1Y, All) right-aligned next to the cumulative/daily toggle. Presets set xaxis min as a lookback from today — forecast data (future) is always visible. "All" shows the full range. Chart re-renders on range change via `:key` binding.
+
+- **User-selectable forecast horizon:**
+  Added separate forecast preset buttons (1M, 3M, 6M, 1Y) next to the history lookback presets. Defaults to 3M (matching previous hardcoded 90 days). State lives in WorkspaceDashboard (drives forecast computation), CashflowGraph emits changes via `update:forecastMonths`. Labels ("History" / "Forecast") distinguish the two control groups. Selection persisted to localStorage per workspace (`farlume:forecast-months:{workspaceId}`) with validation against allowed values.
+
+- **History lookback uses proper calendar arithmetic:**
+  Replaced fixed-ms lookback (30d for 1M, 91d for 3M, etc.) with Date `setMonth`/`setFullYear` arithmetic. "1M" back from Mar 31 now correctly lands on Feb 28, not Mar 1.
+
+- **usePWAUpdate.ts migrated to safeGetItem/safeSetItem:**
+  `checkVersionUpdate()` was using raw `localStorage` instead of the project's `useSafeStorage` wrapper. Switched to `safeGetItem`/`safeSetItem` for consistent error handling in private browsing / storage-full scenarios.
+
+- **Fixed PWA update banner persisting after update applied:**
+  `checkVersionUpdate()` only stored the new `buildTime` in localStorage on the no-change path. When a change was detected, it returned `true` without updating localStorage, so every subsequent check (visibility-based or manual) after the 30s suppression window re-detected the same "update." Fix: always persist `buildTime` before the comparison check.
+
 - **Chart UX improvements (CashflowGraph):**
   - Legend stays at top (left-aligned) — toolbar hidden frees up that space
   - Hidden toolbar (download/zoom/pan/reset buttons) for minimal look
-  - Restricted zoom to x-axis only (drag-to-zoom on date range still works)
+  - Zoom disabled — replaced by History/Forecast timeline presets (see above)
   - Added hover-only markers (zero-size, expand +4px on hover) for interaction feedback without clutter
   - Curve type confirmed as smooth (already was)
 
@@ -20,7 +35,7 @@
   - Bug 1: `checkVersionUpdate()` on initial load detected new version but return value was discarded — `hasUpdate` never set. Now acts on the result immediately.
   - Bug 2: When version.json detected the change (no waiting SW), `updateServiceWorker(true)` sent SKIP_WAITING to nothing. Added 2s fallback to `location.reload()`.
 
-- **Header "Farlume" gradient text:** `bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent` — matches canva-grid pattern, uses DaisyUI tokens so it auto-syncs with theme combos
+- **Header "Farlume" gradient text:** Added then reverted — gradient (`bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent`) reverted to original `text-primary hover:text-primary/80`
 
 - **Moved "Restore from backup" to burger menu:**
   - Extracted restore logic into `useRestoreWorkspace` composable (file picking, validation, import, replace confirm)

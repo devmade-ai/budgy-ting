@@ -18,6 +18,7 @@
 import { ref, watch } from 'vue'
 import { useRegisterSW } from 'virtual:pwa-register/vue'
 import { debugLog } from '@/debug/debugLog'
+import { safeGetItem, safeSetItem } from '@/composables/useSafeStorage'
 
 const CHECK_INTERVAL_MS = 60 * 60 * 1000 // 60 minutes
 const OFFLINE_DISMISS_MS = 3000
@@ -99,12 +100,16 @@ async function checkVersionUpdate(): Promise<boolean> {
     const res = await fetch('/version.json', { cache: 'no-store' })
     if (!res.ok) return false
     const { buildTime } = await res.json()
-    const stored = localStorage.getItem(VERSION_KEY)
+    const stored = safeGetItem(VERSION_KEY)
+    // Always persist the latest buildTime so a detected change is only
+    // reported once. Previously, localStorage was only set on the no-change
+    // path, causing every subsequent check to re-detect the same "update"
+    // after the 30-second suppression window expired.
+    safeSetItem(VERSION_KEY, buildTime)
     if (stored && stored !== buildTime) {
       debugLog('pwa', 'info', 'New app version detected via version.json', { stored, buildTime })
       return true
     }
-    localStorage.setItem(VERSION_KEY, buildTime)
     return false
   } catch { return false }
 }

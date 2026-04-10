@@ -13,7 +13,7 @@ All data lives on-device using IndexedDB. No authentication, no server. Exportab
 - **Statistical forecasting** — Holt's double exponential smoothing with seasonal adjustments and confidence bands
 - **Cash runway** — Enter cash on hand to see how long it lasts with optimistic/expected/pessimistic scenarios
 - **Prediction accuracy** — MAE, RMSE, bias, and hit rate metrics computed from backtest forecasts
-- **Single-screen dashboard** — Cashflow graph, metrics grid, and transaction table on one page
+- **Single-screen dashboard** — Cashflow graph with history/forecast timeline presets, metrics grid, and transaction table on one page
 - **Save as PDF** — Print your dashboard with the full transaction list, graph, and metrics — clean output with no interactive clutter
 - **Export/backup** — Download workspace data as JSON, restore from backup
 - **Offline-first PWA** — Works without internet, installable on mobile, service worker update prompt

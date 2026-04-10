@@ -18,6 +18,7 @@ import { calculateRunway } from '@/engine/runway'
 import { calculateDailyAccuracy, summarizeAccuracy } from '@/engine/accuracy'
 import { formatDate } from '@/engine/dateUtils'
 import { formatAmount } from '@/composables/useFormat'
+import { safeGetItem, safeSetItem } from '@/composables/useSafeStorage'
 import { touchTags } from '@/composables/useTagAutocomplete'
 import { useTagSuggestions } from '@/ml/useTagSuggestions'
 import CashflowGraph from '@/components/CashflowGraph.vue'
@@ -38,6 +39,31 @@ const transactions = ref<Transaction[]>([])
 const patterns = ref<RecurringPattern[]>([])
 const error = ref('')
 const cashOnHand = ref<number | null>(props.workspace.cashOnHand)
+
+// Requirement: Persist forecast horizon per workspace so it survives navigation
+// Approach: localStorage keyed by workspace ID. View preference, not data — doesn't
+//   belong in the DB schema alongside actual financial data like cashOnHand.
+// Alternatives:
+//   - Add to Workspace DB model: Rejected — would require schema migration for a
+//     display preference. cashOnHand is persisted to DB because it's financial data.
+//   - Don't persist: Rejected — recomputing forecast on every navigation is wasteful
+//     and the user's selection is lost, which feels broken.
+const FORECAST_MONTHS_KEY = `farlume:forecast-months:${props.workspace.id}`
+const DEFAULT_FORECAST_MONTHS = 3
+const VALID_FORECAST_MONTHS = [1, 3, 6, 12]
+
+function loadForecastMonths(): number {
+  const stored = safeGetItem(FORECAST_MONTHS_KEY)
+  if (stored === null) return DEFAULT_FORECAST_MONTHS
+  const parsed = Number(stored)
+  return VALID_FORECAST_MONTHS.includes(parsed) ? parsed : DEFAULT_FORECAST_MONTHS
+}
+
+const forecastMonths = ref(loadForecastMonths())
+
+watch(forecastMonths, (val) => {
+  safeSetItem(FORECAST_MONTHS_KEY, String(val))
+})
 
 // ML tag suggestions
 const { preloadModel, suggestTags, inferring, dispose } = useTagSuggestions()
@@ -65,13 +91,17 @@ onUnmounted(() => {
   dispose()
 })
 
-// Compute forecast (90 days ahead from today)
+// Compute forecast (user-selectable horizon, default 3 months)
+// Note: Date constructor rolls over when day exceeds the target month's length
+// (e.g., Jan 31 + 1 month = Mar 3 since Feb 31 doesn't exist). This gives
+// slightly more than the requested months, which is preferred for forecasts —
+// showing a few extra days is better than clipping short.
 const forecast = computed<ForecastResult | null>(() => {
   if (transactions.value.length === 0 && patterns.value.length === 0) return null
 
   const today = new Date()
   const startDate = formatDate(today)
-  const endDate = formatDate(new Date(today.getFullYear(), today.getMonth() + 3, today.getDate()))
+  const endDate = formatDate(new Date(today.getFullYear(), today.getMonth() + forecastMonths.value, today.getDate()))
 
   return buildForecast(transactions.value, patterns.value, startDate, endDate)
 })
@@ -196,6 +226,8 @@ async function handleRequestSuggestions(id: string, description: string) {
       :forecast-points="forecast?.daily ?? []"
       :runway="runway"
       :currency-label="workspace.currencyLabel"
+      :forecast-months="forecastMonths"
+      @update:forecast-months="forecastMonths = $event"
     />
 
     <!-- Metrics grid -->

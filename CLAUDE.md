@@ -57,7 +57,7 @@ Current working features:
 - Holt's double exponential smoothing forecasting with day-of-week seasonality
 - Cash runway calculation with confidence bands (optimistic/expected/pessimistic)
 - Prediction accuracy metrics (MAE, RMSE, bias, WMAPE, hit rate)
-- Single-screen dashboard (cashflow graph, metrics grid, transaction table)
+- Single-screen dashboard (cashflow graph with history/forecast timeline presets, metrics grid, transaction table)
 - Transaction edit modal with read-only view mode
 - Export/import/restore workspace data as JSON
 - PWA: offline-first, installable, service worker update prompt, manual update check, visibility-based update checks, 30s post-update suppression, 7-browser Chromium detection, iOS non-Safari redirect, ChunkLoadError lazy retry, version.json supplementary detection

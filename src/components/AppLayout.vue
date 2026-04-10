@@ -164,7 +164,7 @@ const menuItems = computed<MenuItem[]>(() => [
     <header class="bg-base-100 border-b border-base-300 sticky top-0 z-10 no-print">
       <div class="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
         <button
-          class="text-lg font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent hover:opacity-80 transition-opacity"
+          class="text-lg font-bold text-primary hover:text-primary/80 transition-colors"
           @click="goHome"
         >
           Farlume

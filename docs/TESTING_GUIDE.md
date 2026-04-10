@@ -12,6 +12,8 @@ Run through this checklist after any change to verify nothing is broken:
 - [ ] Home page lists existing workspaces (demo workspace on first visit)
 - [ ] Can create a new workspace (both monthly and custom period types)
 - [ ] Can open a workspace and see single-screen dashboard (graph, metrics, transactions)
+- [ ] Chart controls work: History presets (1W–All), Forecast presets (1M–1Y), Cumulative/Daily toggle
+- [ ] Forecast preset persists after navigating away and back
 - [ ] Cash on hand input shows runway result on dashboard
 - [ ] Can import a CSV file through the 2-step wizard (upload, review & import)
 - [ ] Transactions appear in the table after import
@@ -132,7 +134,7 @@ Run through this checklist after any change to verify nothing is broken:
 - Cashflow graph is visible with readable axis labels (no dark backgrounds)
 - Metrics grid cards are visible
 - ALL transactions are listed in a table (not just the current page)
-- No interactive elements visible: no header/menu, no Import button, no kebab menu, no chart Cumulative/Daily toggle, no search/filter fields, no pagination buttons, no form inputs
+- No interactive elements visible: no header/menu, no Import button, no kebab menu, no chart controls (Cumulative/Daily toggle, History/Forecast presets), no search/filter fields, no pagination buttons, no form inputs
 - Cash on hand shows as plain text (not an input field)
 - If dark mode is active: preview renders in light mode
 
@@ -197,7 +199,27 @@ Run through this checklist after any change to verify nothing is broken:
 - Metrics grid below the graph
 - Transaction table at the bottom
 
-#### 2.2 Cash on Hand — Runs Out
+#### 2.2 Chart Controls — Timeline Presets
+
+**Pre-condition:** Workspace with imported transactions.
+
+**Steps:**
+1. Open a workspace dashboard
+2. Tap **1W** in the History presets
+3. Tap **1Y** in the Forecast presets
+4. Toggle between **Cumulative** and **Daily net**
+5. Navigate back to workspace list, then re-open the same workspace
+
+**Expected:**
+- History presets (1W/1M/3M/6M/1Y/All) control how far back the chart shows
+- Forecast presets (1M/3M/6M/1Y) control how far ahead the projection extends
+- Active preset is visually highlighted
+- Switching presets re-renders the chart immediately
+- On mobile: mode toggle stacks above the timeline presets, buttons shrink to fit
+- Default state: History=All, Forecast=3M
+- After step 5: Forecast preset restored to 1Y (persisted), History resets to All (not persisted)
+
+#### 2.3 Cash on Hand — Runs Out
 
 **Pre-condition:** Workspace where expenses exceed income.
 
@@ -209,7 +231,7 @@ Run through this checklist after any change to verify nothing is broken:
 - Shows depletion date in red text
 - Value persists when you leave and return to the workspace
 
-#### 2.3 Cash on Hand — Positive Outlook
+#### 2.4 Cash on Hand — Positive Outlook
 
 **Pre-condition:** Workspace where income exceeds expenses.
 
@@ -220,7 +242,7 @@ Run through this checklist after any change to verify nothing is broken:
 **Expected:**
 - Shows projected end balance in green text
 
-#### 2.4 Empty Dashboard
+#### 2.5 Empty Dashboard
 
 **Steps:**
 1. Open a workspace with no transactions
@@ -230,7 +252,7 @@ Run through this checklist after any change to verify nothing is broken:
 - Graph shows empty or minimal state
 - Transaction table shows no data
 
-#### 2.5 Transaction Table
+#### 2.6 Transaction Table
 
 **Pre-condition:** Workspace with imported transactions.
 

@@ -84,6 +84,13 @@ An interactive line chart showing:
 - **Historical transactions** — your actual daily cashflow
 - **Forecast** — projected future cashflow based on patterns (shown as a dashed line)
 
+Controls above the chart:
+- **Cumulative / Daily net** — toggle between cumulative sum and daily net view
+- **History** (1W, 1M, 3M, 6M, 1Y, All) — how far back to show. "All" shows everything.
+- **Forecast** (1M, 3M, 6M, 1Y) — how far ahead to project. Defaults to 3 months. Your selection is remembered per workspace.
+
+Changing the forecast horizon also affects the runway calculation — a shorter horizon may show "projected balance" where a longer one would show a depletion date.
+
 ### Metrics Grid
 
 Key financial metrics at a glance:
