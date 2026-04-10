@@ -4,16 +4,15 @@
 
 ## Worked on
 
-DaisyUI v5 migration — full migration + strengthening + component adoption + theme consolidation.
+UX safety, debug pill responsiveness, debug log severity audit.
 
 ## Accomplished
 
-- Full 6-phase DaisyUI migration from custom CSS variables
-- Strengthening pass (selects, neutral conflict, cross-tab sync, accessibility)
-- DaisyUI component adoption (steps, skeleton, join, modal, progress, divider, loading)
-- Consolidated to single "Vivid" combo (cmyk/night), removed classic and nature combos
-- Meta colors computed from actual DaisyUI oklch theme values
-- Combo system kept functional for future expansion (ThemeCombo interface, validCombo, getCombo, setCombo all intact)
+- Removed "Clear all data" nuclear button from workspace list — too dangerous on main screen, individual workspace deletion is sufficient
+- Fixed debug pill panel not scaling to screen width — `w-[360px]` → `w-[calc(100vw-2rem)] max-w-[360px]`, inner content uses `min-w-0 truncate` instead of fixed `max-w`
+- Fixed same width bug in pre-framework inline pill in index.html — `width:320px` → `width:calc(100vw - 2rem);max-width:320px`
+- Changed runway depletion debug severity from `warn` to `info` — depletion is a data outcome, not an app health issue
+- Updated all docs: TESTING_GUIDE, USER_GUIDE, README, PRODUCT_DEFINITION, HISTORY
 
 ## Current state
 
@@ -21,12 +20,7 @@ All work complete and pushed. TypeScript + Vite build + 106 tests pass.
 
 ## Key context
 
-- **4 sync points** when adding combos: `src/config/themes.ts` (source of truth) ↔ `src/index.css` @plugin themes ↔ `index.html` flash script combos object ↔ `vite.config.ts` manifest theme_color
-- `src/composables/useDarkMode.ts` — dual-layer (data-theme + .dark), `syncing` guard for cross-tab, combo system functional
-- Only registered DaisyUI themes: `cmyk --default, night --prefersdark`
-- Flash prevention script also updates meta theme-color pre-paint
-- `@theme` block removed entirely — all colors from DaisyUI tokens
-- CashflowGraph reads theme colors at runtime via `useThemeColor.ts` (canvas pixel conversion)
-- DebugPill migrated to Tailwind/DaisyUI classes + resolveThemeColor for log colors
-- Pre-framework inline pill in index.html stays hardcoded (handles CSS-not-loaded case)
-- glow-props patterns: all complete. EVENT_BUS evaluated and skipped (no service-layer pub/sub needs)
+- Debug log severities should reflect app health, not data outcomes — forecasts, runway, accuracy are all `info`
+- ML model failures and inference errors are `warn` (recoverable/optional features) — debatable but left as-is
+- `ConfirmDialog` import in WorkspaceListView is still used by the restore/replace flow — not orphaned
+- Pre-framework inline pill in index.html uses inline styles (no Tailwind) — must be kept in sync with DebugPill.vue manually

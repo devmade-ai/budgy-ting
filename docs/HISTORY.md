@@ -6,6 +6,8 @@
 
 - **Fixed runway depletion log severity:** Changed from `warn` to `info` — depletion is a data outcome, not an app problem. Debug log severities reflect app health, not user finances
 
+- **Fixed inline debug pill (index.html) same width overflow:** `width:320px` → `width:calc(100vw - 2rem);max-width:320px` — mirrors the DebugPill.vue fix
+
 - **Fixed debug pill not scaling to screen width:**
   - Expanded panel: `w-[360px]` → `w-[calc(100vw-2rem)] max-w-[360px]` so it shrinks on narrow viewports
   - Env tab values: replaced fixed `max-w-[220px]` with `min-w-0 truncate` for fluid sizing
