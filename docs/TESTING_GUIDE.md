@@ -169,22 +169,10 @@ Run through this checklist after any change to verify nothing is broken:
 - Clicking **Replace** overwrites the workspace
 - Clicking **Cancel** keeps the original
 
-#### 1.9 Clear All Data
+#### 1.9 Demo Workspace
 
 **Steps:**
-1. Have at least one workspace
-2. From home screen, click **Clear all data**
-3. Confirmation dialog appears
-
-**Expected (Confirm):**
-4. Click **Clear everything**
-5. Success message: "All data cleared"
-6. Home screen shows empty state: "No workspaces yet"
-
-#### 1.10 Demo Workspace
-
-**Steps:**
-1. Clear all data (or use a fresh browser)
+1. Use a fresh browser (or delete all workspaces individually)
 2. Reload the app
 
 **Expected:**

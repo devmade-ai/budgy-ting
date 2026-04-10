@@ -4,6 +4,11 @@
 
 ## 2026-04-10
 
+- **Removed "Clear all data" button from workspace list:**
+  - Deleted the nuclear delete-everything button, `handleClearAll()` function, `showClearConfirm` ref, and confirmation dialog from WorkspaceListView
+  - Too dangerous to expose on the main screen — individual workspace deletion is available from each workspace's own view
+  - Updated TESTING_GUIDE.md, USER_GUIDE.md, README.md, and PRODUCT_DEFINITION.md to remove references
+
 - **Theme: single "Vivid" combo (cmyk/night) as default:**
   - Added cmyk (light) + night (dark) combo, removed classic (lofi/black) and nature (emerald/forest)
   - Combo system kept functional — ThemeCombo interface, validCombo(), getCombo(), setCombo() all intact for future expansion

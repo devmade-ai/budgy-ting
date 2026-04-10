@@ -65,13 +65,6 @@ The PDF includes your workspace name, cashflow graph, metrics grid, and the full
 3. If a workspace with the same ID already exists, you'll be asked whether to **Replace** it or **Cancel**
 4. The workspace and all its data will be restored
 
-### Clearing All Data
-
-1. From the home screen, scroll to the bottom and click **Clear all data**
-2. A confirmation dialog warns that this deletes everything permanently
-3. Click **Clear everything** to confirm
-4. Make sure you've exported anything you want to keep first
-
 ---
 
 ## The Dashboard

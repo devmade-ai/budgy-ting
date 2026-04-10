@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Requirement: Workspace list with restore-from-backup and clear-all-data flows
+ * Requirement: Workspace list with restore-from-backup flow
  * Approach: FileReader + JSON validation for import, with replace-or-skip
  *   confirmation when a matching workspace already exists
  * Alternatives:
@@ -150,24 +150,6 @@ async function confirmReplace() {
   }
 }
 
-async function handleClearAll() {
-  try {
-    await db.transaction('rw', [db.workspaces, db.transactions, db.patterns, db.importBatches, db.tagCache], async () => {
-      await db.transactions.clear()
-      await db.patterns.clear()
-      await db.importBatches.clear()
-      await db.workspaces.clear()
-      await db.tagCache.clear()
-    })
-    await refreshList()
-    showToast('All data cleared')
-  } catch {
-    error.value = 'Couldn\'t clear data. Please try again.'
-  }
-}
-
-const showClearConfirm = ref(false)
-
 const { showInstallReminder, checkInstallReminder, dismissInstallReminder } = useInstallReminder()
 </script>
 
@@ -283,17 +265,6 @@ const { showInstallReminder, checkInstallReminder, dismissInstallReminder } = us
           </div>
         </button>
       </div>
-
-      <!-- Data management -->
-      <div class="divider"></div>
-      <div>
-        <button
-          class="text-xs text-base-content/40 hover:text-error transition-colors"
-          @click="showClearConfirm = true"
-        >
-          Clear all data
-        </button>
-      </div>
     </template>
 
     <!-- Replace confirm dialog -->
@@ -307,15 +278,5 @@ const { showInstallReminder, checkInstallReminder, dismissInstallReminder } = us
       @cancel="showReplaceConfirm = false; pendingImportData = null"
     />
 
-    <!-- Clear all confirm dialog -->
-    <ConfirmDialog
-      v-if="showClearConfirm"
-      title="Clear all data?"
-      message="This will permanently delete all workspaces, transactions, patterns, and imported data. This cannot be undone. Make sure you've exported anything you want to keep."
-      confirm-label="Clear everything"
-      :danger="true"
-      @confirm="handleClearAll(); showClearConfirm = false"
-      @cancel="showClearConfirm = false"
-    />
   </div>
 </template>
