@@ -10,6 +10,11 @@
   - Bug 1: `checkVersionUpdate()` on initial load detected new version but return value was discarded — `hasUpdate` never set. Now acts on the result immediately.
   - Bug 2: When version.json detected the change (no waiting SW), `updateServiceWorker(true)` sent SKIP_WAITING to nothing. Added 2s fallback to `location.reload()`.
 
+- **Updated app icon to match Farlume branding:**
+  - Changed from green (#10b981) B monogram to blue (#45aeee) F monogram
+  - Geometric bold F — top bar, crossbar, vertical stem, optically centered
+  - Regenerated all PNGs: 512, 192, 180 (apple-touch), 48, maskable 1024, favicon.ico
+
 - **Tightened pattern compliance after review:**
   - BurgerMenu: removed redundant `truncate` from button (inner span handles it correctly for flex layout)
   - Inline pill embed skip: wrapped load timer + pill creation in `window.self === window.top` guard, matching the Vue DebugPill skip in main.ts — prevents orphaned inline pill in iframes
