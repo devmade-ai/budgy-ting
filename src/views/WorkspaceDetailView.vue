@@ -234,6 +234,7 @@ const menuActions: Array<{ label: string; icon: Component; action: () => void }>
     <!-- Mobile bottom sheet (visible only on mobile) -->
     <BottomSheet
       :open="actionsMenuOpen"
+      aria-label="Workspace actions"
       class="sm:hidden"
       @close="actionsMenuOpen = false"
     >

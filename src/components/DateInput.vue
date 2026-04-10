@@ -24,7 +24,7 @@ defineProps<{
       :id="id"
       v-model="model"
       type="date"
-      class="input input-bordered w-full text-base pr-9"
+      class="input input-bordered w-full text-base min-h-[44px] pr-9"
       :min="min"
     />
     <Calendar
