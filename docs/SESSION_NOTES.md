@@ -29,4 +29,4 @@ All work complete and pushed. TypeScript + Vite build + 106 tests pass.
 - CashflowGraph reads theme colors at runtime via `useThemeColor.ts` (canvas pixel conversion)
 - DebugPill migrated to Tailwind/DaisyUI classes + resolveThemeColor for log colors
 - Pre-framework inline pill in index.html stays hardcoded (handles CSS-not-loaded case)
-- glow-props pattern sync remaining: EVENT_BUS
+- glow-props patterns: all complete. EVENT_BUS evaluated and skipped (no service-layer pub/sub needs)
