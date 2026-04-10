@@ -38,6 +38,7 @@ const transactions = ref<Transaction[]>([])
 const patterns = ref<RecurringPattern[]>([])
 const error = ref('')
 const cashOnHand = ref<number | null>(props.workspace.cashOnHand)
+const forecastMonths = ref(3)
 
 // ML tag suggestions
 const { preloadModel, suggestTags, inferring, dispose } = useTagSuggestions()
@@ -65,13 +66,13 @@ onUnmounted(() => {
   dispose()
 })
 
-// Compute forecast (90 days ahead from today)
+// Compute forecast (user-selectable horizon, default 3 months)
 const forecast = computed<ForecastResult | null>(() => {
   if (transactions.value.length === 0 && patterns.value.length === 0) return null
 
   const today = new Date()
   const startDate = formatDate(today)
-  const endDate = formatDate(new Date(today.getFullYear(), today.getMonth() + 3, today.getDate()))
+  const endDate = formatDate(new Date(today.getFullYear(), today.getMonth() + forecastMonths.value, today.getDate()))
 
   return buildForecast(transactions.value, patterns.value, startDate, endDate)
 })
@@ -196,6 +197,8 @@ async function handleRequestSuggestions(id: string, description: string) {
       :forecast-points="forecast?.daily ?? []"
       :runway="runway"
       :currency-label="workspace.currencyLabel"
+      :forecast-months="forecastMonths"
+      @update:forecast-months="forecastMonths = $event"
     />
 
     <!-- Metrics grid -->

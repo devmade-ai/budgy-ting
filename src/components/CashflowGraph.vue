@@ -22,10 +22,25 @@ const props = defineProps<{
   forecastPoints: DailyForecastPoint[]
   runway: RunwayResult | null
   currencyLabel: string
+  forecastMonths: number
+}>()
+
+const emit = defineEmits<{
+  'update:forecastMonths': [months: number]
 }>()
 
 const chartMode = ref<'cumulative' | 'daily'>('cumulative')
 const { isDark } = useDarkMode()
+
+// Requirement: User-selectable forecast horizon
+// Approach: Preset buttons emit to parent (WorkspaceDashboard) which owns the
+//   forecast computation. Separate from lookback presets — different concerns.
+const forecastHorizonOptions: { value: number; label: string }[] = [
+  { value: 1, label: '1M' },
+  { value: 3, label: '3M' },
+  { value: 6, label: '6M' },
+  { value: 12, label: '1Y' },
+]
 
 // Requirement: Preset timeline ranges instead of drag-to-zoom
 // Approach: Button group with lookback periods from today. Forecast (future data)
@@ -275,16 +290,34 @@ const hasData = computed(() => actualPoints.value.length > 0 || props.forecastPo
         </button>
       </div>
 
-      <div class="join ml-auto">
-        <button
-          v-for="opt in timeRangeOptions"
-          :key="opt.value"
-          class="join-item btn btn-sm"
-          :class="timeRange === opt.value ? 'btn-active' : ''"
-          @click="timeRange = opt.value"
-        >
-          {{ opt.label }}
-        </button>
+      <div class="flex flex-wrap items-center gap-2 ml-auto">
+        <!-- Lookback range -->
+        <span class="text-xs text-base-content/50">History</span>
+        <div class="join">
+          <button
+            v-for="opt in timeRangeOptions"
+            :key="opt.value"
+            class="join-item btn btn-sm"
+            :class="timeRange === opt.value ? 'btn-active' : ''"
+            @click="timeRange = opt.value"
+          >
+            {{ opt.label }}
+          </button>
+        </div>
+
+        <!-- Forecast horizon -->
+        <span class="text-xs text-base-content/50">Forecast</span>
+        <div class="join">
+          <button
+            v-for="opt in forecastHorizonOptions"
+            :key="opt.value"
+            class="join-item btn btn-sm"
+            :class="forecastMonths === opt.value ? 'btn-active' : ''"
+            @click="emit('update:forecastMonths', opt.value)"
+          >
+            {{ opt.label }}
+          </button>
+        </div>
       </div>
     </div>
 

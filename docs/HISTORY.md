@@ -7,6 +7,9 @@
 - **Chart timeline presets replace drag-to-zoom:**
   Disabled x-axis drag-to-zoom. Added preset timeline buttons (1W, 1M, 3M, 6M, 1Y, All) right-aligned next to the cumulative/daily toggle. Presets set xaxis min as a lookback from today — forecast data (future) is always visible. "All" shows the full range. Chart re-renders on range change via `:key` binding.
 
+- **User-selectable forecast horizon:**
+  Added separate forecast preset buttons (1M, 3M, 6M, 1Y) next to the history lookback presets. Defaults to 3M (matching previous hardcoded 90 days). State lives in WorkspaceDashboard (drives forecast computation), CashflowGraph emits changes via `update:forecastMonths`. Labels ("History" / "Forecast") distinguish the two control groups.
+
 - **Fixed PWA update banner persisting after update applied:**
   `checkVersionUpdate()` only stored the new `buildTime` in localStorage on the no-change path. When a change was detected, it returned `true` without updating localStorage, so every subsequent check (visibility-based or manual) after the 30s suppression window re-detected the same "update." Fix: always persist `buildTime` before the comparison check.
 
