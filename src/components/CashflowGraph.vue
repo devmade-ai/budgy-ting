@@ -151,8 +151,13 @@ const chartOptions = computed(() => {
       id: 'cashflow-graph',
       type: 'line' as const,
       height: chartHeight.value,
-      toolbar: { show: true, tools: { download: true, zoom: true, pan: true, reset: true } },
-      zoom: { enabled: true },
+      // Requirement: Hide toolbar but keep x-axis drag-to-zoom functional
+      // Approach: toolbar hidden, zoom restricted to x-axis only
+      // Alternatives:
+      //   - Keep toolbar visible: Rejected — user prefers cleaner look
+      //   - Disable zoom entirely: Rejected — x-axis zoom is useful for date ranges
+      toolbar: { show: false },
+      zoom: { enabled: true, type: 'x' as const },
       fontFamily: 'inherit',
       background: 'transparent',
     },
@@ -193,11 +198,18 @@ const chartOptions = computed(() => {
       borderColor: gridColor,
       strokeDashArray: 4,
     },
+    // Requirement: Legend below chart for cleaner layout
     legend: {
-      position: 'top' as const,
-      horizontalAlign: 'left' as const,
+      position: 'bottom' as const,
+      horizontalAlign: 'center' as const,
       fontSize: '12px',
       labels: { colors: labelColor },
+    },
+    // Requirement: Subtle markers visible on hover only
+    // Approach: Zero-size markers that expand on hover — no clutter, clear interaction
+    markers: {
+      size: 0,
+      hover: { sizeOffset: 4 },
     },
     noData: {
       text: 'No data for selected period',

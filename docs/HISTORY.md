@@ -4,6 +4,13 @@
 
 ## 2026-04-10
 
+- **Chart UX improvements (CashflowGraph):**
+  - Moved legend from top to bottom (centered) for cleaner layout
+  - Hidden toolbar (download/zoom/pan/reset buttons) for minimal look
+  - Restricted zoom to x-axis only (drag-to-zoom on date range still works)
+  - Added hover-only markers (zero-size, expand +4px on hover) for interaction feedback without clutter
+  - Curve type confirmed as smooth (already was)
+
 - **Fixed demo workspace not showing on first load:**
   Race condition in `main.ts` — `seedDemoWorkspace()` ran non-blocking (`.then()`) while `app.mount()` fired synchronously. `WorkspaceListView.onMounted` queried the DB before seeding committed, returning an empty array. Fix: wrapped boot sequence in async IIFE, `await seedDemoWorkspace()` before `app.mount()`. DebugPill import changed from static to dynamic (`await import()`) to work inside the async IIFE. ~100ms first-visit cost (subsequent visits skip seeding immediately).
 
