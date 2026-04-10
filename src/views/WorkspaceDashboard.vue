@@ -92,6 +92,10 @@ onUnmounted(() => {
 })
 
 // Compute forecast (user-selectable horizon, default 3 months)
+// Note: Date constructor rolls over when day exceeds the target month's length
+// (e.g., Jan 31 + 1 month = Mar 3 since Feb 31 doesn't exist). This gives
+// slightly more than the requested months, which is preferred for forecasts —
+// showing a few extra days is better than clipping short.
 const forecast = computed<ForecastResult | null>(() => {
   if (transactions.value.length === 0 && patterns.value.length === 0) return null
 

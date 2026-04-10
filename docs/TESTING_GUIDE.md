@@ -12,6 +12,8 @@ Run through this checklist after any change to verify nothing is broken:
 - [ ] Home page lists existing workspaces (demo workspace on first visit)
 - [ ] Can create a new workspace (both monthly and custom period types)
 - [ ] Can open a workspace and see single-screen dashboard (graph, metrics, transactions)
+- [ ] Chart controls work: History presets (1W–All), Forecast presets (1M–1Y), Cumulative/Daily toggle
+- [ ] Forecast preset persists after navigating away and back
 - [ ] Cash on hand input shows runway result on dashboard
 - [ ] Can import a CSV file through the 2-step wizard (upload, review & import)
 - [ ] Transactions appear in the table after import
@@ -206,6 +208,7 @@ Run through this checklist after any change to verify nothing is broken:
 2. Tap **1W** in the History presets
 3. Tap **1Y** in the Forecast presets
 4. Toggle between **Cumulative** and **Daily net**
+5. Navigate back to workspace list, then re-open the same workspace
 
 **Expected:**
 - History presets (1W/1M/3M/6M/1Y/All) control how far back the chart shows
@@ -214,6 +217,7 @@ Run through this checklist after any change to verify nothing is broken:
 - Switching presets re-renders the chart immediately
 - On mobile: mode toggle stacks above the timeline presets, buttons shrink to fit
 - Default state: History=All, Forecast=3M
+- After step 5: Forecast preset restored to 1Y (persisted), History resets to All (not persisted)
 
 #### 2.3 Cash on Hand — Runs Out
 
