@@ -23,15 +23,15 @@ export const themeCombos: ThemeCombo[] = [
     label: 'Vivid',
     light: 'cmyk',
     dark: 'night',
-    metaColorLight: '#45b5e6',
-    metaColorDark: '#0f1729',
+    metaColorLight: '#45aeee',
+    metaColorDark: '#0f172a',
   },
   {
     id: 'classic',
     label: 'Classic',
     light: 'lofi',
     dark: 'black',
-    metaColorLight: '#808080',
+    metaColorLight: '#0d0d0d',
     metaColorDark: '#000000',
   },
   {
@@ -40,7 +40,7 @@ export const themeCombos: ThemeCombo[] = [
     light: 'emerald',
     dark: 'forest',
     metaColorLight: '#66CC8A',
-    metaColorDark: '#1a2e1a',
+    metaColorDark: '#1b1717',
   },
 ]
 
