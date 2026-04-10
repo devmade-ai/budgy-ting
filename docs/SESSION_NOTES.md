@@ -27,5 +27,6 @@ All work complete and pushed. TypeScript + Vite build + 106 tests pass.
 - Flash prevention script also updates meta theme-color pre-paint
 - `@theme` block removed entirely — all colors from DaisyUI tokens
 - CashflowGraph reads theme colors at runtime via `useThemeColor.ts` (canvas pixel conversion)
-- DebugPill intentionally NOT migrated (inline styles, CSS-independent)
+- DebugPill migrated to Tailwind/DaisyUI classes + resolveThemeColor for log colors
+- Pre-framework inline pill in index.html stays hardcoded (handles CSS-not-loaded case)
 - glow-props pattern sync remaining: EVENT_BUS
