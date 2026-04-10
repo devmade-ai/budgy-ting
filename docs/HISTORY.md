@@ -4,7 +4,7 @@
 
 ## 2026-04-10
 
-- **Fixed runway depletion log severity:** Changed from `warn` to `error` — cash hitting zero is the bad outcome, not a heads-up
+- **Fixed runway depletion log severity:** Changed from `warn` to `info` — depletion is a data outcome, not an app problem. Debug log severities reflect app health, not user finances
 
 - **Fixed debug pill not scaling to screen width:**
   - Expanded panel: `w-[360px]` → `w-[calc(100vw-2rem)] max-w-[360px]` so it shrinks on narrow viewports

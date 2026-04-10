@@ -88,7 +88,7 @@ export function calculateRunway(
         minimumBalanceDate: minDate,
         dailyBalance,
       }
-      debugLog('engine', 'error', 'Runway depleted', {
+      debugLog('engine', 'info', 'Runway depleted', {
         daysRemaining: result.daysRemaining,
         depletionDate: result.depletionDate,
         minimumBalance: result.minimumBalance,
