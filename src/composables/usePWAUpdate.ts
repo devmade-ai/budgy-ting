@@ -100,11 +100,15 @@ async function checkVersionUpdate(): Promise<boolean> {
     if (!res.ok) return false
     const { buildTime } = await res.json()
     const stored = localStorage.getItem(VERSION_KEY)
+    // Always persist the latest buildTime so a detected change is only
+    // reported once. Previously, localStorage was only set on the no-change
+    // path, causing every subsequent check to re-detect the same "update"
+    // after the 30-second suppression window expired.
+    localStorage.setItem(VERSION_KEY, buildTime)
     if (stored && stored !== buildTime) {
       debugLog('pwa', 'info', 'New app version detected via version.json', { stored, buildTime })
       return true
     }
-    localStorage.setItem(VERSION_KEY, buildTime)
     return false
   } catch { return false }
 }

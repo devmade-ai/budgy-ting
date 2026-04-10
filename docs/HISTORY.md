@@ -4,6 +4,9 @@
 
 ## 2026-04-10
 
+- **Fixed PWA update banner persisting after update applied:**
+  `checkVersionUpdate()` only stored the new `buildTime` in localStorage on the no-change path. When a change was detected, it returned `true` without updating localStorage, so every subsequent check (visibility-based or manual) after the 30s suppression window re-detected the same "update." Fix: always persist `buildTime` before the comparison check.
+
 - **Chart UX improvements (CashflowGraph):**
   - Legend stays at top (left-aligned) — toolbar hidden frees up that space
   - Hidden toolbar (download/zoom/pan/reset buttons) for minimal look
