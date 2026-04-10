@@ -19,16 +19,6 @@
    Required alongside DaisyUI's data-theme for Tailwind dark: utilities. */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Chart data colors — fixed semantic meanings, constant across DaisyUI themes.
-   These are NOT brand colors — DaisyUI's theme (primary, secondary, etc.) IS the brand.
-   Chart series use hardcoded hex directly (ApexCharts doesn't support CSS vars).
-   These exist for potential non-chart UI that needs fixed data-meaning colors. */
-@theme {
-  --color-overspend: #ef4444;
-  --color-underspend: #22c55e;
-  /* Renamed from --color-neutral to avoid conflict with DaisyUI's `neutral` semantic color. */
-  --color-data-neutral: #6b7280;
-}
 
 /* Native form inputs, selects, scrollbars must match theme.
    Without color-scheme, they stay light-themed in dark mode. */

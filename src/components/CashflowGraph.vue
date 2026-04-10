@@ -12,6 +12,7 @@ import { computed, ref, onMounted, onUnmounted } from 'vue'
 import VueApexCharts from 'vue3-apexcharts'
 import { LineChart } from 'lucide-vue-next'
 import { useDarkMode } from '@/composables/useDarkMode'
+import { resolveThemeColor } from '@/composables/useThemeColor'
 import type { Transaction } from '@/types/models'
 import type { DailyForecastPoint } from '@/engine/forecast'
 import type { RunwayResult } from '@/engine/runway'
@@ -130,20 +131,20 @@ const chartOptions = computed(() => {
   const seriesCount = series.value.length
   const strokeWidths = Array(seriesCount).fill(2) as number[]
   const dashArray = series.value.map((s) => s.name === 'Forecast' ? 5 : 0)
+  // Requirement: Chart colors must come from DaisyUI theme tokens
+  // Approach: resolveThemeColor reads computed oklch values from <html> and
+  //   converts to hex via canvas pixel — ApexCharts can't use CSS variables.
+  //   Colors re-resolve on every chartOptions recompute (isDark triggers this).
   const colors = series.value.map((s) => {
-    if (s.name === 'Actuals') return '#3b82f6'
-    if (s.name === 'Forecast') return '#f59e0b'
-    if (s.name === 'Cash balance') return '#10b981'
-    return '#6b7280'
+    if (s.name === 'Actuals') return resolveThemeColor('--color-info', '#3b82f6')
+    if (s.name === 'Forecast') return resolveThemeColor('--color-warning', '#f59e0b')
+    if (s.name === 'Cash balance') return resolveThemeColor('--color-success', '#10b981')
+    return resolveThemeColor('--color-base-content', '#6b7280')
   })
 
-  // Chart colors adapt to dark mode — hardcoded hex values required by ApexCharts
-  // (it doesn't support CSS variables in config objects)
-  const labelColor = isDark.value ? '#a1a1aa' : '#9ca3af'
-  const titleColor = isDark.value ? '#a1a1aa' : '#6b7280'
-  const gridColor = isDark.value ? '#27272a' : '#f3f4f6'
+  const labelColor = resolveThemeColor('--color-base-content', '#9ca3af')
+  const gridColor = resolveThemeColor('--color-base-300', '#e5e7eb')
   const tooltipTheme = isDark.value ? 'dark' : 'light'
-  const legendColor = isDark.value ? '#d4d4d8' : undefined
 
   return {
     chart: {
@@ -176,7 +177,7 @@ const chartOptions = computed(() => {
       },
       title: {
         text: chartMode.value === 'cumulative' ? 'Cumulative' : 'Daily Net',
-        style: { fontSize: '12px', color: titleColor },
+        style: { fontSize: '12px', color: labelColor },
       },
     },
     tooltip: {
@@ -196,7 +197,7 @@ const chartOptions = computed(() => {
       position: 'top' as const,
       horizontalAlign: 'left' as const,
       fontSize: '12px',
-      labels: { colors: legendColor },
+      labels: { colors: labelColor },
     },
     noData: {
       text: 'No data for selected period',
