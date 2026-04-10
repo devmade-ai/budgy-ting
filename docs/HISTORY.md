@@ -6,6 +6,14 @@
 
 - **Fixed runway depletion log severity:** Changed from `warn` to `info` — depletion is a data outcome, not an app problem. Debug log severities reflect app health, not user finances
 
+- **glow-props pattern compliance — closed remaining gaps:**
+  - BURGER_MENU: Added `destructive` and `external` properties to MenuItem interface + template styling (red text for destructive, ExternalLink icon for external)
+  - DEBUG_SYSTEM: Added static `#debug-root` div to index.html (was created dynamically in main.ts)
+  - DEBUG_SYSTEM: Added subscriber replay — new subscribers immediately receive existing entries
+  - DEBUG_SYSTEM: Added embed mode skip — debug pill not mounted in iframe/embed contexts
+  - DOWNLOAD_PDF: Already complete (window.print() trigger exists in WorkspaceDetailView)
+  - EVENT_BUS: Already evaluated and skipped (no service-layer pub/sub needs)
+
 - **Fixed inline debug pill (index.html) same width overflow:** `width:320px` → `width:calc(100vw - 2rem);max-width:320px` — mirrors the DebugPill.vue fix
 
 - **Fixed debug pill not scaling to screen width:**

@@ -40,7 +40,7 @@ let unsubscribe: (() => void) | null = null
 let copyFeedbackTimer: ReturnType<typeof setTimeout> | null = null
 
 onMounted(() => {
-  entries.value = [...getEntries()]
+  // subscribe() replays existing entries automatically — no manual getEntries() needed
   unsubscribe = subscribe(() => {
     entries.value = [...getEntries()]
   })

@@ -41,14 +41,16 @@ if (typeof (window as any).__debugClearLoadTimer === 'function') {
 
 // Mount debug pill in a separate Vue root so it survives main app crashes.
 // Requirement: Diagnostics must remain visible even if the main app errors.
-// Approach: Separate root element + app instance, no router dependency.
+// Approach: Static #debug-root in index.html + separate app instance, no router dependency.
+// Skipped in embed/iframe contexts — debug pill is only useful in the main window.
 import DebugPill from './debug/DebugPill.vue'
 
-const debugRoot = document.createElement('div')
-debugRoot.id = 'debug-root'
-document.body.appendChild(debugRoot)
-
-const debugApp = createApp(DebugPill)
-debugApp.mount(debugRoot)
-
-debugLog('boot', 'success', 'Debug pill mounted')
+const isEmbed = window.self !== window.top
+if (!isEmbed) {
+  const debugRoot = document.getElementById('debug-root')
+  if (debugRoot) {
+    const debugApp = createApp(DebugPill)
+    debugApp.mount(debugRoot)
+    debugLog('boot', 'success', 'Debug pill mounted')
+  }
+}
