@@ -15,16 +15,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" shape-rendering="geometricPrecision">
   <rect width="512" height="512" rx="92" fill="#45aeee"/>
   <path fill="white" d="
-    M 152 108
-    H 372
+    M 146 108
+    H 366
     V 168
-    H 216
+    H 210
     V 232
-    H 340
+    H 334
     V 292
-    H 216
+    H 210
     V 404
-    H 152
+    H 146
     Z
   "/>
 </svg>
