@@ -84,6 +84,7 @@ src/
 │   ├── useFormValidation.ts       # Shared validation rules (required, dateAfter)
 │   ├── useFormat.ts               # formatAmount() number formatting
 │   ├── useHaptic.ts               # Haptic feedback for touch interactions
+│   ├── useIconRefresh.ts          # Standalone-PWA icon-hash watcher + reinstall banner
 │   ├── useId.ts                   # generateId() UUID generation
 │   ├── useInstallReminder.ts      # Delayed PWA install re-prompt
 │   ├── usePagination.ts           # Paginated list state management

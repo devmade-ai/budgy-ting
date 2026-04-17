@@ -12,7 +12,7 @@ It destroys the session — the input modal covers context the user needs to rea
 
 ---
 
-# READ AND FOLLOW THE FUCKING PROCESS, PRINCIPLES, CODE STANDARDS, DOCUMENTATION, AI NOTES, TRIGGERS, AND PROHIBITIONS EVERY TIME
+# READ AND FOLLOW THE FUCKING PROCESS, PRINCIPLES, COMMUNICATION, CODE STANDARDS, DOCUMENTATION, AI NOTES, TRIGGERS, AND PROHIBITIONS EVERY TIME
 
 ## Cross-Project Reference
 
@@ -43,6 +43,22 @@ All shared implementation patterns are maintained in the **glow-props** repo (`d
 
 ### REMINDER: READ AND FOLLOW THE FUCKING PRINCIPLES EVERY TIME
 
+## Communication
+
+Respond as if talking to yourself. Peer-to-peer, no servility.
+
+- **Direct.** No filler, no preamble, no conversational padding. State facts and actions.
+- **No sycophancy.** No "great question", "you're absolutely right", "excellent point". Acknowledge errors briefly and move on.
+- **No hedging.** Commit to a position. "I think" / "perhaps" only when genuinely uncertain.
+- **Proper solutions only.** Always suggest the right fix, not a quick hack. If the proper solution is complex, explain why the shortcut is wrong and lay out the real approach.
+- **Ask before assuming.** When a user reports a bug or makes a request, ask clarifying questions until you are certain you understand the requirement. Don't guess the cause and build a fix on an assumption — one wrong assumption wastes multiple commits.
+- **Always ask at least one question before starting work.** This is the minimum bar. Even when the request seems clear, verify scope, constraints, or intent before writing code.
+- **Concrete options.** When clarification is needed, list numbered options — never open-ended questions.
+- **Assume competence.** The reader is a developer. Don't over-explain basics.
+- **Push back.** Disagree when warranted. State your view first, then ask if they want to proceed differently.
+
+### REMINDER: READ AND FOLLOW THE COMMUNICATION RULES EVERY TIME
+
 ## Project Status
 
 Current working features:
@@ -61,12 +77,13 @@ Current working features:
 - Transaction edit modal with read-only view mode
 - Export/import/restore workspace data as JSON
 - PWA: offline-first, installable, service worker update prompt, manual update check, visibility-based update checks, 30s post-update suppression, 7-browser Chromium detection, iOS non-Safari redirect, ChunkLoadError lazy retry, version.json supplementary detection
+- PWA icon cache-busting: content-hashed `?v=<sha256-8>` on every icon URL (HTML link tags + manifest), Workbox `ignoreURLParametersMatching: [/^v$/]`, version.json carries `iconsHash`, standalone-mode reinstall banner when the OS-cached launcher icon goes stale (detected via useIconRefresh)
 - Debug pill (alpha): floating diagnostic panel with log + environment + PWA diagnostics tabs, inline styles (CSS-independent), console interception, pre-framework inline pill with 20s load timeout
 - Tag autocomplete from tagCache + pattern tags + ML suggestions
 - Duplicate detection on import (date + amount + description)
 - Pull-to-refresh, haptic feedback, bottom sheet modal
 - Dark mode: DaisyUI dual-layer theming (data-theme + .dark class), named combos (Approach B, single "Vivid" combo: cmyk/night), user-controlled toggle, system preference fallback, localStorage persistence, cross-tab sync, flash prevention, print overrides
-- Save as PDF: window.print() via workspace actions menu, full print CSS (no-print classes, forced light mode, all transactions, table layout, static cash display, ApexCharts overrides)
+- Save as PDF: window.print() via the per-workspace 3-dot actions menu (contextual to dashboard, co-located with Export/Edit), full print CSS (no-print classes, forced light mode, all transactions, table layout, static cash display, ApexCharts overrides)
 
 **Database:** Schema v8 (8 tables: workspaces, transactions, patterns, importBatches, tagCache, embeddingCache + 2 legacy)
 **Tech stack:** Vue 3 + TypeScript + Tailwind CSS v4 + DaisyUI v5 + Dexie.js + vite-plugin-pwa + ApexCharts + simple-statistics + Transformers.js (Web Worker)
@@ -210,28 +227,15 @@ All projects follow this scale to prevent stacking conflicts between the burger 
 
 **Purpose:** AI-managed backlog of ideas and potential improvements.
 **When to read:** When looking for work to do, or when the user asks about pending tasks.
-**When to update:** When noticing potential improvements. Move completed items to HISTORY.md.
+**When to update:** When noticing potential improvements. Delete completed items (git history tracks them).
 **What to include:**
 
 - Group by category (Features, UX, Technical, etc.)
 - Use `- [ ]` for pending items only
 - Brief description of what and why
-- When complete, move to HISTORY.md (don't keep in TODO)
+- When complete, delete the item (git history tracks what was done)
 
 **Why:** User reviews this to prioritize work. Keeps TODO focused on pending items only.
-
-### `docs/HISTORY.md`
-
-**Purpose:** Changelog and record of completed work.
-**When to read:** When you need historical context about why something was built a certain way.
-**When to update:** When completing TODO items or making significant changes.
-**What to include:**
-
-- Completed TODO items (organized by category)
-- Bug fixes and changes (organized by date)
-- Brief description of what was done
-
-**Why:** Historical context separate from active TODO. Tracks what's been accomplished.
 
 ### `docs/USER_ACTIONS.md`
 
@@ -314,10 +318,8 @@ All projects follow this scale to prevent stacking conflicts between the burger 
 - Check for existing patterns in the codebase before creating new ones
 - Commit and push changes before ending a session
 - Clean up completed or obsolete docs/files and remove references to them
-- **ASK before assuming.** When a user reports a bug, ask clarifying questions (which mode? what did you type? what do you see?) BEFORE writing code. Don't guess the cause and build a fix on an assumption - you'll waste time fixing the wrong thing. One clarifying question saves multiple wrong commits.
 - **Always read files before editing.** Use the Read tool on every file before attempting to Edit it. Editing without reading first will fail.
-- **Docs are part of the task, not a follow-up.** Before committing any fix or feature: update TODO.md (remove completed, add deferred), update HISTORY.md (record what was done). Commit code + docs together. NEVER commit code changes without updating docs in the same commit. See AI_MISTAKES.md entry from 2026-03-13.
-- **Communication style:** Direct, concise responses. No filler phrases or conversational padding. State facts and actions. Ask specific questions with concrete options when clarification is needed.
+- **Docs are part of the task, not a follow-up.** Before committing any fix or feature: update TODO.md (remove completed, add deferred). Commit code + docs together. NEVER commit code changes without updating docs in the same commit. See AI_MISTAKES.md entry from 2026-03-13.
 - **NEVER use the AskUserQuestion tool.** It breaks the session UI — the input modal covers context, gets stuck awaiting input, and disrupts workflow. If you need user input, list options as numbered text in your response and let the user reply with a number or text. This is a hard rule with zero exceptions.
 - **Development phase:** App is pre-release with zero users. Features added now are provisional and will be changed or removed later. Don't over-polish or over-engineer — keep things easy to swap out. Don't push back on feature ideas based on "users don't need this" — there are no users yet, and the goal is exploration.
 - **Check build tools before building.** Run `npm install` or verify `node_modules/.bin/vite` exists before attempting `npm run build`. The `sharp` package may not be installed (used by prebuild icon generation), so use `./node_modules/.bin/vite build` directly to skip the prebuild step if sharp fails.
@@ -370,6 +372,12 @@ Or use `$(printenv GITHUB_ALL_REPO_TOKEN)` with curl (see AI Notes for proxy han
 4. **Adapt React examples to Vue 3 Composition API** when implementing patterns from glow-props
 5. **Check for updates before implementing** — patterns evolve; the source always has the latest version
 6. **If glow-props is unreachable**, note it and defer — do not reconstruct patterns from memory
+
+### Not Applicable Patterns
+
+Patterns explicitly decided against for this project. Don't re-evaluate without new evidence.
+
+- **EVENT_BUS** — decided against. No cross-service pub/sub need surfaced. The app is a thin Vue shell over Dexie; component state uses Vue reactivity + `provide`/`inject`, persistent state lives in Dexie (liveQuery covers the reactive-read use case), and ML workers communicate via `postMessage`. Adding an event bus would be infrastructure without a consumer.
 
 ## Prohibitions
 

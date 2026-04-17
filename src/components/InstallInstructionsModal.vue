@@ -18,6 +18,19 @@ import { usePWAInstall } from '@/composables/usePWAInstall'
 import { useDialogA11y } from '@/composables/useDialogA11y'
 import { Share, PlusSquare, Check, Menu, MoreVertical, Download, AlertTriangle } from 'lucide-vue-next'
 
+const props = withDefaults(
+  defineProps<{
+    /**
+     * When true, the "already installed and the icon looks outdated?"
+     * collapsible opens by default — used when the modal is launched from
+     * the icon-refresh banner so the relevant content is the first thing
+     * the user sees.
+     */
+    expandReinstall?: boolean
+  }>(),
+  { expandReinstall: false },
+)
+
 const emit = defineEmits<{
   close: []
 }>()
@@ -38,6 +51,11 @@ interface InstructionSet {
   title: string
   steps: InstructionStep[]
   note?: string
+}
+
+interface ReinstallInstructions {
+  title: string
+  body: string
 }
 
 const instructions = computed<InstructionSet>(() => {
@@ -127,6 +145,35 @@ const instructions = computed<InstructionSet>(() => {
       }
   }
 })
+
+// Requirement: OS icon caches (iOS Springboard, Android launcher, Windows, macOS
+//   dock) persist across browser site-data clears. An installed PWA that updated
+//   its icon still shows the old icon until the user uninstalls and reinstalls.
+// Approach: Platform-specific reinstall instructions in a collapsible. Uses
+//   native <details>/<summary> (works with DaisyUI `collapse` classes in v5,
+//   zero JS, accessible by default). Collapsed by default so first-time
+//   installers stay focused on the main install flow.
+// Reference: glow-props docs/implementations/PWA_ICON_CACHE_BUST.md
+const reinstallInstructions = computed<ReinstallInstructions>(() => {
+  if (isIOS) {
+    return {
+      title: 'Already installed and the icon looks outdated?',
+      body: 'Your phone keeps app icons cached separately from Safari. Press and hold the Farlume icon on your home screen, tap "Remove App" then "Delete App", then reinstall from Safari using the Share button → "Add to Home Screen".',
+    }
+  }
+
+  if (/android/i.test(navigator.userAgent)) {
+    return {
+      title: 'Already installed and the icon looks outdated?',
+      body: 'Your phone keeps app icons cached separately from your browser. Press and hold the Farlume icon on your home screen, tap "App info" → "Uninstall", then reinstall from this browser using the install prompt or menu.',
+    }
+  }
+
+  return {
+    title: 'Already installed and the icon looks outdated?',
+    body: 'Your computer keeps app icons cached separately from your browser. Open Farlume, click the three-dot menu in the app window, choose "Uninstall", then reinstall from the browser address bar install icon.',
+  }
+})
 </script>
 
 <template>
@@ -192,6 +239,18 @@ const instructions = computed<InstructionSet>(() => {
             </li>
           </ul>
         </div>
+
+        <!-- Reinstall hint for users whose OS-cached icon didn't refresh.
+             `open` binds to props.expandReinstall so the icon-refresh banner
+             can launch the modal with this section already visible. -->
+        <details :open="props.expandReinstall" class="mt-4 border-t border-base-300 pt-3">
+          <summary class="text-xs text-base-content/60 cursor-pointer hover:text-base-content">
+            {{ reinstallInstructions.title }}
+          </summary>
+          <p class="text-xs text-base-content/60 mt-2 leading-relaxed">
+            {{ reinstallInstructions.body }}
+          </p>
+        </details>
 
         <button
           class="btn btn-ghost w-full mt-4"

@@ -60,14 +60,13 @@
 
 ## Documentation updates treated as afterthought, not part of the task (2026-03-13)
 
-**What went wrong:** After fixing 8 review findings (kebab hint, pull-to-refresh, ML retry, transaction deletion, etc.), committed and pushed the code changes without updating TODO.md (remove completed items, add deferred items) or HISTORY.md. User had to explicitly ask "everything documented in TODO that was deferred?" to trigger the doc updates.
+**What went wrong:** After fixing 8 review findings (kebab hint, pull-to-refresh, ML retry, transaction deletion, etc.), committed and pushed the code changes without updating TODO.md (remove completed items, add deferred items). User had to explicitly ask "everything documented in TODO that was deferred?" to trigger the doc updates.
 
 **Why it happened:** Treated documentation as a separate cleanup task instead of an integral part of each fix. The mental model was "fix → commit → docs later" instead of the correct "fix → update docs → commit."
 
 **How to prevent it:** Documentation updates are part of the task, not a follow-up. Before committing any fix batch:
 1. Update TODO.md — remove completed items, add any deferred findings
-2. Update HISTORY.md — record what was done
-3. Then commit everything together
+2. Then commit everything together
 This is explicitly documented in CLAUDE.md Documentation section: "Update them as you work — don't wait for the user to ask."
 
 ## Build verification didn't match CI pipeline (2026-03-30)
