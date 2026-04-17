@@ -138,10 +138,20 @@ async function deleteWorkspace() {
 }
 
 // Requirement: "Save as PDF" button — triggers browser print dialog for PDF export
-// Approach: window.print() with existing @media print CSS (no-print hides interactive elements)
+// Approach: window.print() with existing @media print CSS (no-print hides
+//   interactive elements). The button lives in the per-workspace 3-dot actions
+//   menu alongside Export + Edit, because printing a dashboard only makes
+//   sense on a workspace page.
 // Alternatives:
-//   - pdf-lib: Rejected — text-heavy dashboard is better served by native print (searchable, zero deps)
-//   - Screenshot-to-PDF: Rejected — loses text selectability, larger file size
+//   - Burger menu entry (fleet-consistent): Rejected — burger menu is global;
+//     a "Save as PDF" there would either print nothing on non-workspace pages
+//     or require route-aware visibility logic that's less discoverable than
+//     sitting next to the other workspace actions.
+//   - Flat toolbar button: Rejected — collapsing multiple actions into one
+//     dropdown keeps the workspace header uncluttered on mobile.
+//   - pdf-lib: Rejected — text-heavy dashboard is better served by native
+//     print (searchable, zero deps).
+//   - Screenshot-to-PDF: Rejected — loses text selectability, larger file size.
 function handlePrint() {
   actionsMenuOpen.value = false
   window.print()

@@ -12,6 +12,7 @@
 import { ref, computed, provide, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePWAUpdate } from '@/composables/usePWAUpdate'
+import { useIconRefresh } from '@/composables/useIconRefresh'
 import { useTutorial } from '@/composables/useTutorial'
 import { useDarkMode } from '@/composables/useDarkMode'
 import { useRestoreWorkspace } from '@/composables/useRestoreWorkspace'
@@ -37,6 +38,7 @@ const sampleCsvMd = 'Copy this sample data to test the import wizard, or use it 
 
 const router = useRouter()
 const { hasUpdate, offlineReady, checking, updateApp, checkForUpdate } = usePWAUpdate()
+const { iconNeedsRefresh, checkIconsHash, dismissIconRefresh } = useIconRefresh()
 const { showTutorial, showIfFirstVisit, openTutorial, dismissTutorial } = useTutorial()
 const { isDark, toggle: toggleDarkMode } = useDarkMode()
 
@@ -55,6 +57,21 @@ const restore = useRestoreWorkspace(async () => {
 provide('triggerRestore', restore.triggerFilePicker)
 
 const showInstructions = ref(false)
+// When the install modal is opened from the icon-refresh banner we want the
+// reinstall collapsible pre-expanded so the user lands on the relevant content.
+const expandReinstall = ref(false)
+
+function openInstallInstructions(options: { expandReinstall?: boolean } = {}) {
+  expandReinstall.value = options.expandReinstall === true
+  showInstructions.value = true
+}
+
+function handleIconRefreshShowHow() {
+  // User still needs to see "your icon is stale" as acknowledged so the
+  // banner stops reappearing. Opening the modal IS the acknowledgement.
+  dismissIconRefresh()
+  openInstallInstructions({ expandReinstall: true })
+}
 
 // Help drawer state
 type DrawerContent = 'user-guide' | 'testing-guide' | 'import-format' | 'sample-csv' | null
@@ -87,15 +104,27 @@ function onAfterPrint() {
   }
 }
 
+// Throttled icon-hash check on tab focus — piggy-backs on visibilitychange
+// so the banner surfaces when the user returns from a backgrounded tab.
+function onVisibilityChange() {
+  if (document.visibilityState === 'visible') {
+    void checkIconsHash()
+  }
+}
+
 onMounted(() => {
   showIfFirstVisit()
   window.addEventListener('beforeprint', onBeforePrint)
   window.addEventListener('afterprint', onAfterPrint)
+  document.addEventListener('visibilitychange', onVisibilityChange)
+  // Initial run — catches icon-only deploys that landed before mount
+  void checkIconsHash()
 })
 
 onUnmounted(() => {
   window.removeEventListener('beforeprint', onBeforePrint)
   window.removeEventListener('afterprint', onAfterPrint)
+  document.removeEventListener('visibilitychange', onVisibilityChange)
 })
 
 function goHome() {
@@ -155,9 +184,38 @@ const menuItems = computed<MenuItem[]>(() => [
       App is ready for offline use
     </div>
 
+    <!-- Icon-refresh banner — shown only when running as an installed PWA
+         and the app's icon hash differs from the last one the user saw.
+         OS icon caches don't respect query-string cache-busting, so the
+         web side can't force a refresh. The banner is the mitigation. -->
+    <div
+      v-if="iconNeedsRefresh"
+      class="bg-info text-info-content text-sm px-4 py-2 flex items-center justify-between gap-3 no-print"
+      role="status"
+    >
+      <span>Your Farlume icon was updated — reinstall to see the new look.</span>
+      <div class="flex items-center gap-3 shrink-0">
+        <button
+          type="button"
+          class="font-medium underline hover:no-underline"
+          @click="handleIconRefreshShowHow"
+        >
+          Show how
+        </button>
+        <button
+          type="button"
+          class="opacity-80 hover:opacity-100"
+          aria-label="Dismiss icon refresh notice"
+          @click="dismissIconRefresh"
+        >
+          Dismiss
+        </button>
+      </div>
+    </div>
+
     <!-- Install prompt banner -->
     <div class="no-print">
-      <InstallPrompt @show-instructions="showInstructions = true" />
+      <InstallPrompt @show-instructions="openInstallInstructions()" />
     </div>
 
     <!-- Header -->
@@ -179,9 +237,10 @@ const menuItems = computed<MenuItem[]>(() => [
       <slot />
     </main>
 
-    <!-- Install instructions modal (Safari/Firefox) -->
+    <!-- Install instructions modal (Safari/Firefox or icon-refresh flow) -->
     <InstallInstructionsModal
       v-if="showInstructions"
+      :expand-reinstall="expandReinstall"
       @close="showInstructions = false"
     />
 

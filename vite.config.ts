@@ -50,6 +50,18 @@ function versioned(relPath: string): string {
   return `${relPath}?v=${v}`
 }
 
+// Requirement: Single stable token that changes iff any icon bytes change.
+//   Consumed by useIconRefresh.ts to detect icon-only deploys and surface a
+//   reinstall banner to installed users (OS icon cache is the one cache layer
+//   the web side can't bust — user action is required).
+// Approach: sha256(concat(iconVersion for each ICON_PATH, sorted)) → 12 hex.
+//   Sorting makes the hash stable against ICON_PATHS reordering.
+// Reference: glow-props docs/implementations/PWA_ICON_CACHE_BUST.md (OS layer)
+const ICONS_HASH = createHash('sha256')
+  .update([...ICON_PATHS].sort().map((p) => `${p}:${ICON_VERSIONS[p]}`).join('|'))
+  .digest('hex')
+  .slice(0, 12)
+
 // Requirement: Replace stable icon hrefs in index.html with versioned URLs
 //   at build time so browsers refetch on content change.
 // Approach: transformIndexHtml runs once per build. Uses a REPLACEMENTS table
@@ -90,11 +102,16 @@ function iconCacheBustHtml(): Plugin {
 }
 
 // Requirement: Supplementary update detection independent of SW changes.
-// Approach: Emit version.json with a buildTime timestamp during build.
-//   usePWAUpdate.ts fetches this on visibility change and compares against
-//   localStorage to detect deploys that didn't modify sw.js.
-// Reference: glow-props docs/implementations/PWA_SYSTEM.md (version.json)
-function versionJsonPlugin(): Plugin {
+// Approach: Emit version.json with buildTime + iconsHash during build.
+//   buildTime — detects any deploy that changed precached assets
+//     (usePWAUpdate.ts reads this on visibilitychange).
+//   iconsHash — stable across icon-unchanged deploys, changes only when
+//     icon bytes change (useIconRefresh.ts reads this to show a reinstall
+//     banner to installed users whose OS-cached launcher icon won't
+//     auto-refresh — the one cache layer the web side can't bust).
+// Reference: glow-props docs/implementations/PWA_SYSTEM.md (version.json) +
+//   docs/implementations/PWA_ICON_CACHE_BUST.md (OS icon cache)
+function versionJsonPlugin(iconsHash: string): Plugin {
   return {
     name: 'version-json',
     apply: 'build',
@@ -102,7 +119,10 @@ function versionJsonPlugin(): Plugin {
       this.emitFile({
         type: 'asset',
         fileName: 'version.json',
-        source: JSON.stringify({ buildTime: new Date().toISOString() }),
+        source: JSON.stringify({
+          buildTime: new Date().toISOString(),
+          iconsHash,
+        }),
       })
     },
   }
@@ -112,14 +132,18 @@ export default defineConfig({
   plugins: [
     vue(),
     tailwindcss(),
-    versionJsonPlugin(),
+    versionJsonPlugin(ICONS_HASH),
     iconCacheBustHtml(),
     VitePWA({
       registerType: 'prompt',
-      includeAssets: ['favicon.ico', 'favicon-48x48.png', 'apple-touch-icon.png'],
-      // Requirement: ONNX Runtime WASM files (~22MB) must not be precached by the SW
-      // Approach: Exclude .wasm from precache manifest. Transformers.js fetches and caches
-      //   these via the browser Cache API at runtime, independent of the SW.
+      // Requirement: Icon files must reach the precache even though they
+      //   aren't referenced from bundled JS/CSS.
+      // Approach: The globPatterns entry `**/*.{...,ico,png,svg}` below already
+      //   sweeps all /public assets into the precache manifest. An explicit
+      //   `includeAssets` list duplicated every entry (apple-touch-icon.png
+      //   appeared twice in dist/sw.js) so it's been dropped in favour of the
+      //   glob-only path.
+      // Reference: glow-props docs/implementations/PWA_SYSTEM.md
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
         // Requirement: Remove stale caches from incompatible older Workbox versions

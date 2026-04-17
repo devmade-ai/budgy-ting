@@ -18,6 +18,19 @@ import { usePWAInstall } from '@/composables/usePWAInstall'
 import { useDialogA11y } from '@/composables/useDialogA11y'
 import { Share, PlusSquare, Check, Menu, MoreVertical, Download, AlertTriangle } from 'lucide-vue-next'
 
+const props = withDefaults(
+  defineProps<{
+    /**
+     * When true, the "already installed and the icon looks outdated?"
+     * collapsible opens by default — used when the modal is launched from
+     * the icon-refresh banner so the relevant content is the first thing
+     * the user sees.
+     */
+    expandReinstall?: boolean
+  }>(),
+  { expandReinstall: false },
+)
+
 const emit = defineEmits<{
   close: []
 }>()
@@ -227,8 +240,10 @@ const reinstallInstructions = computed<ReinstallInstructions>(() => {
           </ul>
         </div>
 
-        <!-- Reinstall hint for users whose OS-cached icon didn't refresh -->
-        <details class="mt-4 border-t border-base-300 pt-3">
+        <!-- Reinstall hint for users whose OS-cached icon didn't refresh.
+             `open` binds to props.expandReinstall so the icon-refresh banner
+             can launch the modal with this section already visible. -->
+        <details :open="props.expandReinstall" class="mt-4 border-t border-base-300 pt-3">
           <summary class="text-xs text-base-content/60 cursor-pointer hover:text-base-content">
             {{ reinstallInstructions.title }}
           </summary>

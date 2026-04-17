@@ -77,12 +77,13 @@ Current working features:
 - Transaction edit modal with read-only view mode
 - Export/import/restore workspace data as JSON
 - PWA: offline-first, installable, service worker update prompt, manual update check, visibility-based update checks, 30s post-update suppression, 7-browser Chromium detection, iOS non-Safari redirect, ChunkLoadError lazy retry, version.json supplementary detection
+- PWA icon cache-busting: content-hashed `?v=<sha256-8>` on every icon URL (HTML link tags + manifest), Workbox `ignoreURLParametersMatching: [/^v$/]`, version.json carries `iconsHash`, standalone-mode reinstall banner when the OS-cached launcher icon goes stale (detected via useIconRefresh)
 - Debug pill (alpha): floating diagnostic panel with log + environment + PWA diagnostics tabs, inline styles (CSS-independent), console interception, pre-framework inline pill with 20s load timeout
 - Tag autocomplete from tagCache + pattern tags + ML suggestions
 - Duplicate detection on import (date + amount + description)
 - Pull-to-refresh, haptic feedback, bottom sheet modal
 - Dark mode: DaisyUI dual-layer theming (data-theme + .dark class), named combos (Approach B, single "Vivid" combo: cmyk/night), user-controlled toggle, system preference fallback, localStorage persistence, cross-tab sync, flash prevention, print overrides
-- Save as PDF: window.print() via workspace actions menu, full print CSS (no-print classes, forced light mode, all transactions, table layout, static cash display, ApexCharts overrides)
+- Save as PDF: window.print() via the per-workspace 3-dot actions menu (contextual to dashboard, co-located with Export/Edit), full print CSS (no-print classes, forced light mode, all transactions, table layout, static cash display, ApexCharts overrides)
 
 **Database:** Schema v8 (8 tables: workspaces, transactions, patterns, importBatches, tagCache, embeddingCache + 2 legacy)
 **Tech stack:** Vue 3 + TypeScript + Tailwind CSS v4 + DaisyUI v5 + Dexie.js + vite-plugin-pwa + ApexCharts + simple-statistics + Transformers.js (Web Worker)
