@@ -76,6 +76,8 @@ describe('icon cache-bust: source-level wiring', () => {
   // Requirement: iconCacheBustHtml() throws at build time if any expected
   //   literal href is missing — this test fails the same drift before a build
   //   runs, giving faster feedback in dev/CI test runs.
+  // Sync: this list must mirror REPLACEMENTS in vite.config.ts. If an icon
+  //   <link> tag is added/removed in index.html, update both.
   it('index.html contains the exact literal hrefs the plugin replaces', () => {
     for (const literal of [
       'href="/favicon-48x48.png"',
