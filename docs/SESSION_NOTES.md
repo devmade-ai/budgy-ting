@@ -4,41 +4,27 @@
 
 ## Worked on
 
-Cross-project cleanup sweep: docs structure, Communication section, PWA icon cache-busting across all 5 cache layers including OS launcher cache via a reinstall banner, EVENT_BUS decision.
+Closed the ICON_CACHE_BUST pattern by adding the one source-level tripwire test from the pattern doc that wasn't already in `src/iconCacheBust.test.ts` (index.html literal-href check) and verifying every dist-level invariant from the pattern's Verification Checklist.
 
 ## Accomplished
 
-- Deleted `docs/HISTORY.md`; git history is the changelog
-- Added `## Communication` section to CLAUDE.md (verbatim from glow-props); inserted COMMUNICATION into the header reminder line
-- Cleaned duplicate communication + HISTORY bullets from AI Notes and the AI_MISTAKES 2026-03-13 entry
-- `vite.config.ts`: added `iconVersion()` + `iconCacheBustHtml()` plugin + `versioned()` helper; versioned all manifest icons and all HTML icon `<link>` tags with `?v=<sha256-8>`
-- Workbox config gained `ignoreURLParametersMatching: [/^v$/]` so the versioned fetches still resolve from precache
-- Removed redundant `includeAssets` from VitePWA — the `globPatterns` entry was already sweeping those files, causing duplicate precache entries for `apple-touch-icon.png` + `favicon-48x48.png` + `favicon.ico`; precache now 31 entries (down from 34)
-- `version.json` now carries an `iconsHash` (sha256 of concatenated icon versions, stable across icon-unchanged deploys)
-- New `src/composables/useIconRefresh.ts` watches `iconsHash` and surfaces an `info` banner when the app is in standalone display mode AND the fresh hash differs from the last-acknowledged hash. Banner has **Show how** (opens `InstallInstructionsModal` with the reinstall collapsible pre-expanded via new `expand-reinstall` prop) and **Dismiss** (acknowledges the current hash so the banner stops reappearing until icons change again)
-- `InstallInstructionsModal.vue` + `AppLayout.vue` wired to support the banner flow; modal prop `expand-reinstall` defaults to false so the existing install prompt path is unchanged
-- `src/iconCacheBust.test.ts` strengthened to 9 tests (4 source-level + 5 dist-level) — now iterates every `src:` in the manifest icons block and fails on any bare-string filename; catches SW precache URL duplicates; verifies `version.json` carries `iconsHash`. Tripwire was verified by introducing a bare-string src (test fails with the expected error) then restoring (test passes)
-- Recorded EVENT_BUS as "Not Applicable Patterns" in CLAUDE.md (no cross-service pub/sub need in this app)
-- Updated CLAUDE.md Project Status to describe new PWA-icon-cache-busting feature + tightened Save-as-PDF description to name its actual home
-- Strengthened `handlePrint()` comment in `WorkspaceDetailView.vue` to explain why the per-workspace actions menu beats the burger-menu alternative for this app
-- README.md tree updated with `useIconRefresh.ts`
+- Added the missing `index.html contains the exact literal hrefs the plugin replaces` source-level test to `src/iconCacheBust.test.ts`. Brings test count to 10 (5 source + 5 dist), full parity with the glow-props pattern doc plus three project-specific extras (manifest-srcs-bypass-versioned, sw-precache-no-duplicates, version.json-iconsHash).
+- Why a redundant-looking test: `iconCacheBustHtml()` already throws at build time when literals are missing, but the unit test fails the same drift in milliseconds without a full build, which is the faster CI/dev signal.
+- Verified pattern doc's Verification Checklist items 1-3 directly:
+  - `dist/manifest.webmanifest`: 3 icons all carry `?v=<8 hex>` (`pwa-192x192.png?v=0a3cc12f`, `pwa-512x512.png?v=0f61a5f6`, `pwa-maskable-1024x1024.png?v=2f667b10`)
+  - `dist/index.html`: 4 icon `<link>` tags all carry `?v=<8 hex>` (favicon-48x48, favicon.ico, apple-touch-icon x2)
+  - `dist/sw.js`: contains `cleanupOutdatedCaches()` and `ignoreURLParametersMatching:[/^v$/]`
+- All 10 tripwire tests pass against the current `dist/` build.
 
 ## Current state
 
-All 115 tests pass. `vue-tsc --noEmit` clean. `npm run build` succeeds and emits:
-- `dist/index.html` link tags with `?v=<hash>` (icon extensions only — manifest href left untouched)
-- `dist/manifest.webmanifest` icon srcs all with `?v=<hash>`
-- `dist/sw.js` with `cleanupOutdatedCaches()` + `ignoreURLParametersMatching:[/^v$/]`; precache has 0 duplicates
-- `dist/version.json` with `{ buildTime, iconsHash }`
+ICON_CACHE_BUST pattern is complete: core plumbing, OS-cache reinstall banner, and full tripwire coverage are all in place. `./node_modules/.bin/vitest run src/iconCacheBust.test.ts` → 10/10 passing. `./node_modules/.bin/vite build` → succeeds, all icon URLs versioned, SW config carries `/^v$/` ignore.
 
-Branch: `claude/document-budgy-ting-Yn52B`.
+Branch: `claude/complete-icon-cache-bust-X0wpf`.
 
 ## Key context
 
-- Icon cache-bust uses query-string approach (`?v=<sha256-8>`), not filename hashing. Tradeoff noted in the pattern doc: filename hashing is architecturally cleaner but requires a custom prebuild step that vite-plugin-pwa doesn't provide.
-- `iconCacheBustHtml()` throws at build time if any expected literal `href="/..."` isn't found in `index.html` — prevents silent drift if someone reformats a link tag.
-- Reinstall collapsible uses native `<details>`/`<summary>` — zero JS, accessible by default. When launched from the icon-refresh banner, `expand-reinstall` is passed so the user lands on the relevant content.
-- OS icon caches (Springboard, Android launcher, Windows/macOS dock) are user-side — no web fix exists. The banner + collapsible ARE the mitigation and only fire for users who actually have a standalone install.
-- `useIconRefresh` is guarded by `isStandalone()` and a 60-second fetch throttle. First run after a clean install records the current hash as acknowledged, so users don't get flagged for icons they've never seen another version of.
-- EVENT_BUS decision is "no evidence a bus would have a consumer today". Re-evaluate if two services start needing to react to each other.
-- Save-as-PDF button kept in per-workspace 3-dot actions menu. Contextual to dashboard, co-located with Export/Edit. Burger-menu placement was explicitly rejected because the burger menu is global and printing only makes sense on a workspace page.
+- The `index.html` literal-href test list must mirror `REPLACEMENTS` in `vite.config.ts` `iconCacheBustHtml()`. If new icon `<link>` tags are added to `index.html`, both lists need updating.
+- The pattern doc's reference test list is a baseline. Project-specific extras (manifest-srcs-iterate, precache-no-duplicates, version.json-iconsHash) catch drift the baseline can't.
+- Test runner is `vitest` (not `node:test`) — `vitest`'s `expect`/`describe`/`it` map cleanly onto the pattern doc's `node:test` structure.
+- `npm install` is required before running tests in a fresh checkout — `node_modules/.bin/vitest` and `node_modules/.bin/vite` aren't shipped in the repo.
