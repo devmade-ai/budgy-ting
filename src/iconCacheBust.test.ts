@@ -10,6 +10,7 @@ import { resolve } from 'node:path'
 
 const REPO_ROOT = resolve(__dirname, '..')
 const VITE_CONFIG = readFileSync(resolve(REPO_ROOT, 'vite.config.ts'), 'utf8')
+const INDEX_HTML = readFileSync(resolve(REPO_ROOT, 'index.html'), 'utf8')
 const DIST_DIR = resolve(REPO_ROOT, 'dist')
 const DIST_AVAILABLE = existsSync(DIST_DIR)
 const VERSIONED = /\?v=[0-9a-f]{8}(?=[^0-9a-f]|$)/
@@ -69,6 +70,21 @@ describe('icon cache-bust: source-level wiring', () => {
         `Manifest icon srcs bypassing versioned(): ${JSON.stringify(bare)}\n` +
           `Wrap each with versioned('<path>') so the cache-bust hash is applied.`,
       )
+    }
+  })
+
+  // Requirement: iconCacheBustHtml() throws at build time if any expected
+  //   literal href is missing — this test fails the same drift before a build
+  //   runs, giving faster feedback in dev/CI test runs.
+  // Sync: this list must mirror REPLACEMENTS in vite.config.ts. If an icon
+  //   <link> tag is added/removed in index.html, update both.
+  it('index.html contains the exact literal hrefs the plugin replaces', () => {
+    for (const literal of [
+      'href="/favicon-48x48.png"',
+      'href="/favicon.ico"',
+      'href="/apple-touch-icon.png"',
+    ]) {
+      expect(INDEX_HTML, `index.html missing literal: ${literal}`).toContain(literal)
     }
   })
 
