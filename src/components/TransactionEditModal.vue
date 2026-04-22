@@ -18,7 +18,8 @@ import { useTagInput } from '@/composables/useTagInput'
 import { isIncome } from '@/types/models'
 import { useDialogA11y } from '@/composables/useDialogA11y'
 import TagSuggestions from '@/components/TagSuggestions.vue'
-import { X } from 'lucide-vue-next'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
+import { X, RefreshCw } from 'lucide-vue-next'
 import type { TagSuggestion } from '@/ml/types'
 import type { Transaction, TransactionClassification } from '@/types/models'
 
@@ -27,6 +28,8 @@ const props = defineProps<{
   suggestions: TagSuggestion[]
   suggestionsLoading: boolean
   currencyLabel: string
+  /** ML error surfaced so user can retry from the modal when no suggestions appear */
+  suggestionsError?: string | null
   /** All known tags from the workspace — used for autocomplete fallback when tagCache is empty */
   knownTags?: string[]
 }>()
@@ -35,6 +38,7 @@ const emit = defineEmits<{
   save: [fields: Partial<Transaction>]
   delete: []
   close: []
+  retrySuggestions: []
 }>()
 
 const showDeleteConfirm = ref(false)
@@ -226,19 +230,6 @@ function acceptAllSuggestions() {
           >
             Delete transaction
           </button>
-          <!-- Inline delete confirmation -->
-          <div v-if="showDeleteConfirm" class="mt-2 p-3 bg-error/10 border border-error/20 rounded-lg">
-            <p class="text-sm text-error mb-2">Delete this transaction? This can't be undone.</p>
-            <div class="flex gap-2">
-              <button class="btn btn-ghost btn-sm flex-1" @click="showDeleteConfirm = false">Cancel</button>
-              <button
-                class="btn btn-error btn-sm flex-1"
-                @click="emit('delete')"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
         </template>
 
         <!-- ── Edit mode ── -->
@@ -344,6 +335,23 @@ function acceptAllSuggestions() {
                 Suggesting tags...
               </div>
 
+              <!-- ML retry affordance — visible when model errored and no suggestions returned.
+                   Matches the retry pattern in ImportStepReview so users see a way forward. -->
+              <div
+                v-else-if="suggestionsError && filteredSuggestions.length === 0"
+                class="flex items-center gap-2 mt-1 text-xs text-base-content/60"
+              >
+                <span>Suggestions unavailable.</span>
+                <button
+                  class="inline-flex items-center gap-1 text-primary hover:underline"
+                  type="button"
+                  @click="emit('retrySuggestions')"
+                >
+                  <RefreshCw :size="12" aria-hidden="true" />
+                  Retry
+                </button>
+              </div>
+
               <!-- Manual tag input with autocomplete -->
               <div class="relative mt-2">
                 <input
@@ -408,5 +416,18 @@ function acceptAllSuggestions() {
         </template>
       </div>
     </div>
+
+    <!-- Destructive-action confirmation.
+         Previously an inline panel inside the edit modal — promoted to ConfirmDialog
+         for parity with workspace delete (same alertdialog, same button weight). -->
+    <ConfirmDialog
+      v-if="showDeleteConfirm"
+      title="Delete this transaction?"
+      message="This transaction will be permanently removed. This cannot be undone."
+      confirm-label="Delete transaction"
+      :danger="true"
+      @confirm="emit('delete')"
+      @cancel="showDeleteConfirm = false"
+    />
   </Teleport>
 </template>

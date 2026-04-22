@@ -96,6 +96,8 @@ function handleUploadComplete(data: {
   descriptionColumn: string
   dateFormatIndex: number
 }) {
+  // Clear stale banner from a prior failed upload before reporting the new result.
+  error.value = ''
   const rows: ParsedTransaction[] = []
   let skipped = 0
 
@@ -383,7 +385,7 @@ function goBack() {
         :existing-patterns="existingPatterns"
         :currency-label="workspace.currencyLabel"
         @complete="handleReviewComplete"
-        @back="step = 1"
+        @back="step = 1; error = ''"
       />
     </template>
   </div>

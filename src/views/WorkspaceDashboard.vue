@@ -11,7 +11,8 @@
  */
 
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import { Wallet } from 'lucide-vue-next'
+import { useRouter } from 'vue-router'
+import { Wallet, Upload } from 'lucide-vue-next'
 import { db } from '@/db'
 import { buildForecast } from '@/engine/forecast'
 import { calculateRunway } from '@/engine/runway'
@@ -25,6 +26,7 @@ import CashflowGraph from '@/components/CashflowGraph.vue'
 import MetricsGrid from '@/components/MetricsGrid.vue'
 import TransactionTable from '@/components/TransactionTable.vue'
 import ErrorAlert from '@/components/ErrorAlert.vue'
+import EmptyState from '@/components/EmptyState.vue'
 import type { Workspace, Transaction, RecurringPattern } from '@/types/models'
 import type { ForecastResult } from '@/engine/forecast'
 import type { RunwayResult } from '@/engine/runway'
@@ -35,6 +37,8 @@ const props = defineProps<{
   workspace: Workspace
 }>()
 
+const router = useRouter()
+const loading = ref(true)
 const transactions = ref<Transaction[]>([])
 const patterns = ref<RecurringPattern[]>([])
 const error = ref('')
@@ -66,7 +70,16 @@ watch(forecastMonths, (val) => {
 })
 
 // ML tag suggestions
-const { preloadModel, suggestTags, inferring, dispose } = useTagSuggestions()
+const {
+  preloadModel,
+  retryModel,
+  suggestTags,
+  inferring,
+  modelError,
+  modelReady,
+  waitForModel,
+  dispose,
+} = useTagSuggestions()
 const tagSuggestions = ref(new Map<string, TagSuggestion[]>())
 
 // Load data
@@ -80,11 +93,17 @@ onMounted(async () => {
     patterns.value = pats
   } catch {
     error.value = 'Couldn\'t load workspace data. Please try again.'
+  } finally {
+    loading.value = false
   }
 
   // Preload ML model for tag suggestions
   preloadModel()
 })
+
+function goToImport() {
+  router.push({ name: 'import-actuals', params: { id: props.workspace.id } })
+}
 
 onUnmounted(() => {
   if (cashSaveTimeout) clearTimeout(cashSaveTimeout)
@@ -176,6 +195,16 @@ async function handleDeleteTransaction(id: string) {
 async function handleRequestSuggestions(id: string, description: string) {
   if (tagSuggestions.value.has(id)) return
 
+  // Wait for model to be ready. preloadModel() starts on mount, but the first
+  // transaction may open before the download finishes — without this await,
+  // suggestTags returns [] silently and the user never sees suggestions for
+  // their first row. Also makes the retry flow work: after retryModel kicks
+  // off a reload, a subsequent request waits for the new load to complete.
+  if (!modelReady.value) {
+    const ok = await waitForModel()
+    if (!ok) return
+  }
+
   try {
     const suggestions = await suggestTags(description)
     const updated = new Map(tagSuggestions.value)
@@ -191,6 +220,24 @@ async function handleRequestSuggestions(id: string, description: string) {
   <div>
     <ErrorAlert v-if="error" :message="error" @dismiss="error = ''" />
 
+    <!-- Empty state: no transactions imported yet.
+         Requirement: New workspace lands on a useful CTA, not a blank dashboard.
+         The header's Import button is not discoverable from an empty graph.
+         Approach: Full-width EmptyState with a primary action routing to the
+         import wizard. Suppressed while loading to avoid a flash. -->
+    <EmptyState
+      v-if="!loading && transactions.length === 0"
+      :icon="Upload"
+      title="No transactions yet"
+      description="Import a CSV or JSON bank statement to see your cashflow, forecast, and runway."
+    >
+      <button class="btn btn-primary" @click="goToImport">
+        <Upload :size="16" class="mr-1 inline-block" aria-hidden="true" />
+        Import transactions
+      </button>
+    </EmptyState>
+
+    <template v-else>
     <!-- Cash on hand input -->
     <div class="flex flex-wrap items-center gap-3 mb-6">
       <label class="text-sm text-base-content/70 flex items-center gap-2">
@@ -250,10 +297,13 @@ async function handleRequestSuggestions(id: string, description: string) {
         :currency-label="workspace.currencyLabel"
         :tag-suggestions="tagSuggestions"
         :suggestions-loading="inferring"
+        :suggestions-error="modelError"
         @update-transaction="handleUpdateTransaction"
         @delete-transaction="handleDeleteTransaction"
         @request-suggestions="handleRequestSuggestions"
+        @retry-suggestions="retryModel"
       />
     </div>
+    </template>
   </div>
 </template>

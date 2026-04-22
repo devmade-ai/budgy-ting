@@ -37,18 +37,21 @@ const error = ref('')
 const actionsMenuOpen = ref(false)
 const actionsMenuRef = ref<HTMLElement | null>(null)
 
-// Requirement: First-use hint for kebab menu on mobile
-// Approach: One-time subtle pulse animation on the kebab button. Persisted in localStorage.
+// Requirement: First-use hint for kebab menu — it hides Save as PDF, Export, and Edit
+// Approach: Pulse animation persists until the user taps the button (no auto-dismiss).
+//   Previously auto-dismissed after 6s, which meant users who glanced away during
+//   the 6s window never saw the hint and could miss the hidden actions entirely.
+// Alternatives:
+//   - Timed auto-dismiss: Rejected — defeats the purpose if user isn't looking
+//   - Persistent "More" label on mobile: Considered — adds clutter to a tight header
 const KEBAB_HINT_KEY = 'farlume:kebab-hint-seen'
 const showKebabHint = ref(false)
-let kebabHintTimeout: ReturnType<typeof setTimeout> | null = null
 
 function toggleActionsMenu() {
   actionsMenuOpen.value = !actionsMenuOpen.value
   // Dismiss the hint once user taps the menu
   if (showKebabHint.value) {
     showKebabHint.value = false
-    if (kebabHintTimeout) { clearTimeout(kebabHintTimeout); kebabHintTimeout = null }
     try { localStorage.setItem(KEBAB_HINT_KEY, 'true') } catch { /* ignore */ }
   }
 }
@@ -62,14 +65,10 @@ function handleActionsOutsideClick(e: MouseEvent) {
 onMounted(async () => {
   document.addEventListener('click', handleActionsOutsideClick)
 
-  // Show kebab hint if never seen — auto-dismiss after 6s if not tapped
+  // Show kebab hint if never seen — persists until user taps the button.
   try {
     if (!localStorage.getItem(KEBAB_HINT_KEY)) {
       showKebabHint.value = true
-      kebabHintTimeout = setTimeout(() => {
-        showKebabHint.value = false
-        try { localStorage.setItem(KEBAB_HINT_KEY, 'true') } catch { /* ignore */ }
-      }, 6000)
     }
   } catch { /* ignore */ }
 
@@ -89,7 +88,6 @@ onMounted(async () => {
 
 onUnmounted(() => {
   document.removeEventListener('click', handleActionsOutsideClick)
-  if (kebabHintTimeout) clearTimeout(kebabHintTimeout)
 })
 
 function editWorkspace() {
@@ -103,7 +101,7 @@ async function handleExport() {
     const data = await exportWorkspace(props.id)
     if (data) {
       downloadJSON(data, data.workspace.name)
-      showToast('Workspace exported')
+      showToast('Workspace exported — check your downloads')
     }
   } catch {
     error.value = 'Couldn\'t export the workspace. Please try again.'

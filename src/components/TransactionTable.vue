@@ -26,6 +26,8 @@ const props = defineProps<{
   tagSuggestions?: Map<string, TagSuggestion[]>
   /** Whether ML model is currently inferring */
   suggestionsLoading?: boolean
+  /** ML model error — passed through to the edit modal so users can retry */
+  suggestionsError?: string | null
 }>()
 
 const emit = defineEmits<{
@@ -33,6 +35,8 @@ const emit = defineEmits<{
   'delete-transaction': [id: string]
   /** Emitted when a row is selected — parent can trigger ML suggestion for this transaction */
   'request-suggestions': [id: string, description: string]
+  /** Emitted from the edit modal's retry button when ML model failed */
+  'retry-suggestions': []
 }>()
 
 const search = ref('')
@@ -128,6 +132,15 @@ function handleRowKeydown(e: KeyboardEvent, txn: Transaction) {
 function getSuggestions(id: string): TagSuggestion[] {
   return props.tagSuggestions?.get(id) ?? []
 }
+
+function handleRetrySuggestions() {
+  emit('retry-suggestions')
+  // Re-request for the currently open transaction once the model is back.
+  // The parent triggers model load; we re-ask for this row's suggestions.
+  if (editingTransaction.value) {
+    emit('request-suggestions', editingTransaction.value.id, editingTransaction.value.description)
+  }
+}
 </script>
 
 <template>
@@ -157,8 +170,15 @@ function getSuggestions(id: string): TagSuggestion[] {
       </select>
     </div>
 
-    <!-- Mobile card layout (< sm breakpoint) — hidden in print (table is better for PDF) -->
-    <div class="sm:hidden space-y-2 no-print">
+    <!-- Card layout on phones AND small tablets (< md ≈ 768px) — hidden in print.
+         Requirement: Tablets at 640-768px couldn't fit the Tags column cleanly in
+         the desktop table; badges wrapped awkwardly. Keeping cards through md
+         gives readable layout until laptop-class widths.
+         Alternatives:
+           - Collapse Tags to a count bubble on sm: Rejected — hides data the user
+             is actively reading in the table view
+           - Horizontal scroll: Rejected — poor affordance, tables scroll awkwardly on touch -->
+    <div class="md:hidden space-y-2 no-print">
       <div
         v-for="txn in displayRows"
         :key="txn.id"
@@ -198,8 +218,8 @@ function getSuggestions(id: string): TagSuggestion[] {
       </div>
     </div>
 
-    <!-- Desktop table (sm+ breakpoint) — forced visible in print via print-show -->
-    <div class="hidden sm:block overflow-x-auto print-show">
+    <!-- Desktop table (md+ breakpoint) — forced visible in print via print-show -->
+    <div class="hidden md:block overflow-x-auto print-show">
       <table class="w-full text-sm">
         <thead>
           <!-- Mobile UX: text-sm for readable table headers (was text-xs) -->
@@ -282,11 +302,13 @@ function getSuggestions(id: string): TagSuggestion[] {
       :transaction="editingTransaction"
       :suggestions="getSuggestions(editingTransaction.id)"
       :suggestions-loading="!!suggestionsLoading"
+      :suggestions-error="suggestionsError"
       :currency-label="currencyLabel"
       :known-tags="allTags"
       @save="handleSave"
       @delete="handleDelete"
       @close="editingTransaction = null"
+      @retry-suggestions="handleRetrySuggestions"
     />
   </div>
 </template>

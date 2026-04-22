@@ -64,29 +64,44 @@ function handleFileSelect(event: Event) {
   const reader = new FileReader()
   activeReader = reader
   reader.onload = (e) => {
-    activeReader = null
-    parsing.value = false
     const content = e.target?.result as string
     if (!content) {
+      activeReader = null
+      parsing.value = false
       fileError.value = 'Could not read file'
       return
     }
 
-    const isJSON = file.name.endsWith('.json')
-    parsedData.value = isJSON ? parseJSONImport(content) : parseCSV(content)
+    // Requirement: Visual feedback during large-file parse
+    // Approach: parseCSV/parseJSONImport are synchronous and block the main thread
+    //   for multi-MB files. Without a yield, the "Parsing…" spinner never paints —
+    //   the browser grabs the thread immediately and the UI appears frozen.
+    //   requestAnimationFrame defers the parse until after the next paint, so the
+    //   spinner is visible throughout the blocking work.
+    // Alternatives:
+    //   - Worker-based streaming parse: Rejected — significant refactor for a
+    //     pre-release tool; the existing parser is in-memory only
+    //   - setTimeout(fn, 0): Works but rAF guarantees a paint first, not just a
+    //     task queue slot
+    requestAnimationFrame(() => {
+      const isJSON = file.name.endsWith('.json')
+      parsedData.value = isJSON ? parseJSONImport(content) : parseCSV(content)
+      activeReader = null
+      parsing.value = false
 
-    if (parsedData.value.rows.length === 0) {
-      if (parsedData.value.headers.length === 0) {
-        fileError.value = 'The file appears to be empty. Check that it contains data rows.'
-      } else {
-        fileError.value = parsedData.value.errors[0]
-          || `Found ${parsedData.value.headers.length} column headers but no data rows. Check that the file has data below the header row.`
+      if (parsedData.value.rows.length === 0) {
+        if (parsedData.value.headers.length === 0) {
+          fileError.value = 'The file appears to be empty. Check that it contains data rows.'
+        } else {
+          fileError.value = parsedData.value.errors[0]
+            || `Found ${parsedData.value.headers.length} column headers but no data rows. Check that the file has data below the header row.`
+        }
+        parsedData.value = null
+        return
       }
-      parsedData.value = null
-      return
-    }
 
-    autoDetectColumns()
+      autoDetectColumns()
+    })
   }
   reader.onerror = () => {
     activeReader = null
@@ -164,7 +179,10 @@ function handleContinue() {
         <p class="font-medium">{{ selectedFile.name }}</p>
         <p class="text-xs text-base-content/40">{{ selectedFile.size }}</p>
       </div>
-      <span v-if="parsing" class="text-xs text-base-content/40 ml-auto">Parsing...</span>
+      <span v-if="parsing" class="text-xs text-base-content/60 ml-auto inline-flex items-center gap-1.5">
+        <span class="loading loading-spinner loading-xs" aria-hidden="true" />
+        Parsing — large files may take a moment…
+      </span>
     </div>
 
     <p v-if="fileError" class="text-sm text-error mt-3">{{ fileError }}</p>

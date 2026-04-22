@@ -285,6 +285,7 @@ const menuItems = computed<MenuItem[]>(() => [
       :message="`A workspace named '${restore.pendingImportData.value.workspace.name}' already exists. Replacing it will overwrite all its transactions, patterns, and imported data.`"
       confirm-label="Replace"
       :danger="true"
+      :busy="restore.restoring.value"
       @confirm="restore.confirmReplace"
       @cancel="restore.cancelReplace"
     />
