@@ -170,8 +170,62 @@ function consumeEarlyCapturedEvent(): (Event & { prompt: () => Promise<void> }) 
   return null
 }
 
+// Named handlers so removeEventListener can reach them on HMR dispose.
+// Anonymous callbacks passed directly to addEventListener are uncleanable.
+function handleBeforeInstallPrompt(e: Event) {
+  e.preventDefault()
+  deferredPrompt = e as Event & { prompt: () => Promise<void> }
+  canNativeInstall.value = true
+  debugLog('pwa', 'info', 'beforeinstallprompt captured via listener', {
+    browser: browser.value,
+  })
+}
+
+function handleAppInstalled() {
+  canNativeInstall.value = false
+  deferredPrompt = null
+  installed.value = true
+  trackEvent('installed', browser.value)
+  debugLog('pwa', 'success', 'App installed')
+}
+
+function handleStandaloneChange(e: MediaQueryListEvent) {
+  if (e.matches) {
+    installed.value = true
+    canNativeInstall.value = false
+    deferredPrompt = null
+    trackEvent('installed-via-browser', browser.value)
+    debugLog('pwa', 'success', 'App installed via browser menu (display-mode changed)')
+  }
+}
+
+// Clears the diagnostic timeout when beforeinstallprompt fires early enough that
+// the 5s warning would be spurious. Named so removeEventListener can target it.
+function handleEarlyPromptClearDiag() {
+  if (diagTimeout !== undefined) {
+    clearTimeout(diagTimeout)
+    diagTimeout = undefined
+  }
+}
+
+// Tracked at module scope so HMR dispose can reach them.
+let standaloneMediaQuery: MediaQueryList | undefined
+let diagTimeout: ReturnType<typeof setTimeout> | undefined
+
+// Requirement: HMR-safe module-level listener attachment
+// Approach: Per-concern guard flag prevents double-subscription when Vite
+//   re-evaluates this module on hot reload. import.meta.hot.dispose() releases
+//   listeners, the media query subscription, and the diagnostic timeout.
+// Reference: glow-props docs/implementations/TIMER_LEAKS.md §5
+declare global {
+  interface Window {
+    __pwaInstallAttached?: boolean
+  }
+}
+
 // Set up global listeners once at module load
-if (typeof window !== 'undefined') {
+if (typeof window !== 'undefined' && !window.__pwaInstallAttached) {
+  window.__pwaInstallAttached = true
   browser.value = detectBrowser()
   dismissed.value = isDismissed()
   installed.value = isStandalone()
@@ -193,45 +247,24 @@ if (typeof window !== 'undefined') {
   }
 
   // Fallback listener for first-visit case (SW registers after mount)
-  window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault()
-    deferredPrompt = e as Event & { prompt: () => Promise<void> }
-    canNativeInstall.value = true
-    debugLog('pwa', 'info', 'beforeinstallprompt captured via listener', {
-      browser: browser.value,
-    })
-  })
+  window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
 
-  window.addEventListener('appinstalled', () => {
-    canNativeInstall.value = false
-    deferredPrompt = null
-    installed.value = true
-    trackEvent('installed', browser.value)
-    debugLog('pwa', 'success', 'App installed')
-  })
+  window.addEventListener('appinstalled', handleAppInstalled)
 
   // Requirement: Detect installation via browser menu (not the native prompt)
   // Approach: Watch display-mode: standalone change. When it transitions to standalone,
   //   the user installed via the browser's menu. Without this, only appinstalled
   //   event (fired by native prompt) is detected.
   // Reference: glow-props docs/implementations/PWA_SYSTEM.md
-  const standaloneMediaQuery = window.matchMedia('(display-mode: standalone)')
-  standaloneMediaQuery.addEventListener('change', (e: MediaQueryListEvent) => {
-    if (e.matches) {
-      installed.value = true
-      canNativeInstall.value = false
-      deferredPrompt = null
-      trackEvent('installed-via-browser', browser.value)
-      debugLog('pwa', 'success', 'App installed via browser menu (display-mode changed)')
-    }
-  })
+  standaloneMediaQuery = window.matchMedia('(display-mode: standalone)')
+  standaloneMediaQuery.addEventListener('change', handleStandaloneChange)
 
   // Diagnostic: Log installability state after Chrome's engagement heuristic
   // window has had time to evaluate. Helps debug why beforeinstallprompt
   // may not fire on certain devices/browsers.
   // Only runs on browsers that could fire the prompt (Chromium-based).
   if (CHROMIUM_BROWSERS.includes(browser.value)) {
-    const diagTimeout = setTimeout(() => {
+    diagTimeout = setTimeout(() => {
       if (!canNativeInstall.value && !installed.value) {
         debugLog('pwa', 'warn', 'No beforeinstallprompt after 5s', {
           browser: browser.value,
@@ -246,13 +279,33 @@ if (typeof window !== 'undefined') {
         chromiumFallback.value = true
       }
     }, 5000)
-    // Clear if prompt arrives early to avoid noise
+    // Clear if prompt arrives early to avoid noise. Named handler + { once: true }
+    // auto-removes after firing; HMR dispose removes it pre-fire to prevent leak.
     window.addEventListener(
       'beforeinstallprompt',
-      () => clearTimeout(diagTimeout),
+      handleEarlyPromptClearDiag,
       { once: true },
     )
   }
+}
+
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+    window.removeEventListener('appinstalled', handleAppInstalled)
+    window.removeEventListener('beforeinstallprompt', handleEarlyPromptClearDiag)
+    if (standaloneMediaQuery) {
+      standaloneMediaQuery.removeEventListener('change', handleStandaloneChange)
+      standaloneMediaQuery = undefined
+    }
+    if (diagTimeout !== undefined) {
+      clearTimeout(diagTimeout)
+      diagTimeout = undefined
+    }
+    if (typeof window !== 'undefined') {
+      window.__pwaInstallAttached = false
+    }
+  })
 }
 
 // Detect iOS at module level for install instruction routing

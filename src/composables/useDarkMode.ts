@@ -106,7 +106,6 @@ function handleStorageSync(e: StorageEvent): void {
     applyTheme(isDark.value, comboId, true)
   }
 }
-window.addEventListener('storage', handleStorageSync)
 
 // Track OS preference changes — only when user hasn't made an explicit choice.
 // If they've manually toggled, their choice persists and system changes are ignored.
@@ -116,7 +115,33 @@ function handleSystemPreferenceChange(e: MediaQueryListEvent): void {
     isDark.value = e.matches
   }
 }
-mediaQuery.addEventListener('change', handleSystemPreferenceChange)
+
+// Requirement: HMR-safe module-level listener attachment
+// Approach: Per-concern guard flag prevents double-subscription when Vite
+//   re-evaluates this module on hot reload. import.meta.hot.dispose() releases
+//   the listeners when the old module copy is torn down.
+// Reference: glow-props docs/implementations/TIMER_LEAKS.md §5
+declare global {
+  interface Window {
+    __darkModeAttached?: boolean
+  }
+}
+
+if (typeof window !== 'undefined' && !window.__darkModeAttached) {
+  window.__darkModeAttached = true
+  window.addEventListener('storage', handleStorageSync)
+  mediaQuery.addEventListener('change', handleSystemPreferenceChange)
+}
+
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    window.removeEventListener('storage', handleStorageSync)
+    mediaQuery.removeEventListener('change', handleSystemPreferenceChange)
+    if (typeof window !== 'undefined') {
+      window.__darkModeAttached = false
+    }
+  })
+}
 
 export function useDarkMode() {
   function toggle(): void {
