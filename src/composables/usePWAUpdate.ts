@@ -130,7 +130,7 @@ checkVersionUpdate().then(changed => {
 // Alternatives:
 //   - Polling only: Rejected — 60-minute gaps miss updates for long-backgrounded tabs
 //   - Focus event: Rejected — fires on window focus even within same tab (noisy)
-document.addEventListener('visibilitychange', async () => {
+async function onVisibilityChange() {
   if (document.visibilityState !== 'visible') return
 
   // SW update check
@@ -143,7 +143,40 @@ document.addEventListener('visibilitychange', async () => {
   if (versionChanged && !hasUpdate.value) {
     hasUpdate.value = true
   }
-})
+}
+
+// Requirement: HMR-safe module-level listener attachment
+// Approach: Per-concern flag on window prevents double-subscription when Vite
+//   re-evaluates this module on hot reload (module top-level code re-runs but the
+//   previous listener is still attached). import.meta.hot.dispose() then releases
+//   both the listener and the periodic interval when the old module copy is torn down.
+// Alternatives:
+//   - No guard: Rejected — every HMR cycle in dev doubles the listener count
+//   - Always re-register: Rejected — requires knowing a handler ref to remove first
+// Reference: glow-props docs/implementations/TIMER_LEAKS.md §5
+declare global {
+  interface Window {
+    __pwaUpdateAttached?: boolean
+  }
+}
+
+if (typeof window !== 'undefined' && !window.__pwaUpdateAttached) {
+  window.__pwaUpdateAttached = true
+  document.addEventListener('visibilitychange', onVisibilityChange)
+}
+
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    document.removeEventListener('visibilitychange', onVisibilityChange)
+    if (updateCheckInterval !== undefined) {
+      clearInterval(updateCheckInterval)
+      updateCheckInterval = undefined
+    }
+    if (typeof window !== 'undefined') {
+      window.__pwaUpdateAttached = false
+    }
+  })
+}
 
 // Suppress false re-detection within 30s of applying an update, otherwise log
 watch(hasUpdate, (ready) => {
