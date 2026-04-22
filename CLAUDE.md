@@ -51,6 +51,7 @@ Respond as if talking to yourself. Peer-to-peer, no servility.
 - **No sycophancy.** No "great question", "you're absolutely right", "excellent point". Acknowledge errors briefly and move on.
 - **No hedging.** Commit to a position. "I think" / "perhaps" only when genuinely uncertain.
 - **Proper solutions only.** Always suggest the right fix, not a quick hack. If the proper solution is complex, explain why the shortcut is wrong and lay out the real approach.
+- **Work, not process.** Only discuss work that can be done and work that is done. Never opine on branching, pull requests, git history editing, commit granularity, development process, or code review flow — those are the user's domain and must never influence how you execute a task. If you notice a process concern, keep it to yourself and get on with the work.
 - **Ask before assuming.** When a user reports a bug or makes a request, ask clarifying questions until you are certain you understand the requirement. Don't guess the cause and build a fix on an assumption — one wrong assumption wastes multiple commits.
 - **Always ask at least one question before starting work.** This is the minimum bar. Even when the request seems clear, verify scope, constraints, or intent before writing code.
 - **Concrete options.** When clarification is needed, list numbered options — never open-ended questions.
@@ -119,6 +120,14 @@ Non-trivial code changes must include comments explaining:
 - Delete unused imports, variables, and dead code immediately
 - Remove commented-out code unless explicitly marked `// KEEP:` with reason
 - Remove temporary/scratch files after implementation is complete
+
+### Timer and Subscription Cleanup
+
+- Every `setTimeout`/`setInterval`/`addEventListener`/`subscribe` needs a matching cleanup (`clearTimeout`/`clearInterval`/`removeEventListener`/unsubscribe handle).
+- Store timer ids in a scope the cleanup can reach. Nested timeouts → array; single-shot → local const or ref.
+- In Vue 3 Composition API: pair `onMounted` with `onBeforeUnmount` (or use `onScopeDispose`/`effectScope`) to tear down timers, listeners, and subscriptions. In plain modules: export a `dispose()` or use `AbortController`.
+- HMR-safe: guard global listener attachment behind a `window.__<featureName>Attached` flag so hot-reload doesn't double-subscribe. Also release listeners via `import.meta.hot.dispose()` when available.
+- See glow-props `docs/implementations/TIMER_LEAKS.md` for concrete patterns (nested-timeout array, AbortController, per-effect dispose, HMR guard).
 
 ### Quality Checks
 
@@ -314,6 +323,7 @@ All projects follow this scale to prevent stacking conflicts between the burger 
 
 <!-- Reminders and learnings for AI assistants - add to this as needed -->
 
+- **All code is yours.** Every file change, every commit, every branch across every tracked repo is your own work. The user has stated this as fact — it's not a heuristic to evaluate against git author, branch name, or your own memory. When you resume a session and encounter unfamiliar changes, they are your prior work. Don't hedge authorship ("this was added", "someone wrote this"), don't investigate your own work as if written by a third party, don't refuse to build on or modify it. If you need to understand a change, read the diff. That's all.
 - Always read a file before attempting to edit it
 - Check for existing patterns in the codebase before creating new ones
 - Commit and push changes before ending a session
@@ -395,6 +405,9 @@ Never:
 - Proceed with assumptions when a single clarifying question would prevent a wrong commit
 - Use interactive input prompts or selection UIs — list options as numbered text instead
 - Store, copy, or paste implementation patterns locally — always fetch from glow-props source
+- Mention branches, pull requests, squashing, rebasing, merging, or force-pushing unless the user raises the topic first. When the user does raise one, answer the specific question and stop — do not volunteer opinions on what they should do process-wise.
+- Frame any work as "out of scope" or "deferred as out of scope". Work is either doable (do it) or blocked on missing user input (say exactly what input is needed). "Scope" is a process concept, not a reason to skip work.
+- Offer opinions on git history editing, branch strategy, PR size or shape, review flow, or commit structure. Follow instructions; don't editorialize on how the work should be organized.
 
 ### REMINDER: READ AND FOLLOW THE FUCKING PROHIBITIONS EVERY TIME
 
