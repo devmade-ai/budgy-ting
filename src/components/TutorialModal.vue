@@ -105,13 +105,13 @@ function goToStep(index: number) {
         aria-modal="true"
         class="modal-box max-w-sm"
       >
-        <!-- Skip/close button -->
+        <!-- Skip/close button — 40×40 touch target matches other modal close buttons -->
         <button
-          class="absolute top-3 right-3 text-base-content/40 hover:text-base-content/70 transition-colors"
+          class="absolute top-2 right-2 w-10 h-10 rounded-full flex items-center justify-center text-base-content/40 hover:text-base-content/70 hover:bg-base-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary transition-colors"
           aria-label="Close tutorial"
           @click="emit('close')"
         >
-          <X :size="18" />
+          <X :size="18" aria-hidden="true" />
         </button>
 
         <!-- Step content -->
@@ -130,18 +130,24 @@ function goToStep(index: number) {
           </p>
         </div>
 
-        <!-- Step dots -->
-        <div class="flex justify-center gap-1.5 mb-5" role="tablist" aria-label="Tutorial steps">
+        <!-- Step dots — the visible dot is 8px but each button is a 32×32 touch
+             target (inner-span styled) so mobile users can reliably tap them. -->
+        <div class="flex justify-center gap-0.5 mb-5" role="tablist" aria-label="Tutorial steps">
           <button
             v-for="(s, index) in steps"
             :key="index"
             role="tab"
             :aria-selected="index === currentStep"
             :aria-label="`Step ${index + 1}: ${s.title}`"
-            class="w-2 h-2 rounded-full transition-colors"
-            :class="index === currentStep ? 'bg-primary' : 'bg-base-300 hover:bg-base-content/30'"
+            class="w-8 h-8 flex items-center justify-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             @click="goToStep(index)"
-          />
+          >
+            <span
+              class="w-2 h-2 rounded-full transition-colors"
+              :class="index === currentStep ? 'bg-primary' : 'bg-base-300'"
+              aria-hidden="true"
+            />
+          </button>
         </div>
 
         <!-- Navigation buttons -->

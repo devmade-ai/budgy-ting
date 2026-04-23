@@ -85,24 +85,39 @@ const filteredSuggestions = computed(() =>
   ),
 )
 
-// Validation — description required, amount must be a valid number
+// Validation — description required, amount must be a valid number.
+// Track which field failed so aria-invalid / focus target are precise for
+// screen-reader and keyboard users, not just a general banner.
 const validationError = ref('')
+const validationField = ref<'description' | 'amount' | 'date' | ''>('')
+
+// Refs to the three validatable inputs — used to shift focus on failure.
+const descInputRef = ref<HTMLInputElement | null>(null)
+const amountInputRef = ref<HTMLInputElement | null>(null)
+const dateInputRef = ref<HTMLInputElement | null>(null)
 
 function handleSave() {
   const trimmedDesc = localDescription.value.trim()
   if (!trimmedDesc) {
     validationError.value = 'Description is required.'
+    validationField.value = 'description'
+    descInputRef.value?.focus()
     return
   }
   if (isNaN(localAmount.value) || localAmount.value < 0) {
     validationError.value = 'Enter a valid amount.'
+    validationField.value = 'amount'
+    amountInputRef.value?.focus()
     return
   }
   if (!localDate.value || !/^\d{4}-\d{2}-\d{2}$/.test(localDate.value)) {
     validationError.value = 'Enter a valid date.'
+    validationField.value = 'date'
+    dateInputRef.value?.focus()
     return
   }
   validationError.value = ''
+  validationField.value = ''
 
   const signedAmount = localIsIncome.value ? Math.abs(localAmount.value) : -Math.abs(localAmount.value)
   emit('save', {
@@ -202,7 +217,7 @@ function acceptAllSuggestions() {
                 >
                   {{ tag }}
                 </span>
-                <span v-if="transaction.tags.length === 0" class="text-xs text-base-content/40 italic">
+                <span v-if="transaction.tags.length === 0" class="text-xs text-base-content/60 italic">
                   No tags
                 </span>
               </div>
@@ -242,8 +257,11 @@ function acceptAllSuggestions() {
               <label :for="`${uid}-desc`" class="text-sm text-base-content/70 mb-1 block">Description</label>
               <input
                 :id="`${uid}-desc`"
+                ref="descInputRef"
                 v-model="localDescription"
                 type="text"
+                :aria-invalid="validationField === 'description' || undefined"
+                :aria-describedby="validationField === 'description' ? `${uid}-err` : undefined"
                 class="input input-bordered w-full text-base min-h-[44px]"
               />
             </div>
@@ -253,8 +271,11 @@ function acceptAllSuggestions() {
               <label :for="`${uid}-date`" class="text-sm text-base-content/70 mb-1 block">Date</label>
               <input
                 :id="`${uid}-date`"
+                ref="dateInputRef"
                 v-model="localDate"
                 type="date"
+                :aria-invalid="validationField === 'date' || undefined"
+                :aria-describedby="validationField === 'date' ? `${uid}-err` : undefined"
                 class="input input-bordered w-full text-base min-h-[44px]"
               />
             </div>
@@ -265,10 +286,13 @@ function acceptAllSuggestions() {
                 <label :for="`${uid}-amount`" class="text-sm text-base-content/70 mb-1 block">Amount ({{ currencyLabel }})</label>
                 <input
                   :id="`${uid}-amount`"
+                  ref="amountInputRef"
                   v-model.number="localAmount"
                   type="number"
                   min="0"
                   step="0.01"
+                  :aria-invalid="validationField === 'amount' || undefined"
+                  :aria-describedby="validationField === 'amount' ? `${uid}-err` : undefined"
                   class="input input-bordered w-full text-base min-h-[44px]"
                 />
               </div>
@@ -317,7 +341,7 @@ function acceptAllSuggestions() {
                     <X :size="12" />
                   </button>
                 </span>
-                <span v-if="localTags.length === 0" class="text-xs text-base-content/40 italic">
+                <span v-if="localTags.length === 0" class="text-xs text-base-content/60 italic">
                   No tags
                 </span>
               </div>
@@ -330,8 +354,14 @@ function acceptAllSuggestions() {
                 @dismiss="dismissSuggestion"
                 @accept-all="acceptAllSuggestions"
               />
-              <div v-if="suggestionsLoading" class="flex items-center gap-1 mt-1 text-xs text-base-content/40">
-                <span class="loading loading-spinner loading-xs" />
+              <div
+                v-if="suggestionsLoading"
+                class="flex items-center gap-1 mt-1 text-xs text-base-content/60"
+                role="status"
+                aria-live="polite"
+                aria-busy="true"
+              >
+                <span class="loading loading-spinner loading-xs" aria-hidden="true" />
                 Suggesting tags...
               </div>
 
@@ -363,6 +393,8 @@ function acceptAllSuggestions() {
                   role="combobox"
                   :aria-expanded="showAutocomplete"
                   aria-autocomplete="list"
+                  :aria-controls="`${uid}-taglist`"
+                  :aria-activedescendant="showAutocomplete && autocompleteResults[selectedIndex] ? `${uid}-tagopt-${selectedIndex}` : undefined"
                   @keydown="handleTagKeydown"
                   @blur="handleBlur"
                   @focus="updateAutocomplete"
@@ -370,11 +402,13 @@ function acceptAllSuggestions() {
                 <!-- Mobile UX: Render upward (bottom-full) to avoid being clipped by modal overflow -->
                 <ul
                   v-if="showAutocomplete"
+                  :id="`${uid}-taglist`"
                   role="listbox"
                   class="absolute z-10 left-0 right-0 bottom-full mb-0.5 bg-base-100 border border-base-300 rounded shadow-lg max-h-40 overflow-y-auto"
                 >
                   <li
                     v-for="(result, i) in autocompleteResults"
+                    :id="`${uid}-tagopt-${i}`"
                     :key="result"
                     role="option"
                     :aria-selected="i === selectedIndex"
@@ -395,8 +429,16 @@ function acceptAllSuggestions() {
             </div>
           </div>
 
-          <!-- Validation error -->
-          <p v-if="validationError" class="text-sm text-error mt-4">{{ validationError }}</p>
+          <!-- Validation error — role="alert" auto-announces on insert for screen readers.
+               Paired with aria-describedby on the failing input above. -->
+          <p
+            v-if="validationError"
+            :id="`${uid}-err`"
+            role="alert"
+            class="text-sm text-error mt-4"
+          >
+            {{ validationError }}
+          </p>
 
           <!-- Action buttons — edit mode -->
           <div class="flex gap-3 mt-4">

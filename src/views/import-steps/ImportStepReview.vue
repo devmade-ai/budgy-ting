@@ -713,20 +713,24 @@ function handleImport() {
         </div>
       </div>
 
-      <!-- Pagination -->
+      <!-- Pagination — opacity-50 on disabled keeps contrast above WCAG 3:1 threshold
+           for non-text UI (opacity-30 failed on light themes). aria-label clarifies
+           the page context for screen readers beyond the short visual label. -->
       <div v-if="totalPages > 1" class="flex items-center justify-center gap-2 mb-4">
         <button
-          class="text-xs px-2 py-1 rounded border border-base-300 hover:bg-base-200 disabled:opacity-30"
+          class="text-xs px-2 py-1 rounded border border-base-300 hover:bg-base-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          aria-label="Previous page of transactions"
           :disabled="currentPage === 1"
           @click="currentPage--"
         >
           Previous
         </button>
-        <span class="text-xs text-base-content/60">
+        <span class="text-xs text-base-content/70" aria-live="polite">
           Page {{ currentPage }} of {{ totalPages }}
         </span>
         <button
-          class="text-xs px-2 py-1 rounded border border-base-300 hover:bg-base-200 disabled:opacity-30"
+          class="text-xs px-2 py-1 rounded border border-base-300 hover:bg-base-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          aria-label="Next page of transactions"
           :disabled="currentPage === totalPages"
           @click="currentPage++"
         >

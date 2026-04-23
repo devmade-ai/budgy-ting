@@ -272,6 +272,51 @@ const chartOptions = computed(() => {
 })
 
 const hasData = computed(() => actualPoints.value.length > 0 || props.forecastPoints.length > 0)
+
+// Screen-reader text summary of the chart. ApexCharts renders SVG with no
+// semantic hooks — without this, AT users get nothing about the dataset that's
+// the app's primary visual surface.
+// Requirement: Describe period, min/max balance, trend direction, and runway.
+// Approach: Computed sentence built from actuals + forecast + runway. Kept
+//   concise so AT users don't have to wade through data point-by-point.
+// Alternatives:
+//   - Data table alternative: Deferred — long list, less useful for cashflow shape
+//   - ApexCharts' built-in a11y (accessibility: { enabled: true }): Doesn't
+//     exist in the library; this text is the minimum viable alternative.
+const chartSummary = computed(() => {
+  if (!hasData.value) return ''
+  const parts: string[] = ['Cashflow chart.']
+
+  if (actualPoints.value.length > 0) {
+    const first = actualPoints.value[0]!
+    const last = actualPoints.value[actualPoints.value.length - 1]!
+    const direction = last.cumulative > first.cumulative
+      ? 'up'
+      : last.cumulative < first.cumulative
+        ? 'down'
+        : 'flat'
+    parts.push(
+      `Actuals from ${first.date} to ${last.date}, cumulative ${direction} to ${props.currencyLabel}${last.cumulative.toLocaleString(undefined, { maximumFractionDigits: 0 })}.`,
+    )
+  }
+
+  if (props.forecastPoints.length > 0) {
+    const lastForecast = props.forecastPoints[props.forecastPoints.length - 1]!
+    parts.push(
+      `Forecast extends to ${lastForecast.date}, projected cumulative ${props.currencyLabel}${lastForecast.cumulative.toLocaleString(undefined, { maximumFractionDigits: 0 })}.`,
+    )
+  }
+
+  if (props.runway?.depletionDate) {
+    parts.push(`Cash runs out on ${props.runway.depletionDate}.`)
+  } else if (props.runway) {
+    parts.push(
+      `Projected end balance ${props.currencyLabel}${props.runway.endBalance.toLocaleString(undefined, { maximumFractionDigits: 0 })}.`,
+    )
+  }
+
+  return parts.join(' ')
+})
 </script>
 
 <template>
@@ -326,19 +371,24 @@ const hasData = computed(() => actualPoints.value.length > 0 || props.forecastPo
     </div>
 
     <!-- Chart -->
-    <div v-if="hasData">
+    <div v-if="hasData" role="img" :aria-label="chartSummary">
+      <!-- Screen-reader summary — sr-only ensures it doesn't render visually.
+           role="img" + aria-label on the wrapper gives AT users a concise
+           description without announcing every SVG element inside. -->
+      <span class="sr-only">{{ chartSummary }}</span>
       <VueApexCharts
         :key="`${chartMode}-${chartHeight}-${isDark}-${timeRange}-${forecastMonths}`"
         type="line"
         :height="chartHeight"
         :options="chartOptions"
         :series="series"
+        aria-hidden="true"
       />
     </div>
     <div v-else class="text-center py-12">
-      <LineChart :size="36" class="text-base-content/20 mx-auto mb-3" />
-      <p class="text-base-content/60">No data to chart</p>
-      <p class="text-base-content/40 text-sm mt-1">Import transactions to see your cashflow</p>
+      <LineChart :size="36" class="text-base-content/20 mx-auto mb-3" aria-hidden="true" />
+      <p class="text-base-content/70">No data to chart</p>
+      <p class="text-base-content/60 text-sm mt-1">Import transactions to see your cashflow</p>
     </div>
   </div>
 </template>

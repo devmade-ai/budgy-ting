@@ -21,8 +21,8 @@ defineProps<{
     <div class="w-16 h-16 bg-base-200 rounded-full flex items-center justify-center mx-auto mb-4">
       <component :is="icon" :size="28" class="text-base-content/40" />
     </div>
-    <p class="text-base-content/70 font-medium text-lg">{{ title }}</p>
-    <p v-if="description" class="text-base-content/40 text-sm mt-1.5 mb-5 max-w-xs mx-auto">
+    <p class="text-base-content/80 font-medium text-lg">{{ title }}</p>
+    <p v-if="description" class="text-base-content/60 text-sm mt-1.5 mb-5 max-w-xs mx-auto">
       {{ description }}
     </p>
     <slot />

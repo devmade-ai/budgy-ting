@@ -184,6 +184,7 @@ function handleRetrySuggestions() {
         :key="txn.id"
         role="button"
         tabindex="0"
+        :aria-label="`Edit transaction: ${txn.description}`"
         class="bg-base-100 rounded-lg border border-base-300 p-3 cursor-pointer hover:border-base-content/20 transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
         @click="openEdit(txn)"
         @keydown="handleRowKeydown($event, txn)"
@@ -213,7 +214,7 @@ function handleRetrySuggestions() {
           </span>
         </div>
       </div>
-      <div v-if="displayRows.length === 0" class="py-8 text-center text-base-content/40 text-sm">
+      <div v-if="displayRows.length === 0" class="py-8 text-center text-base-content/60 text-sm">
         {{ search || filterTag || filterClassification ? 'No matching transactions' : 'No transactions yet' }}
       </div>
     </div>
@@ -236,6 +237,8 @@ function handleRetrySuggestions() {
             v-for="txn in displayRows"
             :key="txn.id"
             tabindex="0"
+            role="button"
+            :aria-label="`Edit transaction: ${txn.description}`"
             class="border-b border-base-200 hover:bg-base-200 cursor-pointer focus:outline-none focus:bg-primary/10"
             @click="openEdit(txn)"
             @keydown="handleRowKeydown($event, txn)"
@@ -266,7 +269,7 @@ function handleRetrySuggestions() {
             </td>
           </tr>
           <tr v-if="displayRows.length === 0">
-            <td colspan="5" class="py-8 text-center text-base-content/40">
+            <td colspan="5" class="py-8 text-center text-base-content/60">
               {{ search || filterTag || filterClassification ? 'No matching transactions' : 'No transactions yet' }}
             </td>
           </tr>
@@ -275,19 +278,21 @@ function handleRetrySuggestions() {
     </div>
 
     <!-- Pagination -->
-    <div v-if="totalPages > 1" class="flex items-center justify-between mt-4 text-sm text-base-content/60 no-print">
+    <div v-if="totalPages > 1" class="flex items-center justify-between mt-4 text-sm text-base-content/70 no-print">
       <span>{{ filtered.length }} transaction{{ filtered.length === 1 ? '' : 's' }}</span>
-      <div class="flex gap-1">
+      <div class="flex gap-1" role="navigation" aria-label="Transaction pagination">
         <button
-          class="btn btn-ghost btn-sm min-h-[44px] min-w-[44px]"
+          class="btn btn-ghost btn-sm min-h-[44px] min-w-[44px] disabled:opacity-50"
+          aria-label="Previous page of transactions"
           :disabled="currentPage <= 1"
           @click="currentPage--"
         >
           Previous
         </button>
-        <span class="px-3 py-2">{{ currentPage }} / {{ totalPages }}</span>
+        <span class="px-3 py-2" aria-live="polite">{{ currentPage }} / {{ totalPages }}</span>
         <button
-          class="btn btn-ghost btn-sm min-h-[44px] min-w-[44px]"
+          class="btn btn-ghost btn-sm min-h-[44px] min-w-[44px] disabled:opacity-50"
+          aria-label="Next page of transactions"
           :disabled="currentPage >= totalPages"
           @click="currentPage++"
         >

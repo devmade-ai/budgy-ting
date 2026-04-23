@@ -179,7 +179,13 @@ function handleContinue() {
         <p class="font-medium">{{ selectedFile.name }}</p>
         <p class="text-xs text-base-content/40">{{ selectedFile.size }}</p>
       </div>
-      <span v-if="parsing" class="text-xs text-base-content/60 ml-auto inline-flex items-center gap-1.5">
+      <span
+        v-if="parsing"
+        class="text-xs text-base-content/60 ml-auto inline-flex items-center gap-1.5"
+        role="status"
+        aria-live="polite"
+        aria-busy="true"
+      >
         <span class="loading loading-spinner loading-xs" aria-hidden="true" />
         Parsing — large files may take a moment…
       </span>

@@ -31,6 +31,29 @@
   html.dark { color-scheme: dark; }
 }
 
+/* Requirement: Users with vestibular disorders / motion sensitivity can opt out.
+   Approach: Global clamp on animations and transitions when the OS-level
+     prefers-reduced-motion media query is set. Tailwind's animate-*, DaisyUI
+     spinners, and ApexCharts transitions all respect this because they use
+     CSS animations or transitions under the hood.
+   Alternatives:
+     - Per-component conditional classes: Rejected — misses transitions applied
+       by third-party libraries (DaisyUI, ApexCharts).
+     - Disable animations entirely by default: Rejected — motion is part of
+       the default affordance vocabulary.
+   Note: `scroll-behavior: auto` prevents smooth-scroll overrides from making
+   scroll jumps nauseating. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* Print overrides — force readable output regardless of dark mode.
    Reference: glow-props docs/implementations/DOWNLOAD_PDF.md */
 @media print {
