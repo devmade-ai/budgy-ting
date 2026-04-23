@@ -198,7 +198,7 @@ const menuActions: Array<{ label: string; icon: Component; action: () => void }>
           <div ref="actionsMenuRef" class="relative">
             <button
               class="w-11 h-11 rounded-full flex items-center justify-center text-base-content/40 hover:text-base-content/70 hover:bg-base-200 transition-colors"
-              :class="{ 'animate-pulse ring-2 ring-primary/30': showKebabHint }"
+              :class="{ 'animate-hint-pulse ring-2 ring-primary/30': showKebabHint }"
               title="More actions"
               aria-label="More actions"
               aria-haspopup="true"

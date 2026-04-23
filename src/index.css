@@ -54,6 +54,24 @@
   }
 }
 
+/* Requirement: Bounded first-use hint pulse for the workspace kebab menu.
+   Approach: Same keyframe as Tailwind's `animate-pulse`, but with
+     animation-iteration-count: 5 (~10s total), then the ring stays visible
+     via the surrounding ring utility until the user taps.
+   Alternatives:
+     - `animate-pulse` infinite: Rejected — WCAG 2.2.2 requires a stop
+       mechanism for motion running longer than 5 seconds.
+     - JS-timed class removal: Rejected — CSS handles the termination; no
+       timer to clean up, no extra state.
+   Reference: glow-props docs/implementations/BURGER_MENU.md discoverability. */
+@keyframes hint-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+.animate-hint-pulse {
+  animation: hint-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) 5;
+}
+
 /* Print overrides — force readable output regardless of dark mode.
    Reference: glow-props docs/implementations/DOWNLOAD_PDF.md */
 @media print {
