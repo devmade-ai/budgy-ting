@@ -98,7 +98,12 @@ function onAfterPrint() {
   const html = document.documentElement
   if (html.dataset.printWasDark === 'true') {
     html.classList.add('dark')
-    html.setAttribute('data-theme', html.dataset.printTheme || 'black')
+    // Fallback must be a theme registered in src/index.css (cmyk, night).
+    // Previous fallback was 'black' which isn't registered — if onAfterPrint
+    // ever fires without a matching onBeforePrint, DaisyUI would silently
+    // reset to the default theme. 'night' is the correct dark-theme fallback
+    // here since we only reach this branch when printWasDark === 'true'.
+    html.setAttribute('data-theme', html.dataset.printTheme || 'night')
     delete html.dataset.printWasDark
     delete html.dataset.printTheme
   }
