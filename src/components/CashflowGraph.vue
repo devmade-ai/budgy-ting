@@ -233,7 +233,17 @@ const chartOptions = computed(() => {
       type: 'datetime' as const,
       ...(xaxisRange.value.min !== undefined ? { min: xaxisRange.value.min } : {}),
       labels: {
-        format: 'dd MMM',
+        // Browser-locale-aware axis labels. ApexCharts' internal `format: 'dd MMM'`
+        // always emits English month abbreviations; a custom formatter lets us
+        // defer to `toLocaleDateString(undefined, …)`, matching the formatting
+        // already used by the tooltip Y value, the SR chart summary, and
+        // `useFormat.formatDateForDisplay()`. Currently moot while the UI is
+        // English-only, but zero-cost to wire now so chart axes track the
+        // locale the moment any copy is translated.
+        formatter: (_value: string, timestamp?: number) =>
+          timestamp === undefined
+            ? ''
+            : new Date(timestamp).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }),
         style: { fontSize: '11px', colors: labelColor },
       },
     },
@@ -250,7 +260,11 @@ const chartOptions = computed(() => {
     tooltip: {
       shared: true,
       theme: tooltipTheme,
-      x: { format: 'dd MMM yyyy' },
+      x: {
+        // Same locale-aware custom formatter as the x-axis labels (see above).
+        formatter: (value: number) =>
+          new Date(value).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }),
+      },
       y: {
         formatter: (val: number) =>
           `${props.currencyLabel}${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
