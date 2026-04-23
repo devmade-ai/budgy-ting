@@ -86,6 +86,23 @@ watch(forecastMonths, (val) => {
   safeSetItem(FORECAST_MONTHS_KEY, String(val))
 })
 
+// Debounced mirror of cashOnHand used by the runway computation.
+// Typing in the cash-on-hand input fires a keystroke per digit; the immediate
+// recompute of runway → CashflowGraph series → ApexCharts re-render causes
+// visible flicker during typing. The debounce absorbs bursts of input so the
+// chart updates once the user stops typing.
+// DB persistence already has its own 500ms debounce further down; this one is
+// purely for the reactive recompute path.
+const DEBOUNCE_RUNWAY_MS = 300
+const cashOnHandForRunway = ref<number | null>(props.workspace.cashOnHand)
+let runwayDebounceTimer: ReturnType<typeof setTimeout> | null = null
+watch(cashOnHand, (val) => {
+  if (runwayDebounceTimer) clearTimeout(runwayDebounceTimer)
+  runwayDebounceTimer = setTimeout(() => {
+    cashOnHandForRunway.value = val
+  }, DEBOUNCE_RUNWAY_MS)
+})
+
 // ML tag suggestions
 const {
   preloadModel,
@@ -124,6 +141,7 @@ function goToImport() {
 
 onUnmounted(() => {
   if (cashSaveTimeout) clearTimeout(cashSaveTimeout)
+  if (runwayDebounceTimer) clearTimeout(runwayDebounceTimer)
   dispose()
 })
 
@@ -158,11 +176,12 @@ const accuracy = computed<AccuracySummary | null>(() => {
   return summarizeAccuracy(dailyAccuracy)
 })
 
-// Compute runway
+// Compute runway — uses the debounced cash-on-hand ref so the chart doesn't
+// thrash while the user is mid-type. DB persistence uses the raw ref below.
 const runway = computed<RunwayResult | null>(() => {
-  if (cashOnHand.value === null || cashOnHand.value <= 0) return null
+  if (cashOnHandForRunway.value === null || cashOnHandForRunway.value <= 0) return null
   if (!forecast.value) return null
-  return calculateRunway(cashOnHand.value, forecast.value.daily)
+  return calculateRunway(cashOnHandForRunway.value, forecast.value.daily)
 })
 
 // Persist cash on hand when changed
