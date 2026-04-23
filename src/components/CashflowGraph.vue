@@ -97,33 +97,13 @@ function handleResize() { windowWidth.value = window.innerWidth }
 onMounted(() => window.addEventListener('resize', handleResize))
 onUnmounted(() => window.removeEventListener('resize', handleResize))
 
-// Requirement: Respect prefers-reduced-motion for chart animations.
-// Approach: ApexCharts drives SVG animations via its own RAF loop — the global
-//   CSS reduced-motion clamp in index.css only covers CSS animations/transitions,
-//   so chart draw-in and tooltip transitions still played for motion-sensitive
-//   users. We read the media query into a reactive ref and feed it to
-//   chart.animations.enabled. The listener covers users who toggle the OS-level
-//   preference mid-session (rare but free to support).
-// Alternatives:
-//   - Global setting via ApexCharts.setOption: Rejected — couples our config
-//     to the singleton-style API; per-chart config is cleaner.
-//   - Read once at module load: Rejected — doesn't react to preference changes
-//     and leaks no cleanup path for the listener.
-const reducedMotion = ref(
-  typeof window !== 'undefined' &&
-  window.matchMedia('(prefers-reduced-motion: reduce)').matches,
-)
-let reducedMotionQuery: MediaQueryList | undefined
-function onReducedMotionChange(e: MediaQueryListEvent) {
-  reducedMotion.value = e.matches
-}
-onMounted(() => {
-  reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
-  reducedMotionQuery.addEventListener('change', onReducedMotionChange)
-})
-onUnmounted(() => {
-  reducedMotionQuery?.removeEventListener('change', onReducedMotionChange)
-})
+// Read prefers-reduced-motion once at init. ApexCharts draws SVG animations
+// imperatively via its own RAF loop, so the global CSS reduced-motion clamp
+// doesn't reach it — we have to pass `chart.animations.enabled` explicitly.
+// Mid-session OS-level toggles don't update the chart; users reload to pick
+// up a preference change. Acceptable trade-off for an OS-level preference.
+const reducedMotion = typeof window !== 'undefined' &&
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
 // Build actual daily points from transactions
 const actualDailyMap = computed(() => {
@@ -240,10 +220,7 @@ const chartOptions = computed(() => {
       zoom: { enabled: false },
       fontFamily: 'inherit',
       background: 'transparent',
-      // Disable all chart entrance + transition animations when the user has
-      // requested reduced motion. ApexCharts draws SVG imperatively, so the
-      // CSS reduced-motion clamp doesn't reach it.
-      animations: { enabled: !reducedMotion.value },
+      animations: { enabled: !reducedMotion },
     },
     theme: { mode: isDark.value ? 'dark' as const : 'light' as const },
     stroke: {
@@ -409,7 +386,7 @@ const chartSummary = computed(() => {
            description without announcing every SVG element inside. -->
       <span class="sr-only">{{ chartSummary }}</span>
       <VueApexCharts
-        :key="`${chartMode}-${chartHeight}-${isDark}-${timeRange}-${forecastMonths}-${reducedMotion}`"
+        :key="`${chartMode}-${chartHeight}-${isDark}-${timeRange}-${forecastMonths}`"
         type="line"
         :height="chartHeight"
         :options="chartOptions"

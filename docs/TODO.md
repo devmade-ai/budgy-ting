@@ -15,6 +15,21 @@
 - [ ] Virtual scrolling for long transaction lists (vue-virtual-scroller) — current pagination filters full array on every change, 10K+ transactions will lag
 - [ ] Keyboard shortcuts for common actions
 - [ ] Theme combo picker UI in burger menu — useDarkMode() exposes setCombo() + themeCombos but no UI exists yet. Currently only "Vivid" (cmyk/night) combo registered. Add more combos to src/config/themes.ts + register themes in CSS + sync flash script.
+- [ ] Systematic `text-base-content/40` audit — 30 uses remain after the a11y contrast pass normalised some to /60. Needs a per-site visual review to decide which are legitimately decorative (icons, placeholders) vs body text still failing WCAG AA.
+
+## Performance
+
+- [ ] Debounce the forecast/accuracy/runway computed chain in WorkspaceDashboard — cash-on-hand input recomputes on every keystroke while DB save is already 500ms-debounced. 1000+ transactions = main-thread hog mid-type.
+- [ ] CashflowGraph `:key` triggers full ApexCharts re-init on chartMode / timeRange / forecastMonths / isDark change. Investigate mutating the chart instance (via `this.chart.updateOptions`) instead of a keyed remount.
+
+## Testing
+
+- [ ] Unit tests for `useDialogA11y` stack semantics — push/pop ordering, Escape-to-top-only behaviour, body-scroll lock-release symmetry across nested dialogs
+- [ ] Unit tests for `isDirty` computation in TransactionEditModal — covers description/date/amount/direction/classification/tags each field in isolation
+
+## Internationalization (deferred)
+
+- [ ] ApexCharts axis + tooltip date formatters hardcoded English ('dd MMM'). Becomes relevant only if the UI is translated. Until then, entire-app English consistency makes this a non-issue.
 
 ## Technical
 

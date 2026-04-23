@@ -33,12 +33,8 @@ const stack: DialogEntry[] = []
 let listenerAttached = false
 
 // Body scroll lock — engaged while ANY dialog is on the stack.
-// Requirement: With an overlay open, the page behind must not scroll on
-//   touch drag. Without this, pull-to-refresh and ghost-scroll fire under
-//   modals on mobile, and iOS rubber-band exposes the page edges.
-// Approach: Save current inline styles on first push, apply overflow:hidden
-//   + overscroll-behavior:contain, restore on last pop. Inline style reuse
-//   means we don't clobber whatever the page had before.
+// Without this, pull-to-refresh and ghost-scroll fire under modals on
+// mobile, and iOS rubber-band exposes the page edges.
 interface LockedStyles {
   bodyOverflow: string
   bodyOverscroll: string
@@ -47,7 +43,7 @@ interface LockedStyles {
 let lockedStyles: LockedStyles | null = null
 
 function lockBodyScroll() {
-  if (lockedStyles || typeof document === 'undefined') return
+  if (lockedStyles) return
   lockedStyles = {
     bodyOverflow: document.body.style.overflow,
     bodyOverscroll: document.body.style.overscrollBehavior,
@@ -59,7 +55,7 @@ function lockBodyScroll() {
 }
 
 function unlockBodyScroll() {
-  if (!lockedStyles || typeof document === 'undefined') return
+  if (!lockedStyles) return
   document.body.style.overflow = lockedStyles.bodyOverflow
   document.body.style.overscrollBehavior = lockedStyles.bodyOverscroll
   document.documentElement.style.overflow = lockedStyles.htmlOverflow
