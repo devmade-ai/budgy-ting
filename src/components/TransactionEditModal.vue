@@ -19,6 +19,7 @@ import { isIncome } from '@/types/models'
 import { useDialogA11y } from '@/composables/useDialogA11y'
 import TagSuggestions from '@/components/TagSuggestions.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
+import { isTransactionDirty } from '@/components/transactionDirty'
 import { X, RefreshCw } from 'lucide-vue-next'
 import type { TagSuggestion } from '@/ml/types'
 import type { Transaction, TransactionClassification } from '@/types/models'
@@ -62,27 +63,17 @@ const localIsIncome = ref(props.transaction.amount >= 0)
 const localClassification = ref<TransactionClassification>(props.transaction.classification)
 const localTags = ref<string[]>([...props.transaction.tags])
 
-// Requirement: Warn user before silently discarding edits.
-// Approach: Track dirty state by comparing local fields to the original
-//   transaction; when close is requested in edit mode while dirty, show a
-//   confirm dialog instead of emitting close.
-// Alternatives:
-//   - beforeunload listener: Rejected — only fires on tab close, not modal close
-//   - Auto-save on close: Rejected — validation can fail, and users expect
-//     explicit Save to be the only commit path
-const isDirty = computed(() => {
-  const original = props.transaction
-  if (localDescription.value !== original.description) return true
-  if (localDate.value !== original.date) return true
-  if (localClassification.value !== original.classification) return true
-  const signed = localIsIncome.value ? Math.abs(localAmount.value) : -Math.abs(localAmount.value)
-  if (signed !== original.amount) return true
-  if (localTags.value.length !== original.tags.length) return true
-  for (let i = 0; i < localTags.value.length; i++) {
-    if (localTags.value[i] !== original.tags[i]) return true
-  }
-  return false
-})
+// Warn user before silently discarding edits. Comparison lives in a pure
+// helper (transactionDirty.ts) so it can be unit-tested without mounting
+// the component.
+const isDirty = computed(() => isTransactionDirty(props.transaction, {
+  description: localDescription.value,
+  date: localDate.value,
+  amount: localAmount.value,
+  isIncome: localIsIncome.value,
+  classification: localClassification.value,
+  tags: localTags.value,
+}))
 
 // Pending action for the discard confirmation — either 'close' (emit close
 // and tear down the modal) or 'view' (revert to read-only mode without closing).
