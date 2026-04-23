@@ -375,6 +375,21 @@ function toggleIgnore(index: number) {
   }
 }
 
+// Fully remove a transaction from the review list. Ignore already excludes
+// it from import but keeps the row visible (dimmed). Users sometimes want
+// to clear the row entirely — e.g. after ignoring 20 spam rows they want
+// the screen quieter. Splice shifts later indexes down; tagInputIndex is
+// reconciled so a mid-edit index on a later row still points at the same
+// row after the splice.
+function removeRow(index: number) {
+  transactions.value.splice(index, 1)
+  if (tagInputIndex.value === index) {
+    tagInputIndex.value = -1
+  } else if (tagInputIndex.value > index) {
+    tagInputIndex.value -= 1
+  }
+}
+
 // ── Filtered + paginated view ──
 const filteredTransactions = computed(() => {
   if (!search.value.trim()) {
@@ -705,15 +720,27 @@ function handleImport() {
                   Once-off
                 </button>
               </div>
-              <button
-                class="text-xs px-2 py-1 transition-colors"
-                :class="tx.ignored
-                  ? 'text-error hover:text-error/80 font-medium'
-                  : 'text-base-content/40 hover:text-base-content/70'"
-                @click="toggleIgnore(originalIndex)"
-              >
-                {{ tx.ignored ? 'Ignored — undo' : 'Ignore' }}
-              </button>
+              <div class="flex items-center gap-2">
+                <button
+                  class="text-xs px-2 py-1 transition-colors"
+                  :class="tx.ignored
+                    ? 'text-error hover:text-error/80 font-medium'
+                    : 'text-base-content/60 hover:text-base-content/80'"
+                  @click="toggleIgnore(originalIndex)"
+                >
+                  {{ tx.ignored ? 'Ignored — undo' : 'Ignore' }}
+                </button>
+                <!-- Fully remove — "Ignore" excludes from import but keeps
+                     the row visible; Remove drops it from the review entirely
+                     for users who want the screen quieter. -->
+                <button
+                  class="w-7 h-7 flex items-center justify-center rounded-full text-base-content/40 hover:text-error hover:bg-error/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-error transition-colors"
+                  :aria-label="`Remove ${tx.description} from this import`"
+                  @click="removeRow(originalIndex)"
+                >
+                  <X :size="14" aria-hidden="true" />
+                </button>
+              </div>
             </div>
           </div>
         </div>

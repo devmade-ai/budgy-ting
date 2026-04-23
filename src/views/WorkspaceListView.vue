@@ -6,7 +6,7 @@
  *   inject for the empty state discovery button.
  */
 
-import { ref, inject, onMounted } from 'vue'
+import { ref, inject, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { db } from '@/db'
 import { usePullToRefresh } from '@/composables/usePullToRefresh'
@@ -16,7 +16,7 @@ import EmptyState from '@/components/EmptyState.vue'
 import { formatAmount } from '@/composables/useFormat'
 import { useInstallReminder } from '@/composables/useInstallReminder'
 import { estimateMonthlySpend } from '@/engine/transactionMath'
-import { Plus, Smartphone, Wallet, ChevronRight } from 'lucide-vue-next'
+import { Plus, Smartphone, Wallet, ChevronRight, Database } from 'lucide-vue-next'
 import type { Workspace } from '@/types/models'
 
 const router = useRouter()
@@ -81,6 +81,33 @@ function createWorkspace() {
 }
 
 const { showInstallReminder, checkInstallReminder, dismissInstallReminder } = useInstallReminder()
+
+// Storage usage indicator — reads quota via navigator.storage.estimate().
+// Hidden when the API isn't available (older Safari / some Android browsers).
+// Read once on mount; no reactive refresh — users can pull-to-refresh for a
+// new snapshot if they just imported a large batch.
+const storageUsage = ref<{ used: number; quota: number } | null>(null)
+const storagePct = computed(() => {
+  if (!storageUsage.value || storageUsage.value.quota === 0) return 0
+  return (storageUsage.value.used / storageUsage.value.quota) * 100
+})
+function formatStorageSize(bytes: number): string {
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`
+}
+async function loadStorageUsage() {
+  if (!navigator.storage?.estimate) return
+  try {
+    const { usage, quota } = await navigator.storage.estimate()
+    if (usage !== undefined && quota !== undefined && quota > 0) {
+      storageUsage.value = { used: usage, quota }
+    }
+  } catch {
+    // Silent — non-critical diagnostic
+  }
+}
+onMounted(() => { loadStorageUsage() })
 </script>
 
 <template>
@@ -178,5 +205,24 @@ const { showInstallReminder, checkInstallReminder, dismissInstallReminder } = us
       </div>
     </template>
 
+    <!-- Storage usage indicator — rendered below any list/empty state so users
+         see where their local data sits against the browser quota. Skipped
+         while loading (no value during skeleton) and when navigator.storage
+         isn't supported (some older Safari / Android). -->
+    <div
+      v-if="!loading && storageUsage"
+      class="mt-8 flex items-center gap-2 text-xs text-base-content/60"
+    >
+      <Database :size="12" class="shrink-0" aria-hidden="true" />
+      <span class="whitespace-nowrap">
+        {{ formatStorageSize(storageUsage.used) }} of {{ formatStorageSize(storageUsage.quota) }} used
+      </span>
+      <progress
+        class="progress progress-primary h-1 flex-1 max-w-[180px]"
+        :value="storagePct"
+        max="100"
+        :aria-label="`Storage ${storagePct.toFixed(0)}% used`"
+      />
+    </div>
   </div>
 </template>

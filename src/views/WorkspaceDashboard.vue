@@ -10,7 +10,7 @@
  *   - Lazy-load engines: Considered — data is small enough to compute eagerly
  */
 
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, defineAsyncComponent, h, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Wallet, Upload } from 'lucide-vue-next'
 import { db } from '@/db'
@@ -22,11 +22,28 @@ import { formatAmount } from '@/composables/useFormat'
 import { safeGetItem, safeSetItem } from '@/composables/useSafeStorage'
 import { touchTags } from '@/composables/useTagAutocomplete'
 import { useTagSuggestions } from '@/ml/useTagSuggestions'
-import CashflowGraph from '@/components/CashflowGraph.vue'
 import MetricsGrid from '@/components/MetricsGrid.vue'
 import TransactionTable from '@/components/TransactionTable.vue'
 import ErrorAlert from '@/components/ErrorAlert.vue'
 import EmptyState from '@/components/EmptyState.vue'
+
+// CashflowGraph is the sole consumer of the ~500 KB ApexCharts bundle.
+// Loading it async splits ApexCharts out of the initial chunk so workspace
+// list, import wizard, and settings pages render without downloading the chart
+// library. The loading fallback is a chart-sized skeleton to prevent layout
+// shift; the 100ms delay avoids a flash for fast networks / cached chunks.
+const ChartSkeleton = {
+  render: () => h('div', {
+    role: 'status',
+    'aria-label': 'Loading chart…',
+    class: 'skeleton h-[280px] sm:h-[350px] lg:h-[420px] w-full mb-6',
+  }),
+}
+const CashflowGraph = defineAsyncComponent({
+  loader: () => import('@/components/CashflowGraph.vue'),
+  loadingComponent: ChartSkeleton,
+  delay: 100,
+})
 import type { Workspace, Transaction, RecurringPattern } from '@/types/models'
 import type { ForecastResult } from '@/engine/forecast'
 import type { RunwayResult } from '@/engine/runway'
