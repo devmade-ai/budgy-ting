@@ -156,13 +156,15 @@ function acceptAllSuggestions() {
         @click="emit('close')"
       />
 
-      <!-- Dialog -->
+      <!-- Dialog — max-h + overflow-y-auto keeps long edit forms scrollable on
+           small phones. Without explicit overflow, DaisyUI's modal-box clips
+           content at 90vh and traps the user. -->
       <div
         ref="dialogRef"
         role="dialog"
         :aria-label="editing ? 'Edit transaction' : 'Transaction details'"
         aria-modal="true"
-        class="modal-box max-w-md max-h-[90vh] p-4 sm:p-5"
+        class="modal-box max-w-md max-h-[90vh] overflow-y-auto p-4 sm:p-5"
       >
         <!-- Close button -->
         <!-- Mobile UX: 40x40px touch target for close button (was 18px icon with no padding) -->
@@ -329,16 +331,19 @@ function acceptAllSuggestions() {
                 <span
                   v-for="tag in localTags"
                   :key="tag"
-                  class="inline-flex items-center gap-0.5 text-xs bg-info/10 text-info rounded px-1.5 py-0.5"
+                  class="inline-flex items-center gap-1 text-xs bg-info/10 text-info rounded pl-2 pr-0.5 py-0.5"
                 >
                   {{ tag }}
-                  <!-- Mobile UX: 20x20px touch target for tag removal (was 10px icon) -->
+                  <!-- Mobile UX: 28×28 touch target (was 20×20; 20px is below the
+                       44px recommendation and inconsistent with other close buttons
+                       in the app — 28 keeps chip compactness without sacrificing
+                       reliable tappability). -->
                   <button
-                    class="w-5 h-5 flex items-center justify-center opacity-60 hover:opacity-100 ml-0.5 rounded-full hover:bg-info/20 transition-colors"
+                    class="w-7 h-7 flex items-center justify-center opacity-60 hover:opacity-100 rounded-full hover:bg-info/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-info transition-colors"
                     :aria-label="`Remove ${tag}`"
                     @click="removeTag(tag)"
                   >
-                    <X :size="12" />
+                    <X :size="14" aria-hidden="true" />
                   </button>
                 </span>
                 <span v-if="localTags.length === 0" class="text-xs text-base-content/60 italic">

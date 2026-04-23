@@ -10,6 +10,7 @@
  */
 
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { isDialogOpen } from '@/composables/useDialogA11y'
 
 const THRESHOLD = 80
 
@@ -26,6 +27,10 @@ export function usePullToRefresh(onRefresh: () => Promise<void>) {
   let isPulling = false
 
   function handleTouchStart(e: TouchEvent) {
+    // Suppress pull-to-refresh while any overlay is open — otherwise a downward
+    // drag inside a modal/sheet triggers a page refresh instead of scrolling
+    // the sheet contents or being absorbed by the modal backdrop.
+    if (isDialogOpen()) return
     if (window.scrollY === 0) {
       startY = e.touches[0]!.clientY
       isPulling = true

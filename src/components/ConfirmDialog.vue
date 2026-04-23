@@ -45,7 +45,7 @@ useDialogA11y(dialogRef, () => { if (!props.busy) emit('cancel') })
         :aria-label="title"
         aria-modal="true"
         :aria-busy="busy || undefined"
-        class="modal-box max-w-sm"
+        class="modal-box max-w-sm max-h-[90vh] overflow-y-auto"
       >
         <h3 class="text-lg font-semibold text-base-content mb-2">{{ title }}</h3>
         <p class="text-sm text-base-content/70 mb-6">{{ message }}</p>

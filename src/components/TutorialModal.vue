@@ -103,7 +103,7 @@ function goToStep(index: number) {
         role="dialog"
         aria-label="How it works"
         aria-modal="true"
-        class="modal-box max-w-sm"
+        class="modal-box max-w-sm max-h-[90vh] overflow-y-auto"
       >
         <!-- Skip/close button — 40×40 touch target matches other modal close buttons -->
         <button

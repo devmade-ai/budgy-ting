@@ -275,8 +275,15 @@ const menuItems = computed<MenuItem[]>(() => [
       :markdown="sampleCsvMd"
       @close="closeDrawer"
     />
-    <!-- Restore from backup: error + replace confirm -->
-    <div v-if="restore.importError.value" class="fixed bottom-20 left-4 right-4 z-[70] max-w-md mx-auto">
+    <!-- Restore from backup: error + replace confirm.
+         Bottom offset accounts for iOS home indicator + keyboard region via
+         env(safe-area-inset-bottom). Without this, the alert sat behind the
+         on-screen keyboard when restore surfaced a validation error. -->
+    <div
+      v-if="restore.importError.value"
+      class="fixed left-4 right-4 z-[70] max-w-md mx-auto"
+      style="bottom: calc(1.5rem + env(safe-area-inset-bottom))"
+    >
       <ErrorAlert :message="restore.importError.value" @dismiss="restore.importError.value = ''" />
     </div>
     <ConfirmDialog

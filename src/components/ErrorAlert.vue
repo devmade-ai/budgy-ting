@@ -26,17 +26,20 @@ const variantClasses: Record<string, { wrapper: string; button: string }> = {
 
 <template>
   <div
-    class="mb-4 p-3 text-sm rounded-lg flex items-center justify-between"
+    class="mb-4 pl-3 pr-1 py-1 text-sm rounded-lg flex items-center justify-between gap-2"
     :class="variantClasses[variant ?? 'error']?.wrapper"
     role="alert"
   >
-    <span>{{ message }}</span>
+    <span class="py-2">{{ message }}</span>
+    <!-- Mobile UX: 40×40 touch target (was a bare 16px icon with no padding).
+         Flex centering keeps the icon visually identical to the old version. -->
     <button
+      class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-current"
       :class="variantClasses[variant ?? 'error']?.button"
       aria-label="Dismiss message"
       @click="emit('dismiss')"
     >
-      <X :size="16" />
+      <X :size="16" aria-hidden="true" />
     </button>
   </div>
 </template>

@@ -32,6 +32,48 @@ interface DialogEntry {
 const stack: DialogEntry[] = []
 let listenerAttached = false
 
+// Body scroll lock — engaged while ANY dialog is on the stack.
+// Requirement: With an overlay open, the page behind must not scroll on
+//   touch drag. Without this, pull-to-refresh and ghost-scroll fire under
+//   modals on mobile, and iOS rubber-band exposes the page edges.
+// Approach: Save current inline styles on first push, apply overflow:hidden
+//   + overscroll-behavior:contain, restore on last pop. Inline style reuse
+//   means we don't clobber whatever the page had before.
+interface LockedStyles {
+  bodyOverflow: string
+  bodyOverscroll: string
+  htmlOverflow: string
+}
+let lockedStyles: LockedStyles | null = null
+
+function lockBodyScroll() {
+  if (lockedStyles || typeof document === 'undefined') return
+  lockedStyles = {
+    bodyOverflow: document.body.style.overflow,
+    bodyOverscroll: document.body.style.overscrollBehavior,
+    htmlOverflow: document.documentElement.style.overflow,
+  }
+  document.body.style.overflow = 'hidden'
+  document.body.style.overscrollBehavior = 'contain'
+  document.documentElement.style.overflow = 'hidden'
+}
+
+function unlockBodyScroll() {
+  if (!lockedStyles || typeof document === 'undefined') return
+  document.body.style.overflow = lockedStyles.bodyOverflow
+  document.body.style.overscrollBehavior = lockedStyles.bodyOverscroll
+  document.documentElement.style.overflow = lockedStyles.htmlOverflow
+  lockedStyles = null
+}
+
+/**
+ * Returns true if any dialog is currently open. Consumers (e.g. pull-to-refresh)
+ * use this to suppress gestures that would otherwise fire under an overlay.
+ */
+export function isDialogOpen(): boolean {
+  return stack.length > 0
+}
+
 function handleStackKeydown(e: KeyboardEvent) {
   const top = stack[stack.length - 1]
   if (!top) return
@@ -103,8 +145,10 @@ export function useDialogA11y(
 
   onMounted(() => {
     previouslyFocused = document.activeElement as HTMLElement | null
+    const wasEmpty = stack.length === 0
     stack.push(entry)
     ensureListener()
+    if (wasEmpty) lockBodyScroll()
 
     // Focus the first focusable element in the dialog.
     // Track RAF ID so it can be cancelled if the component unmounts before it fires.
@@ -122,6 +166,7 @@ export function useDialogA11y(
     const idx = stack.lastIndexOf(entry)
     if (idx !== -1) stack.splice(idx, 1)
     releaseListenerIfIdle()
+    if (stack.length === 0) unlockBodyScroll()
     // Restore focus to the element that was focused before this dialog opened.
     // With stacked dialogs this naturally returns to the outer dialog's last
     // focused control when the inner dialog unmounts.

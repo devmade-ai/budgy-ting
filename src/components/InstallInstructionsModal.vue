@@ -188,7 +188,7 @@ const reinstallInstructions = computed<ReinstallInstructions>(() => {
         role="dialog"
         :aria-label="instructions.title"
         aria-modal="true"
-        class="modal-box max-w-sm"
+        class="modal-box max-w-sm max-h-[90vh] overflow-y-auto"
       >
         <h3 class="text-lg font-semibold text-base-content mb-4">
           {{ instructions.title }}
