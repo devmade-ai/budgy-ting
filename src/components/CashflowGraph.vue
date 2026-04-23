@@ -374,7 +374,7 @@ const chartSummary = computed(() => {
       </div>
 
       <div class="flex items-center gap-2 sm:ml-auto overflow-x-auto">
-        <span class="text-xs text-base-content/50 shrink-0">History</span>
+        <span class="text-xs text-base-content/60 shrink-0">History</span>
         <div class="join shrink-0">
           <button
             v-for="opt in timeRangeOptions"
@@ -387,7 +387,7 @@ const chartSummary = computed(() => {
           </button>
         </div>
 
-        <span class="text-xs text-base-content/50 shrink-0">Forecast</span>
+        <span class="text-xs text-base-content/60 shrink-0">Forecast</span>
         <div class="join shrink-0">
           <button
             v-for="opt in forecastHorizonOptions"

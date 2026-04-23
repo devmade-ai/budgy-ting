@@ -245,7 +245,7 @@ function acceptAllSuggestions() {
 
         <!-- ── Read-only view ── -->
         <template v-if="!editing">
-          <h3 class="text-base font-semibold text-base-content mb-4">Transaction details</h3>
+          <h3 class="text-lg font-semibold text-base-content mb-4">Transaction details</h3>
 
           <div class="space-y-3">
             <div>
@@ -318,7 +318,7 @@ function acceptAllSuggestions() {
 
         <!-- ── Edit mode ── -->
         <template v-else>
-          <h3 class="text-base font-semibold text-base-content mb-4">Edit transaction</h3>
+          <h3 class="text-lg font-semibold text-base-content mb-4">Edit transaction</h3>
 
           <div class="space-y-4">
             <!-- Description -->

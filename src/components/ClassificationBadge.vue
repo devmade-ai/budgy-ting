@@ -17,7 +17,7 @@ defineProps<{
     class="text-xs sm:text-sm px-1.5 py-0.5 rounded"
     :class="classification === 'recurring'
       ? 'bg-info/10 text-info'
-      : 'bg-base-200 text-base-content/50'"
+      : 'bg-base-200 text-base-content/60'"
   >
     {{ classification === 'recurring' ? 'Recurring' : 'Once-off' }}
   </span>
