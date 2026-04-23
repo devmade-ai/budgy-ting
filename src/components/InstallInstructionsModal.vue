@@ -224,7 +224,7 @@ const reinstallInstructions = computed<ReinstallInstructions>(() => {
         <div class="divider"></div>
         <div>
           <p class="text-xs text-base-content/60 mb-1.5">Why install?</p>
-          <ul class="text-xs text-base-content/40 space-y-1">
+          <ul class="text-xs text-base-content/60 space-y-1">
             <li class="flex items-center gap-2">
               <Check :size="12" class="text-primary shrink-0" aria-hidden="true" />
               Works offline — no internet needed

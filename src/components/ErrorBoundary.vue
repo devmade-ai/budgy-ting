@@ -32,7 +32,7 @@ function retry() {
     <p class="text-base-content/60 text-sm mb-1">
       The app ran into a problem. Your data is safe.
     </p>
-    <p v-if="errorMessage" class="text-base-content/40 text-xs mb-6 font-mono">
+    <p v-if="errorMessage" class="text-base-content/60 text-xs mb-6 font-mono">
       {{ errorMessage }}
     </p>
     <div class="flex gap-3 justify-center">

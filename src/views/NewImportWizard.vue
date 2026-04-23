@@ -365,7 +365,7 @@ function goBack() {
           {{ label }}
         </li>
       </ul>
-      <p class="text-xs text-base-content/40 mb-4">
+      <p class="text-xs text-base-content/60 mb-4">
         Step {{ step }} of 2
         <span v-if="step === 2 && parsedRows.length > 10">
           &middot; {{ parsedRows.length }} transactions to review

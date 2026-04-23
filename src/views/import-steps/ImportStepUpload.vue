@@ -178,7 +178,7 @@ function handleContinue() {
       <File :size="18" class="text-base-content/40" />
       <div>
         <p class="font-medium">{{ selectedFile.name }}</p>
-        <p class="text-xs text-base-content/40">{{ selectedFile.size }}</p>
+        <p class="text-xs text-base-content/60">{{ selectedFile.size }}</p>
       </div>
       <span
         v-if="parsing"

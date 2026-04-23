@@ -494,7 +494,7 @@ function acceptAllSuggestions() {
                 </ul>
                 <p
                   v-else-if="tagInput.length > 0 && autocompleteResults.length === 0"
-                  class="text-xs text-base-content/40 mt-1"
+                  class="text-xs text-base-content/60 mt-1"
                 >
                   No matching tags — press Enter to create "{{ tagInput }}"
                 </p>

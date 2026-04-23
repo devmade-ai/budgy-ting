@@ -28,6 +28,6 @@ defineProps<{
     >
       {{ value }}
     </p>
-    <p v-if="sublabel" class="text-xs text-base-content/40 mt-0.5">{{ sublabel }}</p>
+    <p v-if="sublabel" class="text-xs text-base-content/60 mt-0.5">{{ sublabel }}</p>
   </div>
 </template>

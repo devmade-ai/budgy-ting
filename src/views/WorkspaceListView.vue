@@ -151,7 +151,7 @@ onMounted(() => { loadStorageUsage() })
         :value="refreshing ? 100 : pullProgress * 100"
         max="100"
       />
-      <span :class="canRelease ? 'text-primary font-medium' : 'text-base-content/40'">
+      <span :class="canRelease ? 'text-primary font-medium' : 'text-base-content/60'">
         {{ refreshing ? 'Refreshing...' : canRelease ? 'Release to refresh' : 'Pull to refresh' }}
       </span>
     </div>

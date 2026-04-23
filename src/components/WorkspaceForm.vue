@@ -105,7 +105,7 @@ function handleSubmit() {
         placeholder="R"
         maxlength="5"
       />
-      <p class="text-sm text-base-content/40 mt-1">Display only — shown next to amounts</p>
+      <p class="text-sm text-base-content/60 mt-1">Display only — shown next to amounts</p>
     </div>
 
     <!-- Period type — ARIA radiogroup with arrow-key navigation.

@@ -479,7 +479,7 @@ function handleImport() {
           />
         </div>
 
-        <p class="text-xs text-base-content/40 text-center">
+        <p class="text-xs text-base-content/60 text-center">
           <template v-if="embeddingLoading || tagModelLoading">
             Downloading models for first use — this only happens once
           </template>
@@ -512,7 +512,7 @@ function handleImport() {
       <div class="flex flex-wrap gap-3 mb-4 text-sm">
         <span class="text-info">{{ summary.recurring }} recurring</span>
         <span class="text-base-content/70">{{ summary.onceOff }} once-off</span>
-        <span class="text-base-content/40">{{ summary.ignored }} ignored</span>
+        <span class="text-base-content/60">{{ summary.ignored }} ignored</span>
         <span class="ml-auto text-base-content/60">{{ summary.active }} of {{ summary.total }} will be imported</span>
       </div>
 
@@ -531,7 +531,7 @@ function handleImport() {
         >
           Mark remaining as one-time
         </button>
-        <span v-if="tagModelLoading" class="text-xs text-base-content/40 italic">
+        <span v-if="tagModelLoading" class="text-xs text-base-content/60 italic">
           Loading tag suggestions...
         </span>
       </div>
