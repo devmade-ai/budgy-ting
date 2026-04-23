@@ -159,15 +159,16 @@ function handleContinue() {
     </p>
 
     <label
-      class="bg-base-100 rounded-xl border-2 border-dashed border-base-300 p-4 flex flex-col items-center justify-center py-12 hover:border-primary transition-colors cursor-pointer"
+      class="bg-base-100 rounded-xl border-2 border-dashed border-base-300 p-4 flex flex-col items-center justify-center py-12 hover:border-primary transition-colors cursor-pointer focus-within:border-primary focus-within:ring-2 focus-within:ring-primary"
     >
-      <Upload :size="28" class="text-base-content/40 mb-3" />
+      <Upload :size="28" class="text-base-content/40 mb-3" aria-hidden="true" />
       <p class="text-base-content/70 font-medium">Choose a file</p>
-      <p class="text-base-content/40 text-sm mt-1">CSV or JSON, max 10 MB</p>
+      <p class="text-base-content/60 text-sm mt-1">CSV or JSON, max 10 MB</p>
       <input
         type="file"
         accept=".csv,.json"
-        class="hidden"
+        class="sr-only"
+        aria-label="Upload CSV or JSON bank statement, max 10 MB"
         @change="handleFileSelect"
       />
     </label>
@@ -236,10 +237,13 @@ function handleContinue() {
 
       <!-- Date format override — lets user correct auto-detection if needed
            Requirement: User must be able to fix DD/MM vs MM/DD ambiguity
-           Approach: Dropdown showing detected format with option to change -->
+           Approach: Dropdown showing detected format with option to change.
+           Explicit for/id label association so screen-reader users hear
+           "Date format combobox" when focusing. -->
       <div class="mt-4 flex items-center gap-3">
-        <label class="text-sm text-base-content/70">Date format:</label>
+        <label for="date-format-select" class="text-sm text-base-content/70">Date format:</label>
         <select
+          id="date-format-select"
           v-model.number="dateFormatIndex"
           class="select select-bordered w-auto text-base min-h-[44px]"
         >

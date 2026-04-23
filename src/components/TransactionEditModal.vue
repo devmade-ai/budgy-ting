@@ -42,9 +42,10 @@ const emit = defineEmits<{
 }>()
 
 const showDeleteConfirm = ref(false)
+const showDiscardConfirm = ref(false)
 
 const dialogRef = ref<HTMLElement | null>(null)
-useDialogA11y(dialogRef, () => emit('close'))
+useDialogA11y(dialogRef, () => requestClose())
 
 // Requirement: Read-only first, then editable on user action
 // Approach: Boolean toggle — modal opens in view mode, "Edit" button switches to edit mode
@@ -60,6 +61,72 @@ const localAmount = ref(Math.abs(props.transaction.amount))
 const localIsIncome = ref(props.transaction.amount >= 0)
 const localClassification = ref<TransactionClassification>(props.transaction.classification)
 const localTags = ref<string[]>([...props.transaction.tags])
+
+// Requirement: Warn user before silently discarding edits.
+// Approach: Track dirty state by comparing local fields to the original
+//   transaction; when close is requested in edit mode while dirty, show a
+//   confirm dialog instead of emitting close.
+// Alternatives:
+//   - beforeunload listener: Rejected — only fires on tab close, not modal close
+//   - Auto-save on close: Rejected — validation can fail, and users expect
+//     explicit Save to be the only commit path
+const isDirty = computed(() => {
+  const original = props.transaction
+  if (localDescription.value !== original.description) return true
+  if (localDate.value !== original.date) return true
+  if (localClassification.value !== original.classification) return true
+  const signed = localIsIncome.value ? Math.abs(localAmount.value) : -Math.abs(localAmount.value)
+  if (signed !== original.amount) return true
+  if (localTags.value.length !== original.tags.length) return true
+  for (let i = 0; i < localTags.value.length; i++) {
+    if (localTags.value[i] !== original.tags[i]) return true
+  }
+  return false
+})
+
+// Pending action for the discard confirmation — either 'close' (emit close
+// and tear down the modal) or 'view' (revert to read-only mode without closing).
+const discardTarget = ref<'close' | 'view'>('close')
+
+function requestClose() {
+  if (editing.value && isDirty.value) {
+    discardTarget.value = 'close'
+    showDiscardConfirm.value = true
+    return
+  }
+  emit('close')
+}
+
+function requestCancelEdit() {
+  if (!isDirty.value) {
+    editing.value = false
+    return
+  }
+  discardTarget.value = 'view'
+  showDiscardConfirm.value = true
+}
+
+function resetLocalFields() {
+  const t = props.transaction
+  localDescription.value = t.description
+  localDate.value = t.date
+  localAmount.value = Math.abs(t.amount)
+  localIsIncome.value = t.amount >= 0
+  localClassification.value = t.classification
+  localTags.value = [...t.tags]
+  validationError.value = ''
+  validationField.value = ''
+}
+
+function confirmDiscard() {
+  showDiscardConfirm.value = false
+  if (discardTarget.value === 'close') {
+    emit('close')
+  } else {
+    resetLocalFields()
+    editing.value = false
+  }
+}
 
 const {
   tagInput,
@@ -153,7 +220,7 @@ function acceptAllSuggestions() {
       <div
         class="modal-backdrop"
         aria-hidden="true"
-        @click="emit('close')"
+        @click="requestClose"
       />
 
       <!-- Dialog — max-h + overflow-y-auto keeps long edit forms scrollable on
@@ -171,7 +238,7 @@ function acceptAllSuggestions() {
         <button
           class="absolute top-2 right-2 w-10 h-10 rounded-full flex items-center justify-center text-base-content/40 hover:text-base-content/70 hover:bg-base-200 transition-colors"
           aria-label="Close"
-          @click="emit('close')"
+          @click="requestClose"
         >
           <X :size="18" />
         </button>
@@ -291,6 +358,7 @@ function acceptAllSuggestions() {
                   ref="amountInputRef"
                   v-model.number="localAmount"
                   type="number"
+                  inputmode="decimal"
                   min="0"
                   step="0.01"
                   :aria-invalid="validationField === 'amount' || undefined"
@@ -449,7 +517,7 @@ function acceptAllSuggestions() {
           <div class="flex gap-3 mt-4">
             <button
               class="btn btn-ghost flex-1"
-              @click="editing = false"
+              @click="requestCancelEdit"
             >
               Cancel
             </button>
@@ -475,6 +543,19 @@ function acceptAllSuggestions() {
       :danger="true"
       @confirm="emit('delete')"
       @cancel="showDeleteConfirm = false"
+    />
+
+    <!-- Unsaved-changes guard — fires on close/backdrop/Escape/Cancel when
+         the edit form is dirty. Without this, clicking away silently discarded
+         typed values. -->
+    <ConfirmDialog
+      v-if="showDiscardConfirm"
+      title="Discard unsaved changes?"
+      message="You have unsaved changes. Close without saving?"
+      confirm-label="Discard changes"
+      :danger="true"
+      @confirm="confirmDiscard"
+      @cancel="showDiscardConfirm = false"
     />
   </Teleport>
 </template>

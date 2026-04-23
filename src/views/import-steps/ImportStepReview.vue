@@ -505,8 +505,9 @@ function handleImport() {
       <div class="mb-4 flex flex-wrap items-center gap-3">
         <input
           v-model="search"
-          type="text"
+          type="search"
           placeholder="Search descriptions..."
+          aria-label="Search transactions by description"
           class="input input-bordered text-base py-1.5 px-3 w-48 min-h-[44px]"
         />
         <button
@@ -600,21 +601,26 @@ function handleImport() {
                     v-model="tagInputValue"
                     type="text"
                     placeholder="Type a tag..."
+                    :aria-label="`Add tag to ${tx.description}`"
                     class="input input-bordered w-full text-xs py-1.5 px-2"
                     role="combobox"
                     :aria-expanded="tagAutocompleteVisible"
                     aria-autocomplete="list"
+                    :aria-controls="`tag-list-${originalIndex}`"
+                    :aria-activedescendant="tagAutocompleteVisible && tagAutocompleteResults[tagSelectedIndex] ? `tag-opt-${originalIndex}-${tagSelectedIndex}` : undefined"
                     @keydown="handleTagKeydown($event, originalIndex)"
                     @blur="handleTagBlur"
                     @focus="updateTagAutocomplete"
                   />
                   <ul
                     v-if="tagAutocompleteVisible"
+                    :id="`tag-list-${originalIndex}`"
                     role="listbox"
                     class="absolute z-10 left-0 right-0 mt-0.5 bg-base-100 border border-base-300 rounded shadow-lg max-h-32 overflow-y-auto"
                   >
                     <li
                       v-for="(result, ri) in tagAutocompleteResults"
+                      :id="`tag-opt-${originalIndex}-${ri}`"
                       :key="result"
                       role="option"
                       :aria-selected="ri === tagSelectedIndex"

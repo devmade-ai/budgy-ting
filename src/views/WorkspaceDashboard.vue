@@ -238,20 +238,29 @@ async function handleRequestSuggestions(id: string, description: string) {
     </EmptyState>
 
     <template v-else>
-    <!-- Cash on hand input -->
+    <!-- Cash on hand input.
+         Requirement: AT users must hear the label when focusing the input, and
+         mobile users should get the decimal keypad on iOS.
+         Approach: Explicit for/id label association (prior markup had a label
+         as a sibling with no binding); inputmode="decimal" triggers the iOS
+         numeric keypad; step="0.01" lets users enter granular amounts (was 100,
+         which forced cents to be a multiple of 100 units). -->
     <div class="flex flex-wrap items-center gap-3 mb-6">
-      <label class="text-sm text-base-content/70 flex items-center gap-2">
-        <Wallet :size="16" class="text-base-content/40" />
+      <label for="cash-on-hand" class="text-sm text-base-content/70 flex items-center gap-2">
+        <Wallet :size="16" class="text-base-content/40" aria-hidden="true" />
         Cash on hand
       </label>
       <div class="flex items-center gap-1">
-        <span class="text-sm text-base-content/60">{{ workspace.currencyLabel }}</span>
+        <span class="text-sm text-base-content/60" aria-hidden="true">{{ workspace.currencyLabel }}</span>
         <input
+          id="cash-on-hand"
           v-model.number="cashOnHand"
           type="number"
+          inputmode="decimal"
           min="0"
-          step="100"
+          step="0.01"
           placeholder="0.00"
+          :aria-label="`Cash on hand in ${workspace.currencyLabel}`"
           class="input input-bordered w-32 text-base min-h-[44px] no-print"
         />
         <!-- Print-only: static value replaces the interactive input -->

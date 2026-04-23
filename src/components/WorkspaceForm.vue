@@ -7,7 +7,7 @@
  *   - Modal form: Rejected — full page form is simpler on mobile
  */
 
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import type { Workspace, PeriodType } from '@/types/models'
 import { todayISO } from '@/composables/useTimestamp'
 import { useFormValidation, required, dateAfter } from '@/composables/useFormValidation'
@@ -37,6 +37,17 @@ const endDate = ref(props.workspace?.endDate ?? '')
 const isEditing = computed(() => !!props.workspace)
 
 const { errors, validate } = useFormValidation([name, startDate, endDate])
+
+// Period-type radiogroup: arrow keys toggle selection and move focus to the
+// newly selected radio (WAI-ARIA radiogroup pattern).
+const periodMonthlyBtn = ref<HTMLButtonElement | null>(null)
+const periodCustomBtn = ref<HTMLButtonElement | null>(null)
+async function selectPeriod(value: PeriodType) {
+  periodType.value = value
+  await nextTick()
+  if (value === 'monthly') periodMonthlyBtn.value?.focus()
+  else periodCustomBtn.value?.focus()
+}
 
 function runValidation(): boolean {
   return validate([
@@ -97,25 +108,49 @@ function handleSubmit() {
       <p class="text-sm text-base-content/40 mt-1">Display only — shown next to amounts</p>
     </div>
 
-    <!-- Period type -->
+    <!-- Period type — ARIA radiogroup with arrow-key navigation.
+         Requirement: Keyboard users need arrow keys between options, and AT
+         should announce the group as a radio group with selection state.
+         Approach: role="radiogroup" on wrapper; each button gets role="radio"
+         + aria-checked; left/right arrow keys shift selection. Only the
+         selected option is in the tab order (roving tabindex).
+         Alternatives:
+           - Native <input type="radio">: Rejected — button styling via DaisyUI
+             join/btn-active is easier than styling native radios cross-browser. -->
     <div>
-      <label class="block text-sm font-medium text-base-content/80 mb-2">
+      <p id="period-label" class="block text-sm font-medium text-base-content/80 mb-2">
         Period
-      </label>
-      <div class="join w-full">
+      </p>
+      <div
+        role="radiogroup"
+        aria-labelledby="period-label"
+        class="join w-full"
+        @keydown.left.prevent="selectPeriod('monthly')"
+        @keydown.right.prevent="selectPeriod('custom')"
+        @keydown.up.prevent="selectPeriod('monthly')"
+        @keydown.down.prevent="selectPeriod('custom')"
+      >
         <button
+          ref="periodMonthlyBtn"
           type="button"
+          role="radio"
+          :aria-checked="periodType === 'monthly'"
+          :tabindex="periodType === 'monthly' ? 0 : -1"
           class="join-item btn flex-1"
           :class="periodType === 'monthly' ? 'btn-active' : ''"
-          @click="periodType = 'monthly'"
+          @click="selectPeriod('monthly')"
         >
           Monthly
         </button>
         <button
+          ref="periodCustomBtn"
           type="button"
+          role="radio"
+          :aria-checked="periodType === 'custom'"
+          :tabindex="periodType === 'custom' ? 0 : -1"
           class="join-item btn flex-1"
           :class="periodType === 'custom' ? 'btn-active' : ''"
-          @click="periodType = 'custom'"
+          @click="selectPeriod('custom')"
         >
           Custom dates
         </button>
