@@ -153,7 +153,7 @@ function handleContinue() {
 
 <template>
   <div>
-    <h1 class="text-2xl font-bold text-base-content mb-2">Import Actuals</h1>
+    <h1 class="text-2xl font-bold text-base-content mb-2">Import transactions</h1>
     <p class="text-base-content/60 text-sm mb-6">
       Upload a CSV or JSON file with your actual spending data
     </p>
@@ -258,7 +258,7 @@ function handleContinue() {
       </div>
 
       <button class="btn btn-primary mt-4" @click="handleContinue">
-        Continue to classify
+        Review &amp; import
       </button>
     </template>
   </div>

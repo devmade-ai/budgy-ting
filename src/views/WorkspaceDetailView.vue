@@ -189,7 +189,7 @@ const menuActions: Array<{ label: string; icon: Component; action: () => void }>
         <div class="flex items-center gap-2 no-print">
           <button
             class="btn btn-primary text-sm min-h-[44px]"
-            title="Import actuals"
+            title="Import transactions"
             @click="router.push({ name: 'import-actuals', params: { id: props.id } })"
           >
             <Upload :size="16" class="mr-1 inline-block" />

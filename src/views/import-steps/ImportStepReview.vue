@@ -429,13 +429,13 @@ function handleImport() {
     <!-- Loading state while ML models load -->
     <template v-if="preparing">
       <p class="text-sm text-base-content/60 mb-4">
-        Preparing tag suggestions and pattern matching...
+        Preparing tag suggestions and recurring detection…
       </p>
       <div class="max-w-sm mx-auto mt-8 mb-8 space-y-4">
         <!-- Embedding model (fuzzy pattern matching) -->
         <div>
           <div class="flex items-center justify-between text-xs text-base-content/60 mb-1">
-            <span>Pattern matching</span>
+            <span>Recurring detection</span>
             <span v-if="embeddingError" class="text-warning">Unavailable</span>
             <span v-else-if="!embeddingLoading && !embeddingError">Ready</span>
             <span v-else-if="embeddingProgress > 0">{{ Math.round(embeddingProgress) }}%</span>
@@ -469,8 +469,8 @@ function handleImport() {
             Downloading models for first use — this only happens once
           </template>
           <template v-else-if="embeddingError || tagModelError">
-            <span v-if="embeddingError && tagModelError">Models unavailable — continuing with basic matching</span>
-            <span v-else-if="embeddingError">Pattern matching unavailable</span>
+            <span v-if="embeddingError && tagModelError">Smart detection unavailable — you can still review manually</span>
+            <span v-else-if="embeddingError">Recurring detection unavailable</span>
             <span v-else>Tag suggestions unavailable</span>
             <button
               class="block mx-auto mt-2 text-primary hover:text-primary/80 underline"
@@ -514,7 +514,7 @@ function handleImport() {
           class="text-xs text-base-content/60 hover:text-base-content underline"
           @click="markAllOnceOff"
         >
-          Mark all unmatched as once-off
+          Mark remaining as one-time
         </button>
         <span v-if="tagModelLoading" class="text-xs text-base-content/40 italic">
           Loading tag suggestions...

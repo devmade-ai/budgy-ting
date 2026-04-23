@@ -322,7 +322,7 @@ async function handleReviewComplete(reviewedTransactions: ReviewTransaction[]) {
     router.push({ name: 'workspace-detail', params: { id: props.id } })
   } catch (e) {
     debugLog('import', 'error', 'Import save failed', { error: String(e) })
-    error.value = 'Couldn\'t save imported data. Please try again.'
+    error.value = 'Couldn\'t save your transactions. Your review is still loaded — please try again.'
     saving.value = false
   }
 }

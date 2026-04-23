@@ -154,7 +154,7 @@ const series = computed(() => {
   // Actuals
   if (actualPoints.value.length > 0) {
     result.push({
-      name: 'Actuals',
+      name: 'Spending',
       data: actualPoints.value.map((p) => ({
         x: p.date,
         y: chartMode.value === 'cumulative' ? p.cumulative : p.amount,
@@ -218,7 +218,7 @@ const chartOptions = computed(() => {
   //   converts to hex via canvas pixel — ApexCharts can't use CSS variables.
   //   Colors re-resolve on every chartOptions recompute (isDark triggers this).
   const colors = series.value.map((s) => {
-    if (s.name === 'Actuals') return resolveThemeColor('--color-info', '#3b82f6')
+    if (s.name === 'Spending') return resolveThemeColor('--color-info', '#3b82f6')
     if (s.name === 'Forecast') return resolveThemeColor('--color-warning', '#f59e0b')
     if (s.name === 'Cash balance') return resolveThemeColor('--color-success', '#10b981')
     return resolveThemeColor('--color-base-content', '#6b7280')
@@ -328,7 +328,7 @@ const chartSummary = computed(() => {
         ? 'down'
         : 'flat'
     parts.push(
-      `Actuals from ${first.date} to ${last.date}, cumulative ${direction} to ${props.currencyLabel}${last.cumulative.toLocaleString(undefined, { maximumFractionDigits: 0 })}.`,
+      `Spending from ${first.date} to ${last.date}, cumulative ${direction} to ${props.currencyLabel}${last.cumulative.toLocaleString(undefined, { maximumFractionDigits: 0 })}.`,
     )
   }
 
