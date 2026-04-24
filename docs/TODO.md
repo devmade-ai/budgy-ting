@@ -17,6 +17,21 @@
 
 - [ ] CashflowGraph `:key` triggers full ApexCharts re-init on chartMode / timeRange / forecastMonths / isDark change. Investigate mutating the chart instance (via `this.chart.updateOptions`) instead of a keyed remount.
 
+## Testing
+
+- [ ] Unit tests for WorkspaceListView storage indicator helpers (`formatStorageSize`, `loadStorageUsage` behaviour when `navigator.storage` is missing)
+- [ ] Unit tests for `removeRow` in ImportStepReview (index reconciliation for `tagInputIndex`, `currentPage` bounds after splicing)
+- [ ] Unit tests for debounced `cashOnHandForRunway` watcher in WorkspaceDashboard
+
+## A11y / Dark mode
+
+- [ ] Visually verify the 12 `text-base-content/40` → `/60` bumps against both cmyk and night themes using an actual contrast checker. Current bumps were made by heuristic (body/helper vs icon) — dark-theme readability unverified.
+- [ ] Verify `CashflowGraph` chart-loading error state (`ChartLoadError` component) renders as expected when a chunk fetch fails — e.g. by disabling the network tab after initial paint.
+
+## Refactor
+
+- [ ] `src/components/transactionDirty.ts` isn't a component — lives in `src/components/` only because it was extracted from `TransactionEditModal.vue`. Move to `src/lib/` or `src/components/helpers/` for clarity.
+
 ## Technical
 
 - [ ] Migrate WorkspaceDetailView.vue raw `localStorage` calls to `safeGetItem`/`safeSetItem` — kebab hint key (`KEBAB_HINT_KEY`) uses inline try/catch instead of the project's `useSafeStorage` wrapper

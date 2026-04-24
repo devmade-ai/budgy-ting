@@ -67,6 +67,9 @@ async function refreshList() {
   try {
     workspaces.value = await db.workspaces.orderBy('createdAt').reverse().toArray()
     loadSummaries(workspaces.value)
+    // Re-estimate storage too — users pulling-to-refresh after a large import
+    // expect the quota indicator to reflect the new on-disk size.
+    loadStorageUsage()
   } catch {
     error.value = 'Couldn\'t refresh the list. Please refresh the page and try again.'
   }

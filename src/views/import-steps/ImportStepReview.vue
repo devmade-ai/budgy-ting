@@ -380,13 +380,17 @@ function toggleIgnore(index: number) {
 // to clear the row entirely — e.g. after ignoring 20 spam rows they want
 // the screen quieter. Splice shifts later indexes down; tagInputIndex is
 // reconciled so a mid-edit index on a later row still points at the same
-// row after the splice.
+// row after the splice. currentPage is bound-checked so removing the last
+// row on the last page doesn't leave the pager stranded past totalPages.
 function removeRow(index: number) {
   transactions.value.splice(index, 1)
   if (tagInputIndex.value === index) {
     tagInputIndex.value = -1
   } else if (tagInputIndex.value > index) {
     tagInputIndex.value -= 1
+  }
+  if (currentPage.value > totalPages.value) {
+    currentPage.value = Math.max(1, totalPages.value)
   }
 }
 

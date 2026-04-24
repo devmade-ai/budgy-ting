@@ -152,7 +152,7 @@ const menuItems = computed<MenuItem[]>(() => [
   {
     label: isDark.value ? 'Light mode' : 'Dark mode',
     icon: isDark.value ? Sun : Moon,
-    iconClass: isDark.value ? 'text-warning' : 'text-base-content/40',
+    iconClass: isDark.value ? 'text-warning' : 'text-base-content/60',
     action: () => toggleDarkMode(),
     separator: true,
   },
