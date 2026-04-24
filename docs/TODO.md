@@ -31,6 +31,7 @@
 ## Refactor
 
 - [ ] `src/components/transactionDirty.ts` isn't a component — lives in `src/components/` only because it was extracted from `TransactionEditModal.vue`. Move to `src/lib/` or `src/components/helpers/` for clarity.
+- [ ] `TransactionEditModal` save is fire-and-forget — modal closes optimistically on save click; if the parent's `db.transactions.update()` rejects, the error appears on the dashboard (not the modal) because the modal already unmounted. Not data-loss (reopening shows the un-saved state + dashboard banner reads "Couldn't save changes"), but feedback is loosely coupled. Fixing requires child-waits-for-parent via callback prop or promise — emit-based flow doesn't support it cleanly.
 
 ## Technical
 

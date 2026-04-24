@@ -89,6 +89,10 @@ export function useRestoreWorkspace(onSuccess?: () => void) {
     } catch {
       importError.value = 'Couldn\'t replace the workspace. Please try again.'
       showReplaceConfirm.value = false
+      // Clear pendingImportData too — otherwise a subsequent file pick shows
+      // the confirm dialog with the previous file's workspace name until the
+      // new file's validation overwrites it.
+      pendingImportData.value = null
     } finally {
       restoring.value = false
     }

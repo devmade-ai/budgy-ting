@@ -22,6 +22,7 @@ import { formatAmount } from '@/composables/useFormat'
 import { safeGetItem, safeSetItem } from '@/composables/useSafeStorage'
 import { touchTags } from '@/composables/useTagAutocomplete'
 import { useTagSuggestions } from '@/ml/useTagSuggestions'
+import { debugLog } from '@/debug/debugLog'
 import MetricsGrid from '@/components/MetricsGrid.vue'
 import TransactionTable from '@/components/TransactionTable.vue'
 import ErrorAlert from '@/components/ErrorAlert.vue'
@@ -196,8 +197,10 @@ watch(cashOnHand, (val) => {
   cashSaveTimeout = setTimeout(async () => {
     try {
       await db.workspaces.update(props.workspace.id, { cashOnHand: val, updatedAt: new Date().toISOString() })
-    } catch {
-      // Silent — non-critical persistence
+    } catch (e) {
+      // Non-blocking: the value stays in the input ref so the UI remains usable,
+      // but persistence failed — alpha debug reports surface it instead of going silent.
+      debugLog('db', 'error', 'Failed to persist cash-on-hand', { error: String(e), val })
     }
   }, 500)
 })
