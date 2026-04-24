@@ -72,18 +72,23 @@ function applyTheme(dark: boolean, comboId: string, skipPersist = false): void {
   }
 }
 
-// Watch isDark and combo changes — skipped during cross-tab sync
+// Watch isDark and combo changes — skipped during cross-tab sync.
+// flush: 'sync' is required because handleStorageSync below sets syncing=true,
+// mutates the refs, then sets syncing=false — all synchronously. With the
+// default post-flush scheduling, watchers fire on the next microtask when
+// syncing is already false, defeating the guard and running applyTheme twice
+// (once inside handleStorageSync, once per watcher — three total per sync event).
 watch(isDark, (dark) => {
   if (syncing) return
   applyTheme(dark, currentComboId.value)
   debugLog('boot', 'info', `Theme changed to ${dark ? 'dark' : 'light'}`)
-})
+}, { flush: 'sync' })
 
 watch(currentComboId, (comboId) => {
   if (syncing) return
   applyTheme(isDark.value, comboId)
   debugLog('boot', 'info', `Theme combo changed to ${comboId}`)
-})
+}, { flush: 'sync' })
 
 // Cross-tab sync — storage event only fires in OTHER tabs (not the one that wrote),
 // so there's no infinite loop risk. The syncing flag prevents the watchers from
