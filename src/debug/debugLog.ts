@@ -170,12 +170,24 @@ export function generateReport(): string {
 // Must run at module load time to catch early console calls.
 // HMR guard prevents duplicate patching during development.
 
+// Window augmentation for HMR guard flags — matches the pattern used by the
+// other HMR-safe composables (useDialogA11y, usePWAInstall, usePWAUpdate,
+// useDarkMode). `__debugLogReady` is also read by the pre-framework inline
+// pill in index.html to know whether to skip its own error capture.
+declare global {
+  interface Window {
+    __debugConsolePatched?: boolean
+    __debugLogListenersAttached?: boolean
+    __debugLogReady?: boolean
+  }
+}
+
 // Module-scoped so dispose() can restore the originals.
 let originalError: typeof console.error | undefined
 let originalWarn: typeof console.warn | undefined
 
-if (typeof window !== 'undefined' && !(window as any).__debugConsolePatched) {
-  (window as any).__debugConsolePatched = true
+if (typeof window !== 'undefined' && !window.__debugConsolePatched) {
+  window.__debugConsolePatched = true
 
   originalError = console.error
   originalWarn = console.warn
@@ -218,25 +230,20 @@ function handleUnhandledRejection(event: PromiseRejectionEvent) {
   debugLog('global', 'error', `Unhandled rejection: ${String(event.reason)}`)
 }
 
-if (typeof window !== 'undefined' && !(window as any).__debugLogListenersAttached) {
-  (window as any).__debugLogListenersAttached = true
+if (typeof window !== 'undefined' && !window.__debugLogListenersAttached) {
+  window.__debugLogListenersAttached = true
   // Signal to inline pill's error listeners (index.html) that debugLog.ts is active.
   // They check this flag and skip capture to prevent duplicate entries.
-  ;(window as any).__debugLogReady = true
+  window.__debugLogReady = true
 
   window.addEventListener('error', handleGlobalError)
   window.addEventListener('unhandledrejection', handleUnhandledRejection)
 }
 
-// Requirement: HMR-safe teardown of module-level console patches and listeners
-// Approach: import.meta.hot.dispose() restores originals and removes listeners.
-//   Without this, every HMR cycle leaves the patched console pointing at the
-//   orphaned old module's debugLog (wrong buffer, stale subscribers) while the
-//   new module's HMR guard skips re-patching — silently dropping events.
-// Alternatives:
-//   - Re-patch on every load: Rejected — must first restore, requires the same work
-//   - Ignore (prod-only concern): Rejected — debugging in dev is exactly when you
-//     need reliable console capture
+// HMR-safe teardown of module-level console patches and listeners. Without
+// this, each HMR cycle leaves the patched console pointing at the orphaned
+// old module's debugLog (wrong buffer, stale subscribers) while the new
+// module's HMR guard skips re-patching — silently dropping events.
 // Reference: glow-props docs/implementations/TIMER_LEAKS.md §5
 if (import.meta.hot) {
   import.meta.hot.dispose(() => {
@@ -245,8 +252,8 @@ if (import.meta.hot) {
     if (originalWarn) console.warn = originalWarn
     window.removeEventListener('error', handleGlobalError)
     window.removeEventListener('unhandledrejection', handleUnhandledRejection)
-    ;(window as any).__debugConsolePatched = false
-    ;(window as any).__debugLogListenersAttached = false
-    ;(window as any).__debugLogReady = false
+    window.__debugConsolePatched = false
+    window.__debugLogListenersAttached = false
+    window.__debugLogReady = false
   })
 }
