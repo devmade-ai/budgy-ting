@@ -93,7 +93,11 @@ const { showInstallReminder, checkInstallReminder, dismissInstallReminder } = us
 const storageUsage = ref<{ used: number; quota: number } | null>(null)
 const storagePct = computed(() => {
   if (!storageUsage.value || storageUsage.value.quota === 0) return 0
-  return (storageUsage.value.used / storageUsage.value.quota) * 100
+  // Clamp at 100 — spec allows `usage > quota` briefly when the browser
+  // rebalances the origin's quota downward (user clears site data, other
+  // origins under the same domain grow). Without the clamp, the aria-label
+  // reads "Storage 105% used" until the next estimate catches up.
+  return Math.min(100, (storageUsage.value.used / storageUsage.value.quota) * 100)
 })
 async function loadStorageUsage() {
   if (!navigator.storage?.estimate) return

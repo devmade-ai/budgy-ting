@@ -538,8 +538,24 @@ function handleImport() {
         </span>
       </div>
 
-      <!-- Transaction list -->
-      <div class="space-y-2 mb-4">
+      <!-- Transaction list — empty when the user has removed every row.
+           Without this guard the review step renders a blank area with a
+           disabled "Import 0 transactions" button and no path forward;
+           surfacing a clear message + Back affordance is kinder. -->
+      <div
+        v-if="transactions.length === 0"
+        class="text-center py-12 border border-base-300 rounded-lg bg-base-200/30 mb-4"
+        role="status"
+      >
+        <p class="text-sm text-base-content/70 mb-3">
+          No transactions left to import. You removed all of them.
+        </p>
+        <button class="btn btn-ghost btn-sm" @click="emit('back')">
+          Go back to upload
+        </button>
+      </div>
+
+      <div v-else class="space-y-2 mb-4">
         <div
           v-for="{ tx, originalIndex } in paginatedTransactions"
           :key="originalIndex"
