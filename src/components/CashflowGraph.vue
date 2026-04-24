@@ -296,16 +296,9 @@ const chartOptions = computed(() => {
 
 const hasData = computed(() => actualPoints.value.length > 0 || props.forecastPoints.length > 0)
 
-// Screen-reader text summary of the chart. ApexCharts renders SVG with no
-// semantic hooks — without this, AT users get nothing about the dataset that's
-// the app's primary visual surface.
-// Requirement: Describe period, min/max balance, trend direction, and runway.
-// Approach: Computed sentence built from actuals + forecast + runway. Kept
-//   concise so AT users don't have to wade through data point-by-point.
-// Alternatives:
-//   - Data table alternative: Deferred — long list, less useful for cashflow shape
-//   - ApexCharts' built-in a11y (accessibility: { enabled: true }): Doesn't
-//     exist in the library; this text is the minimum viable alternative.
+// Screen-reader summary of the chart — ApexCharts renders SVG with no
+// semantic hooks, so AT users get nothing about the primary visual surface
+// without a text alternative. Sentence form (not data-table) keeps it scannable.
 const chartSummary = computed(() => {
   if (!hasData.value) return ''
   const parts: string[] = ['Cashflow chart.']

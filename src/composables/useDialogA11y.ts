@@ -1,22 +1,11 @@
 /**
  * Dialog accessibility composable — focus trapping and Escape key handling.
  *
- * Requirement: All modals need role="dialog", focus trapping, Escape to close.
- *   Stacked modals (e.g. a ConfirmDialog opened inside a TransactionEditModal)
- *   must only close the topmost dialog per Escape — not cascade.
- * Approach: Module-level stack of active dialogs + a single shared document
- *   keydown listener. Each useDialogA11y call pushes an entry on mount and
- *   pops on unmount. The listener only delegates to the stack's top entry, so
- *   exactly one dialog handles Escape/Tab at any moment. Focus is restored to
- *   the element that was focused before THIS dialog opened (LIFO).
- * Alternatives:
- *   - Per-instance document listener (previous version): Rejected — two open
- *     modals both received the same Escape, so pressing Escape on the inner
- *     ConfirmDialog also closed the outer edit modal.
- *   - Third-party focus-trap library: Deferred — the stack is the minimum
- *     increment needed; we can upgrade later without changing call sites.
- *   - Per-dialog DOM-scoped listener: Rejected — Escape and Tab are window
- *     concerns; the caller's dialog may not yet contain the focused element.
+ * Module-level stack + one shared document keydown listener. Stacked modals
+ * (e.g. ConfirmDialog inside TransactionEditModal) cascade only if both
+ * dialogs receive the same Escape — the stack ensures exactly one does. A
+ * per-instance listener (the previous design) broke this: closing the inner
+ * dialog also closed the outer one.
  */
 
 import { onMounted, onUnmounted, type Ref } from 'vue'

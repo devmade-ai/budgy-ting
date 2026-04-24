@@ -19,9 +19,9 @@
 
 ## Testing
 
-- [ ] Unit tests for WorkspaceListView storage indicator helpers (`formatStorageSize`, `loadStorageUsage` behaviour when `navigator.storage` is missing)
-- [ ] Unit tests for `removeRow` in ImportStepReview (index reconciliation for `tagInputIndex`, `currentPage` bounds after splicing)
 - [ ] Unit tests for debounced `cashOnHandForRunway` watcher in WorkspaceDashboard
+- [ ] Test radiogroup arrow-key focus movement in WorkspaceForm — requires mounting the full form (DateInput, router, validation composable) so deferred
+- [ ] `loadStorageUsage` runtime branch (navigator.storage missing / estimate rejects) — currently covered by code inspection only
 
 ## A11y / Dark mode
 

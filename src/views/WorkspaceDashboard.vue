@@ -27,12 +27,9 @@ import TransactionTable from '@/components/TransactionTable.vue'
 import ErrorAlert from '@/components/ErrorAlert.vue'
 import EmptyState from '@/components/EmptyState.vue'
 
-// CashflowGraph is the sole consumer of the ~500 KB ApexCharts bundle.
-// Loading it async splits ApexCharts into its own chunk so workspaces with
-// no transactions never download it. The loading fallback is a chart-sized
-// skeleton to prevent layout shift; a minimal error fallback covers the case
-// where the chunk fails to load (offline after SW cache eviction, stale
-// deployment, CDN blip) — otherwise Vue would render nothing silently.
+// Lazy-load the chart so workspaces with no transactions skip ApexCharts's
+// ~500 KB chunk. Skeleton avoids layout shift; error fallback covers the
+// chunk-fetch-failed case (Vue otherwise renders nothing).
 const ChartSkeleton = {
   render: () => h('div', {
     role: 'status',

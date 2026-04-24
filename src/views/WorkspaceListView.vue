@@ -16,6 +16,7 @@ import EmptyState from '@/components/EmptyState.vue'
 import { formatAmount } from '@/composables/useFormat'
 import { useInstallReminder } from '@/composables/useInstallReminder'
 import { estimateMonthlySpend } from '@/engine/transactionMath'
+import { formatStorageSize } from '@/lib/reviewHelpers'
 import { Plus, Smartphone, Wallet, ChevronRight, Database } from 'lucide-vue-next'
 import type { Workspace } from '@/types/models'
 
@@ -94,11 +95,6 @@ const storagePct = computed(() => {
   if (!storageUsage.value || storageUsage.value.quota === 0) return 0
   return (storageUsage.value.used / storageUsage.value.quota) * 100
 })
-function formatStorageSize(bytes: number): string {
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`
-}
 async function loadStorageUsage() {
   if (!navigator.storage?.estimate) return
   try {

@@ -17,6 +17,7 @@ import { X } from 'lucide-vue-next'
 import { formatAmount } from '@/composables/useFormat'
 import { usePagination } from '@/composables/usePagination'
 import { useTagInput } from '@/composables/useTagInput'
+import { reconcileRemoveRow } from '@/lib/reviewHelpers'
 import { isIncome } from '@/types/models'
 import type { RecurringPattern, RecurringVariability } from '@/types/models'
 import { useTagSuggestions } from '@/ml/useTagSuggestions'
@@ -375,23 +376,20 @@ function toggleIgnore(index: number) {
   }
 }
 
-// Fully remove a transaction from the review list. Ignore already excludes
-// it from import but keeps the row visible (dimmed). Users sometimes want
-// to clear the row entirely — e.g. after ignoring 20 spam rows they want
-// the screen quieter. Splice shifts later indexes down; tagInputIndex is
-// reconciled so a mid-edit index on a later row still points at the same
-// row after the splice. currentPage is bound-checked so removing the last
-// row on the last page doesn't leave the pager stranded past totalPages.
+// Fully remove a transaction from the review list. "Ignore" excludes from
+// import but keeps the row visible; this drops it entirely for users who
+// want the screen quieter. Index reconciliation lives in reviewHelpers
+// (tested separately).
 function removeRow(index: number) {
   transactions.value.splice(index, 1)
-  if (tagInputIndex.value === index) {
-    tagInputIndex.value = -1
-  } else if (tagInputIndex.value > index) {
-    tagInputIndex.value -= 1
-  }
-  if (currentPage.value > totalPages.value) {
-    currentPage.value = Math.max(1, totalPages.value)
-  }
+  const reconciled = reconcileRemoveRow({
+    tagInputIndex: tagInputIndex.value,
+    currentPage: currentPage.value,
+    totalPagesAfter: totalPages.value,
+    removedIndex: index,
+  })
+  tagInputIndex.value = reconciled.tagInputIndex
+  currentPage.value = reconciled.currentPage
 }
 
 // ── Filtered + paginated view ──
