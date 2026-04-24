@@ -18,7 +18,9 @@ import { useTagInput } from '@/composables/useTagInput'
 import { isIncome } from '@/types/models'
 import { useDialogA11y } from '@/composables/useDialogA11y'
 import TagSuggestions from '@/components/TagSuggestions.vue'
-import { X } from 'lucide-vue-next'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
+import { isTransactionDirty } from '@/components/transactionDirty'
+import { X, RefreshCw } from 'lucide-vue-next'
 import type { TagSuggestion } from '@/ml/types'
 import type { Transaction, TransactionClassification } from '@/types/models'
 
@@ -27,6 +29,8 @@ const props = defineProps<{
   suggestions: TagSuggestion[]
   suggestionsLoading: boolean
   currencyLabel: string
+  /** ML error surfaced so user can retry from the modal when no suggestions appear */
+  suggestionsError?: string | null
   /** All known tags from the workspace — used for autocomplete fallback when tagCache is empty */
   knownTags?: string[]
 }>()
@@ -35,12 +39,14 @@ const emit = defineEmits<{
   save: [fields: Partial<Transaction>]
   delete: []
   close: []
+  retrySuggestions: []
 }>()
 
 const showDeleteConfirm = ref(false)
+const showDiscardConfirm = ref(false)
 
 const dialogRef = ref<HTMLElement | null>(null)
-useDialogA11y(dialogRef, () => emit('close'))
+useDialogA11y(dialogRef, () => requestClose())
 
 // Requirement: Read-only first, then editable on user action
 // Approach: Boolean toggle — modal opens in view mode, "Edit" button switches to edit mode
@@ -56,6 +62,62 @@ const localAmount = ref(Math.abs(props.transaction.amount))
 const localIsIncome = ref(props.transaction.amount >= 0)
 const localClassification = ref<TransactionClassification>(props.transaction.classification)
 const localTags = ref<string[]>([...props.transaction.tags])
+
+// Warn user before silently discarding edits. Comparison lives in a pure
+// helper (transactionDirty.ts) so it can be unit-tested without mounting
+// the component.
+const isDirty = computed(() => isTransactionDirty(props.transaction, {
+  description: localDescription.value,
+  date: localDate.value,
+  amount: localAmount.value,
+  isIncome: localIsIncome.value,
+  classification: localClassification.value,
+  tags: localTags.value,
+}))
+
+// Pending action for the discard confirmation — either 'close' (emit close
+// and tear down the modal) or 'view' (revert to read-only mode without closing).
+const discardTarget = ref<'close' | 'view'>('close')
+
+function requestClose() {
+  if (editing.value && isDirty.value) {
+    discardTarget.value = 'close'
+    showDiscardConfirm.value = true
+    return
+  }
+  emit('close')
+}
+
+function requestCancelEdit() {
+  if (!isDirty.value) {
+    editing.value = false
+    return
+  }
+  discardTarget.value = 'view'
+  showDiscardConfirm.value = true
+}
+
+function resetLocalFields() {
+  const t = props.transaction
+  localDescription.value = t.description
+  localDate.value = t.date
+  localAmount.value = Math.abs(t.amount)
+  localIsIncome.value = t.amount >= 0
+  localClassification.value = t.classification
+  localTags.value = [...t.tags]
+  validationError.value = ''
+  validationField.value = ''
+}
+
+function confirmDiscard() {
+  showDiscardConfirm.value = false
+  if (discardTarget.value === 'close') {
+    emit('close')
+  } else {
+    resetLocalFields()
+    editing.value = false
+  }
+}
 
 const {
   tagInput,
@@ -81,24 +143,39 @@ const filteredSuggestions = computed(() =>
   ),
 )
 
-// Validation — description required, amount must be a valid number
+// Validation — description required, amount must be a valid number.
+// Track which field failed so aria-invalid / focus target are precise for
+// screen-reader and keyboard users, not just a general banner.
 const validationError = ref('')
+const validationField = ref<'description' | 'amount' | 'date' | ''>('')
+
+// Refs to the three validatable inputs — used to shift focus on failure.
+const descInputRef = ref<HTMLInputElement | null>(null)
+const amountInputRef = ref<HTMLInputElement | null>(null)
+const dateInputRef = ref<HTMLInputElement | null>(null)
 
 function handleSave() {
   const trimmedDesc = localDescription.value.trim()
   if (!trimmedDesc) {
     validationError.value = 'Description is required.'
+    validationField.value = 'description'
+    descInputRef.value?.focus()
     return
   }
   if (isNaN(localAmount.value) || localAmount.value < 0) {
     validationError.value = 'Enter a valid amount.'
+    validationField.value = 'amount'
+    amountInputRef.value?.focus()
     return
   }
   if (!localDate.value || !/^\d{4}-\d{2}-\d{2}$/.test(localDate.value)) {
     validationError.value = 'Enter a valid date.'
+    validationField.value = 'date'
+    dateInputRef.value?.focus()
     return
   }
   validationError.value = ''
+  validationField.value = ''
 
   const signedAmount = localIsIncome.value ? Math.abs(localAmount.value) : -Math.abs(localAmount.value)
   emit('save', {
@@ -134,30 +211,32 @@ function acceptAllSuggestions() {
       <div
         class="modal-backdrop"
         aria-hidden="true"
-        @click="emit('close')"
+        @click="requestClose"
       />
 
-      <!-- Dialog -->
+      <!-- Dialog — max-h + overflow-y-auto keeps long edit forms scrollable on
+           small phones. Without explicit overflow, DaisyUI's modal-box clips
+           content at 90vh and traps the user. -->
       <div
         ref="dialogRef"
         role="dialog"
         :aria-label="editing ? 'Edit transaction' : 'Transaction details'"
         aria-modal="true"
-        class="modal-box max-w-md max-h-[90vh] p-4 sm:p-5"
+        class="modal-box max-w-md max-h-[90vh] overflow-y-auto p-4 sm:p-5"
       >
         <!-- Close button -->
         <!-- Mobile UX: 40x40px touch target for close button (was 18px icon with no padding) -->
         <button
           class="absolute top-2 right-2 w-10 h-10 rounded-full flex items-center justify-center text-base-content/40 hover:text-base-content/70 hover:bg-base-200 transition-colors"
           aria-label="Close"
-          @click="emit('close')"
+          @click="requestClose"
         >
           <X :size="18" />
         </button>
 
         <!-- ── Read-only view ── -->
         <template v-if="!editing">
-          <h3 class="text-base font-semibold text-base-content mb-4">Transaction details</h3>
+          <h3 class="text-lg font-semibold text-base-content mb-4">Transaction details</h3>
 
           <div class="space-y-3">
             <div>
@@ -198,7 +277,7 @@ function acceptAllSuggestions() {
                 >
                   {{ tag }}
                 </span>
-                <span v-if="transaction.tags.length === 0" class="text-xs text-base-content/40 italic">
+                <span v-if="transaction.tags.length === 0" class="text-xs text-base-content/60 italic">
                   No tags
                 </span>
               </div>
@@ -226,24 +305,11 @@ function acceptAllSuggestions() {
           >
             Delete transaction
           </button>
-          <!-- Inline delete confirmation -->
-          <div v-if="showDeleteConfirm" class="mt-2 p-3 bg-error/10 border border-error/20 rounded-lg">
-            <p class="text-sm text-error mb-2">Delete this transaction? This can't be undone.</p>
-            <div class="flex gap-2">
-              <button class="btn btn-ghost btn-sm flex-1" @click="showDeleteConfirm = false">Cancel</button>
-              <button
-                class="btn btn-error btn-sm flex-1"
-                @click="emit('delete')"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
         </template>
 
         <!-- ── Edit mode ── -->
         <template v-else>
-          <h3 class="text-base font-semibold text-base-content mb-4">Edit transaction</h3>
+          <h3 class="text-lg font-semibold text-base-content mb-4">Edit transaction</h3>
 
           <div class="space-y-4">
             <!-- Description -->
@@ -251,8 +317,11 @@ function acceptAllSuggestions() {
               <label :for="`${uid}-desc`" class="text-sm text-base-content/70 mb-1 block">Description</label>
               <input
                 :id="`${uid}-desc`"
+                ref="descInputRef"
                 v-model="localDescription"
                 type="text"
+                :aria-invalid="validationField === 'description' || undefined"
+                :aria-describedby="validationField === 'description' ? `${uid}-err` : undefined"
                 class="input input-bordered w-full text-base min-h-[44px]"
               />
             </div>
@@ -262,8 +331,11 @@ function acceptAllSuggestions() {
               <label :for="`${uid}-date`" class="text-sm text-base-content/70 mb-1 block">Date</label>
               <input
                 :id="`${uid}-date`"
+                ref="dateInputRef"
                 v-model="localDate"
                 type="date"
+                :aria-invalid="validationField === 'date' || undefined"
+                :aria-describedby="validationField === 'date' ? `${uid}-err` : undefined"
                 class="input input-bordered w-full text-base min-h-[44px]"
               />
             </div>
@@ -274,10 +346,14 @@ function acceptAllSuggestions() {
                 <label :for="`${uid}-amount`" class="text-sm text-base-content/70 mb-1 block">Amount ({{ currencyLabel }})</label>
                 <input
                   :id="`${uid}-amount`"
+                  ref="amountInputRef"
                   v-model.number="localAmount"
                   type="number"
+                  inputmode="decimal"
                   min="0"
                   step="0.01"
+                  :aria-invalid="validationField === 'amount' || undefined"
+                  :aria-describedby="validationField === 'amount' ? `${uid}-err` : undefined"
                   class="input input-bordered w-full text-base min-h-[44px]"
                 />
               </div>
@@ -314,19 +390,22 @@ function acceptAllSuggestions() {
                 <span
                   v-for="tag in localTags"
                   :key="tag"
-                  class="inline-flex items-center gap-0.5 text-xs bg-info/10 text-info rounded px-1.5 py-0.5"
+                  class="inline-flex items-center gap-1 text-xs bg-info/10 text-info rounded pl-2 pr-0.5 py-0.5"
                 >
                   {{ tag }}
-                  <!-- Mobile UX: 20x20px touch target for tag removal (was 10px icon) -->
+                  <!-- Mobile UX: 28×28 touch target (was 20×20; 20px is below the
+                       44px recommendation and inconsistent with other close buttons
+                       in the app — 28 keeps chip compactness without sacrificing
+                       reliable tappability). -->
                   <button
-                    class="w-5 h-5 flex items-center justify-center opacity-60 hover:opacity-100 ml-0.5 rounded-full hover:bg-info/20 transition-colors"
+                    class="w-7 h-7 flex items-center justify-center opacity-60 hover:opacity-100 rounded-full hover:bg-info/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-info transition-colors"
                     :aria-label="`Remove ${tag}`"
                     @click="removeTag(tag)"
                   >
-                    <X :size="12" />
+                    <X :size="14" aria-hidden="true" />
                   </button>
                 </span>
-                <span v-if="localTags.length === 0" class="text-xs text-base-content/40 italic">
+                <span v-if="localTags.length === 0" class="text-xs text-base-content/60 italic">
                   No tags
                 </span>
               </div>
@@ -339,9 +418,32 @@ function acceptAllSuggestions() {
                 @dismiss="dismissSuggestion"
                 @accept-all="acceptAllSuggestions"
               />
-              <div v-if="suggestionsLoading" class="flex items-center gap-1 mt-1 text-xs text-base-content/40">
-                <span class="loading loading-spinner loading-xs" />
+              <div
+                v-if="suggestionsLoading"
+                class="flex items-center gap-1 mt-1 text-xs text-base-content/60"
+                role="status"
+                aria-live="polite"
+                aria-busy="true"
+              >
+                <span class="loading loading-spinner loading-xs" aria-hidden="true" />
                 Suggesting tags...
+              </div>
+
+              <!-- ML retry affordance — visible when model errored and no suggestions returned.
+                   Matches the retry pattern in ImportStepReview so users see a way forward. -->
+              <div
+                v-else-if="suggestionsError && filteredSuggestions.length === 0"
+                class="flex items-center gap-2 mt-1 text-xs text-base-content/60"
+              >
+                <span>Suggestions unavailable.</span>
+                <button
+                  class="inline-flex items-center gap-1 text-primary hover:underline"
+                  type="button"
+                  @click="emit('retrySuggestions')"
+                >
+                  <RefreshCw :size="12" aria-hidden="true" />
+                  Retry
+                </button>
               </div>
 
               <!-- Manual tag input with autocomplete -->
@@ -355,6 +457,8 @@ function acceptAllSuggestions() {
                   role="combobox"
                   :aria-expanded="showAutocomplete"
                   aria-autocomplete="list"
+                  :aria-controls="`${uid}-taglist`"
+                  :aria-activedescendant="showAutocomplete && autocompleteResults[selectedIndex] ? `${uid}-tagopt-${selectedIndex}` : undefined"
                   @keydown="handleTagKeydown"
                   @blur="handleBlur"
                   @focus="updateAutocomplete"
@@ -362,11 +466,13 @@ function acceptAllSuggestions() {
                 <!-- Mobile UX: Render upward (bottom-full) to avoid being clipped by modal overflow -->
                 <ul
                   v-if="showAutocomplete"
+                  :id="`${uid}-taglist`"
                   role="listbox"
                   class="absolute z-10 left-0 right-0 bottom-full mb-0.5 bg-base-100 border border-base-300 rounded shadow-lg max-h-40 overflow-y-auto"
                 >
                   <li
                     v-for="(result, i) in autocompleteResults"
+                    :id="`${uid}-tagopt-${i}`"
                     :key="result"
                     role="option"
                     :aria-selected="i === selectedIndex"
@@ -379,7 +485,7 @@ function acceptAllSuggestions() {
                 </ul>
                 <p
                   v-else-if="tagInput.length > 0 && autocompleteResults.length === 0"
-                  class="text-xs text-base-content/40 mt-1"
+                  class="text-xs text-base-content/60 mt-1"
                 >
                   No matching tags — press Enter to create "{{ tagInput }}"
                 </p>
@@ -387,14 +493,22 @@ function acceptAllSuggestions() {
             </div>
           </div>
 
-          <!-- Validation error -->
-          <p v-if="validationError" class="text-sm text-error mt-4">{{ validationError }}</p>
+          <!-- Validation error — role="alert" auto-announces on insert for screen readers.
+               Paired with aria-describedby on the failing input above. -->
+          <p
+            v-if="validationError"
+            :id="`${uid}-err`"
+            role="alert"
+            class="text-sm text-error mt-4"
+          >
+            {{ validationError }}
+          </p>
 
           <!-- Action buttons — edit mode -->
           <div class="flex gap-3 mt-4">
             <button
               class="btn btn-ghost flex-1"
-              @click="editing = false"
+              @click="requestCancelEdit"
             >
               Cancel
             </button>
@@ -408,5 +522,31 @@ function acceptAllSuggestions() {
         </template>
       </div>
     </div>
+
+    <!-- Destructive-action confirmation.
+         Previously an inline panel inside the edit modal — promoted to ConfirmDialog
+         for parity with workspace delete (same alertdialog, same button weight). -->
+    <ConfirmDialog
+      v-if="showDeleteConfirm"
+      title="Delete this transaction?"
+      message="This transaction will be permanently removed. This cannot be undone."
+      confirm-label="Delete transaction"
+      :danger="true"
+      @confirm="emit('delete')"
+      @cancel="showDeleteConfirm = false"
+    />
+
+    <!-- Unsaved-changes guard — fires on close/backdrop/Escape/Cancel when
+         the edit form is dirty. Without this, clicking away silently discarded
+         typed values. -->
+    <ConfirmDialog
+      v-if="showDiscardConfirm"
+      title="Discard unsaved changes?"
+      message="You have unsaved changes. Close without saving?"
+      confirm-label="Discard changes"
+      :danger="true"
+      @confirm="confirmDiscard"
+      @cancel="showDiscardConfirm = false"
+    />
   </Teleport>
 </template>

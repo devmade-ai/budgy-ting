@@ -64,29 +64,44 @@ function handleFileSelect(event: Event) {
   const reader = new FileReader()
   activeReader = reader
   reader.onload = (e) => {
-    activeReader = null
-    parsing.value = false
     const content = e.target?.result as string
     if (!content) {
+      activeReader = null
+      parsing.value = false
       fileError.value = 'Could not read file'
       return
     }
 
-    const isJSON = file.name.endsWith('.json')
-    parsedData.value = isJSON ? parseJSONImport(content) : parseCSV(content)
+    // Requirement: Visual feedback during large-file parse
+    // Approach: parseCSV/parseJSONImport are synchronous and block the main thread
+    //   for multi-MB files. Without a yield, the "Parsing…" spinner never paints —
+    //   the browser grabs the thread immediately and the UI appears frozen.
+    //   requestAnimationFrame defers the parse until after the next paint, so the
+    //   spinner is visible throughout the blocking work.
+    // Alternatives:
+    //   - Worker-based streaming parse: Rejected — significant refactor for a
+    //     pre-release tool; the existing parser is in-memory only
+    //   - setTimeout(fn, 0): Works but rAF guarantees a paint first, not just a
+    //     task queue slot
+    requestAnimationFrame(() => {
+      const isJSON = file.name.endsWith('.json')
+      parsedData.value = isJSON ? parseJSONImport(content) : parseCSV(content)
+      activeReader = null
+      parsing.value = false
 
-    if (parsedData.value.rows.length === 0) {
-      if (parsedData.value.headers.length === 0) {
-        fileError.value = 'The file appears to be empty. Check that it contains data rows.'
-      } else {
-        fileError.value = parsedData.value.errors[0]
-          || `Found ${parsedData.value.headers.length} column headers but no data rows. Check that the file has data below the header row.`
+      if (parsedData.value.rows.length === 0) {
+        if (parsedData.value.headers.length === 0) {
+          fileError.value = 'The file appears to be empty. Check that it contains data rows.'
+        } else {
+          fileError.value = parsedData.value.errors[0]
+            || `Found ${parsedData.value.headers.length} column headers but no data rows. Check that the file has data below the header row.`
+        }
+        parsedData.value = null
+        return
       }
-      parsedData.value = null
-      return
-    }
 
-    autoDetectColumns()
+      autoDetectColumns()
+    })
   }
   reader.onerror = () => {
     activeReader = null
@@ -138,21 +153,22 @@ function handleContinue() {
 
 <template>
   <div>
-    <h1 class="text-2xl font-bold text-base-content mb-2">Import Actuals</h1>
+    <h1 class="text-2xl font-bold text-base-content mb-2">Import transactions</h1>
     <p class="text-base-content/60 text-sm mb-6">
       Upload a CSV or JSON file with your actual spending data
     </p>
 
     <label
-      class="bg-base-100 rounded-xl border-2 border-dashed border-base-300 p-4 flex flex-col items-center justify-center py-12 hover:border-primary transition-colors cursor-pointer"
+      class="bg-base-100 rounded-xl border-2 border-dashed border-base-300 p-4 flex flex-col items-center justify-center py-12 hover:border-primary transition-colors cursor-pointer focus-within:border-primary focus-within:ring-2 focus-within:ring-primary"
     >
-      <Upload :size="28" class="text-base-content/40 mb-3" />
+      <Upload :size="28" class="text-base-content/40 mb-3" aria-hidden="true" />
       <p class="text-base-content/70 font-medium">Choose a file</p>
-      <p class="text-base-content/40 text-sm mt-1">CSV or JSON, max 10 MB</p>
+      <p class="text-base-content/60 text-sm mt-1">CSV or JSON, max 10 MB</p>
       <input
         type="file"
         accept=".csv,.json"
-        class="hidden"
+        class="sr-only"
+        aria-label="Upload CSV or JSON bank statement, max 10 MB"
         @change="handleFileSelect"
       />
     </label>
@@ -162,9 +178,18 @@ function handleContinue() {
       <File :size="18" class="text-base-content/40" />
       <div>
         <p class="font-medium">{{ selectedFile.name }}</p>
-        <p class="text-xs text-base-content/40">{{ selectedFile.size }}</p>
+        <p class="text-xs text-base-content/60">{{ selectedFile.size }}</p>
       </div>
-      <span v-if="parsing" class="text-xs text-base-content/40 ml-auto">Parsing...</span>
+      <span
+        v-if="parsing"
+        class="text-xs text-base-content/60 ml-auto inline-flex items-center gap-1.5"
+        role="status"
+        aria-live="polite"
+        aria-busy="true"
+      >
+        <span class="loading loading-spinner loading-xs" aria-hidden="true" />
+        Parsing — large files may take a moment…
+      </span>
     </div>
 
     <p v-if="fileError" class="text-sm text-error mt-3">{{ fileError }}</p>
@@ -212,10 +237,13 @@ function handleContinue() {
 
       <!-- Date format override — lets user correct auto-detection if needed
            Requirement: User must be able to fix DD/MM vs MM/DD ambiguity
-           Approach: Dropdown showing detected format with option to change -->
+           Approach: Dropdown showing detected format with option to change.
+           Explicit for/id label association so screen-reader users hear
+           "Date format combobox" when focusing. -->
       <div class="mt-4 flex items-center gap-3">
-        <label class="text-sm text-base-content/70">Date format:</label>
+        <label for="date-format-select" class="text-sm text-base-content/70">Date format:</label>
         <select
+          id="date-format-select"
           v-model.number="dateFormatIndex"
           class="select select-bordered w-auto text-base min-h-[44px]"
         >
@@ -230,7 +258,7 @@ function handleContinue() {
       </div>
 
       <button class="btn btn-primary mt-4" @click="handleContinue">
-        Continue to classify
+        Review &amp; import
       </button>
     </template>
   </div>

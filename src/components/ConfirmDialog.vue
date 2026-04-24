@@ -8,11 +8,14 @@ import { ref } from 'vue'
 import { useDialogA11y } from '@/composables/useDialogA11y'
 import { hapticConfirm } from '@/composables/useHaptic'
 
-defineProps<{
+const props = defineProps<{
   title: string
   message: string
   confirmLabel?: string
   danger?: boolean
+  /** When true, disables both buttons and swaps confirm for a spinner — for
+   *  async confirms (DB restore, network calls) where the action takes real time. */
+  busy?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -21,7 +24,8 @@ const emit = defineEmits<{
 }>()
 
 const dialogRef = ref<HTMLElement | null>(null)
-useDialogA11y(dialogRef, () => emit('cancel'))
+// While busy, Escape should not cancel — the work is already running.
+useDialogA11y(dialogRef, () => { if (!props.busy) emit('cancel') })
 </script>
 
 <template>
@@ -31,7 +35,7 @@ useDialogA11y(dialogRef, () => emit('cancel'))
       <div
         class="modal-backdrop"
         aria-hidden="true"
-        @click="emit('cancel')"
+        @click="busy || emit('cancel')"
       />
 
       <!-- Dialog -->
@@ -40,7 +44,8 @@ useDialogA11y(dialogRef, () => emit('cancel'))
         role="alertdialog"
         :aria-label="title"
         aria-modal="true"
-        class="modal-box max-w-sm"
+        :aria-busy="busy || undefined"
+        class="modal-box max-w-sm max-h-[90vh] overflow-y-auto"
       >
         <h3 class="text-lg font-semibold text-base-content mb-2">{{ title }}</h3>
         <p class="text-sm text-base-content/70 mb-6">{{ message }}</p>
@@ -51,6 +56,7 @@ useDialogA11y(dialogRef, () => emit('cancel'))
         <div class="flex gap-3">
           <button
             class="btn btn-ghost flex-1"
+            :disabled="busy"
             @click="emit('cancel')"
           >
             Cancel
@@ -58,9 +64,11 @@ useDialogA11y(dialogRef, () => emit('cancel'))
           <button
             class="btn flex-1"
             :class="danger ? 'btn-error' : 'btn-primary'"
+            :disabled="busy"
             @click="hapticConfirm(); emit('confirm')"
           >
-            {{ confirmLabel || 'Confirm' }}
+            <span v-if="busy" class="loading loading-spinner loading-xs mr-1" aria-hidden="true" />
+            {{ busy ? 'Working…' : (confirmLabel || 'Confirm') }}
           </button>
         </div>
       </div>

@@ -17,6 +17,7 @@ import { X } from 'lucide-vue-next'
 import { formatAmount } from '@/composables/useFormat'
 import { usePagination } from '@/composables/usePagination'
 import { useTagInput } from '@/composables/useTagInput'
+import { reconcileRemoveRow } from '@/lib/reviewHelpers'
 import { isIncome } from '@/types/models'
 import type { RecurringPattern, RecurringVariability } from '@/types/models'
 import { useTagSuggestions } from '@/ml/useTagSuggestions'
@@ -375,6 +376,22 @@ function toggleIgnore(index: number) {
   }
 }
 
+// Fully remove a transaction from the review list. "Ignore" excludes from
+// import but keeps the row visible; this drops it entirely for users who
+// want the screen quieter. Index reconciliation lives in reviewHelpers
+// (tested separately).
+function removeRow(index: number) {
+  transactions.value.splice(index, 1)
+  const reconciled = reconcileRemoveRow({
+    tagInputIndex: tagInputIndex.value,
+    currentPage: currentPage.value,
+    totalPagesAfter: totalPages.value,
+    removedIndex: index,
+  })
+  tagInputIndex.value = reconciled.tagInputIndex
+  currentPage.value = reconciled.currentPage
+}
+
 // ── Filtered + paginated view ──
 const filteredTransactions = computed(() => {
   if (!search.value.trim()) {
@@ -429,13 +446,13 @@ function handleImport() {
     <!-- Loading state while ML models load -->
     <template v-if="preparing">
       <p class="text-sm text-base-content/60 mb-4">
-        Preparing tag suggestions and pattern matching...
+        Preparing tag suggestions and recurring detection…
       </p>
       <div class="max-w-sm mx-auto mt-8 mb-8 space-y-4">
         <!-- Embedding model (fuzzy pattern matching) -->
         <div>
           <div class="flex items-center justify-between text-xs text-base-content/60 mb-1">
-            <span>Pattern matching</span>
+            <span>Recurring detection</span>
             <span v-if="embeddingError" class="text-warning">Unavailable</span>
             <span v-else-if="!embeddingLoading && !embeddingError">Ready</span>
             <span v-else-if="embeddingProgress > 0">{{ Math.round(embeddingProgress) }}%</span>
@@ -464,13 +481,13 @@ function handleImport() {
           />
         </div>
 
-        <p class="text-xs text-base-content/40 text-center">
+        <p class="text-xs text-base-content/60 text-center">
           <template v-if="embeddingLoading || tagModelLoading">
             Downloading models for first use — this only happens once
           </template>
           <template v-else-if="embeddingError || tagModelError">
-            <span v-if="embeddingError && tagModelError">Models unavailable — continuing with basic matching</span>
-            <span v-else-if="embeddingError">Pattern matching unavailable</span>
+            <span v-if="embeddingError && tagModelError">Smart detection unavailable — you can still review manually</span>
+            <span v-else-if="embeddingError">Recurring detection unavailable</span>
             <span v-else>Tag suggestions unavailable</span>
             <button
               class="block mx-auto mt-2 text-primary hover:text-primary/80 underline"
@@ -497,7 +514,7 @@ function handleImport() {
       <div class="flex flex-wrap gap-3 mb-4 text-sm">
         <span class="text-info">{{ summary.recurring }} recurring</span>
         <span class="text-base-content/70">{{ summary.onceOff }} once-off</span>
-        <span class="text-base-content/40">{{ summary.ignored }} ignored</span>
+        <span class="text-base-content/60">{{ summary.ignored }} ignored</span>
         <span class="ml-auto text-base-content/60">{{ summary.active }} of {{ summary.total }} will be imported</span>
       </div>
 
@@ -505,23 +522,40 @@ function handleImport() {
       <div class="mb-4 flex flex-wrap items-center gap-3">
         <input
           v-model="search"
-          type="text"
+          type="search"
           placeholder="Search descriptions..."
+          aria-label="Search transactions by description"
           class="input input-bordered text-base py-1.5 px-3 w-48 min-h-[44px]"
         />
         <button
           class="text-xs text-base-content/60 hover:text-base-content underline"
           @click="markAllOnceOff"
         >
-          Mark all unmatched as once-off
+          Mark remaining as one-time
         </button>
-        <span v-if="tagModelLoading" class="text-xs text-base-content/40 italic">
+        <span v-if="tagModelLoading" class="text-xs text-base-content/60 italic">
           Loading tag suggestions...
         </span>
       </div>
 
-      <!-- Transaction list -->
-      <div class="space-y-2 mb-4">
+      <!-- Transaction list — empty when the user has removed every row.
+           Without this guard the review step renders a blank area with a
+           disabled "Import 0 transactions" button and no path forward;
+           surfacing a clear message + Back affordance is kinder. -->
+      <div
+        v-if="transactions.length === 0"
+        class="text-center py-12 border border-base-300 rounded-lg bg-base-200/30 mb-4"
+        role="status"
+      >
+        <p class="text-sm text-base-content/70 mb-3">
+          No transactions left to import. You removed all of them.
+        </p>
+        <button class="btn btn-ghost btn-sm" @click="emit('back')">
+          Go back to upload
+        </button>
+      </div>
+
+      <div v-else class="space-y-2 mb-4">
         <div
           v-for="{ tx, originalIndex } in paginatedTransactions"
           :key="originalIndex"
@@ -600,21 +634,26 @@ function handleImport() {
                     v-model="tagInputValue"
                     type="text"
                     placeholder="Type a tag..."
+                    :aria-label="`Add tag to ${tx.description}`"
                     class="input input-bordered w-full text-xs py-1.5 px-2"
                     role="combobox"
                     :aria-expanded="tagAutocompleteVisible"
                     aria-autocomplete="list"
+                    :aria-controls="`tag-list-${originalIndex}`"
+                    :aria-activedescendant="tagAutocompleteVisible && tagAutocompleteResults[tagSelectedIndex] ? `tag-opt-${originalIndex}-${tagSelectedIndex}` : undefined"
                     @keydown="handleTagKeydown($event, originalIndex)"
                     @blur="handleTagBlur"
                     @focus="updateTagAutocomplete"
                   />
                   <ul
                     v-if="tagAutocompleteVisible"
+                    :id="`tag-list-${originalIndex}`"
                     role="listbox"
                     class="absolute z-10 left-0 right-0 mt-0.5 bg-base-100 border border-base-300 rounded shadow-lg max-h-32 overflow-y-auto"
                   >
                     <li
                       v-for="(result, ri) in tagAutocompleteResults"
+                      :id="`tag-opt-${originalIndex}-${ri}`"
                       :key="result"
                       role="option"
                       :aria-selected="ri === tagSelectedIndex"
@@ -699,34 +738,50 @@ function handleImport() {
                   Once-off
                 </button>
               </div>
-              <button
-                class="text-xs px-2 py-1 transition-colors"
-                :class="tx.ignored
-                  ? 'text-error hover:text-error/80 font-medium'
-                  : 'text-base-content/40 hover:text-base-content/70'"
-                @click="toggleIgnore(originalIndex)"
-              >
-                {{ tx.ignored ? 'Ignored — undo' : 'Ignore' }}
-              </button>
+              <div class="flex items-center gap-2">
+                <button
+                  class="text-xs px-2 py-1 transition-colors"
+                  :class="tx.ignored
+                    ? 'text-error hover:text-error/80 font-medium'
+                    : 'text-base-content/60 hover:text-base-content/80'"
+                  @click="toggleIgnore(originalIndex)"
+                >
+                  {{ tx.ignored ? 'Ignored — undo' : 'Ignore' }}
+                </button>
+                <!-- Fully remove — "Ignore" excludes from import but keeps
+                     the row visible; Remove drops it from the review entirely
+                     for users who want the screen quieter. -->
+                <button
+                  class="w-7 h-7 flex items-center justify-center rounded-full text-base-content/40 hover:text-error hover:bg-error/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-error transition-colors"
+                  :aria-label="`Remove ${tx.description} from this import`"
+                  @click="removeRow(originalIndex)"
+                >
+                  <X :size="14" aria-hidden="true" />
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Pagination -->
+      <!-- Pagination — opacity-50 on disabled keeps contrast above WCAG 3:1 threshold
+           for non-text UI (opacity-30 failed on light themes). aria-label clarifies
+           the page context for screen readers beyond the short visual label. -->
       <div v-if="totalPages > 1" class="flex items-center justify-center gap-2 mb-4">
         <button
-          class="text-xs px-2 py-1 rounded border border-base-300 hover:bg-base-200 disabled:opacity-30"
+          class="text-xs px-2 py-1 rounded border border-base-300 hover:bg-base-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          aria-label="Previous page of transactions"
           :disabled="currentPage === 1"
           @click="currentPage--"
         >
           Previous
         </button>
-        <span class="text-xs text-base-content/60">
+        <span class="text-xs text-base-content/70" aria-live="polite">
           Page {{ currentPage }} of {{ totalPages }}
         </span>
         <button
-          class="text-xs px-2 py-1 rounded border border-base-300 hover:bg-base-200 disabled:opacity-30"
+          class="text-xs px-2 py-1 rounded border border-base-300 hover:bg-base-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          aria-label="Next page of transactions"
           :disabled="currentPage === totalPages"
           @click="currentPage++"
         >

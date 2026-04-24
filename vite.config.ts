@@ -234,5 +234,9 @@ export default defineConfig({
   },
   test: {
     include: ['src/**/*.test.ts'],
+    // happy-dom provides a lightweight DOM implementation for composable tests
+    // that touch document/window. Engine tests don't care either way but they
+    // all run under the same env for simplicity.
+    environment: 'happy-dom',
   },
 })

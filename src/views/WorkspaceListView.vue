@@ -6,7 +6,7 @@
  *   inject for the empty state discovery button.
  */
 
-import { ref, inject, onMounted } from 'vue'
+import { ref, inject, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { db } from '@/db'
 import { usePullToRefresh } from '@/composables/usePullToRefresh'
@@ -16,7 +16,8 @@ import EmptyState from '@/components/EmptyState.vue'
 import { formatAmount } from '@/composables/useFormat'
 import { useInstallReminder } from '@/composables/useInstallReminder'
 import { estimateMonthlySpend } from '@/engine/transactionMath'
-import { Plus, Smartphone, Wallet, ChevronRight } from 'lucide-vue-next'
+import { formatStorageSize } from '@/lib/reviewHelpers'
+import { Plus, Smartphone, Wallet, ChevronRight, Database } from 'lucide-vue-next'
 import type { Workspace } from '@/types/models'
 
 const router = useRouter()
@@ -67,6 +68,9 @@ async function refreshList() {
   try {
     workspaces.value = await db.workspaces.orderBy('createdAt').reverse().toArray()
     loadSummaries(workspaces.value)
+    // Re-estimate storage too — users pulling-to-refresh after a large import
+    // expect the quota indicator to reflect the new on-disk size.
+    loadStorageUsage()
   } catch {
     error.value = 'Couldn\'t refresh the list. Please refresh the page and try again.'
   }
@@ -81,6 +85,32 @@ function createWorkspace() {
 }
 
 const { showInstallReminder, checkInstallReminder, dismissInstallReminder } = useInstallReminder()
+
+// Storage usage indicator — reads quota via navigator.storage.estimate().
+// Hidden when the API isn't available (older Safari / some Android browsers).
+// Read once on mount; no reactive refresh — users can pull-to-refresh for a
+// new snapshot if they just imported a large batch.
+const storageUsage = ref<{ used: number; quota: number } | null>(null)
+const storagePct = computed(() => {
+  if (!storageUsage.value || storageUsage.value.quota === 0) return 0
+  // Clamp at 100 — spec allows `usage > quota` briefly when the browser
+  // rebalances the origin's quota downward (user clears site data, other
+  // origins under the same domain grow). Without the clamp, the aria-label
+  // reads "Storage 105% used" until the next estimate catches up.
+  return Math.min(100, (storageUsage.value.used / storageUsage.value.quota) * 100)
+})
+async function loadStorageUsage() {
+  if (!navigator.storage?.estimate) return
+  try {
+    const { usage, quota } = await navigator.storage.estimate()
+    if (usage !== undefined && quota !== undefined && quota > 0) {
+      storageUsage.value = { used: usage, quota }
+    }
+  } catch {
+    // Silent — non-critical diagnostic
+  }
+}
+onMounted(() => { loadStorageUsage() })
 </script>
 
 <template>
@@ -124,7 +154,7 @@ const { showInstallReminder, checkInstallReminder, dismissInstallReminder } = us
         :value="refreshing ? 100 : pullProgress * 100"
         max="100"
       />
-      <span :class="canRelease ? 'text-primary font-medium' : 'text-base-content/40'">
+      <span :class="canRelease ? 'text-primary font-medium' : 'text-base-content/60'">
         {{ refreshing ? 'Refreshing...' : canRelease ? 'Release to refresh' : 'Pull to refresh' }}
       </span>
     </div>
@@ -178,5 +208,24 @@ const { showInstallReminder, checkInstallReminder, dismissInstallReminder } = us
       </div>
     </template>
 
+    <!-- Storage usage indicator — rendered below any list/empty state so users
+         see where their local data sits against the browser quota. Skipped
+         while loading (no value during skeleton) and when navigator.storage
+         isn't supported (some older Safari / Android). -->
+    <div
+      v-if="!loading && storageUsage"
+      class="mt-8 flex items-center gap-2 text-xs text-base-content/60"
+    >
+      <Database :size="12" class="shrink-0" aria-hidden="true" />
+      <span class="whitespace-nowrap">
+        {{ formatStorageSize(storageUsage.used) }} of {{ formatStorageSize(storageUsage.quota) }} used
+      </span>
+      <progress
+        class="progress progress-primary h-1 flex-1 max-w-[180px]"
+        :value="storagePct"
+        max="100"
+        :aria-label="`Storage ${storagePct.toFixed(0)}% used`"
+      />
+    </div>
   </div>
 </template>

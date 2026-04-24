@@ -22,6 +22,9 @@ export function useRestoreWorkspace(onSuccess?: () => void) {
   const importError = ref('')
   const showReplaceConfirm = ref(false)
   const pendingImportData = ref<ExportSchema | null>(null)
+  // Requirement: Non-trivial IDB replace transactions need visible progress —
+  // users shouldn't wonder if the app froze.
+  const restoring = ref(false)
 
   function triggerFilePicker() {
     const input = document.createElement('input')
@@ -75,7 +78,8 @@ export function useRestoreWorkspace(onSuccess?: () => void) {
   }
 
   async function confirmReplace() {
-    if (!pendingImportData.value) return
+    if (!pendingImportData.value || restoring.value) return
+    restoring.value = true
     try {
       const result = await importWorkspace(pendingImportData.value, 'replace')
       showToast(result.message)
@@ -85,10 +89,17 @@ export function useRestoreWorkspace(onSuccess?: () => void) {
     } catch {
       importError.value = 'Couldn\'t replace the workspace. Please try again.'
       showReplaceConfirm.value = false
+      // Clear pendingImportData too — otherwise a subsequent file pick shows
+      // the confirm dialog with the previous file's workspace name until the
+      // new file's validation overwrites it.
+      pendingImportData.value = null
+    } finally {
+      restoring.value = false
     }
   }
 
   function cancelReplace() {
+    if (restoring.value) return
     showReplaceConfirm.value = false
     pendingImportData.value = null
   }
@@ -98,6 +109,7 @@ export function useRestoreWorkspace(onSuccess?: () => void) {
     importError,
     showReplaceConfirm,
     pendingImportData,
+    restoring,
     confirmReplace,
     cancelReplace,
   }

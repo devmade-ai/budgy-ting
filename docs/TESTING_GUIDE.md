@@ -614,3 +614,24 @@ Run through this checklist after any change to verify nothing is broken:
 - Each workspace's data is isolated
 - No cross-contamination between workspaces
 - Deleting one workspace doesn't affect others
+
+---
+
+## Automated tests
+
+Run with `npm test` (one-shot) or `npm run test:watch`.
+
+**Environment:** vitest runs under `happy-dom` (configured in `vite.config.ts`). Engine tests are env-agnostic; composable and component-behaviour tests rely on `document` / `addEventListener` provided by happy-dom. Keep this in mind when adding tests that touch globals — `window.matchMedia`, `navigator.*`, etc. — they may need stubbing.
+
+**Coverage highlights:**
+- `src/engine/` — forecast, patterns, accuracy, matching, csvParser, runway (pure)
+- `src/composables/useDialogA11y.test.ts` — dialog stack semantics (push/pop, Escape-to-top, body-scroll lock)
+- `src/components/transactionDirty.test.ts` — unsaved-changes detection for the transaction edit modal
+- `src/iconCacheBust.test.ts` — PWA icon cache-bust wiring (source + dist)
+
+## Performance-sensitive manual checks
+
+Not covered by automated tests — verify with browser devtools after substantial changes:
+
+- **Cashflow chart lazy-load.** The chart is code-split via `defineAsyncComponent` (CashflowGraph + ~500 KB ApexCharts chunk). On a fresh visit to a data-loaded workspace, the metrics grid and transaction table render first; the chart skeleton appears ~100 ms later, replaced by the chart itself once the chunk downloads. Empty-state workspaces skip the chart download entirely. Check the Network tab to confirm `CashflowGraph-*.js` and `apexcharts-*.js` load only when a chart is about to render.
+- **Cash-on-hand debounce.** Typing rapidly in the cash-on-hand input should not cause chart flicker during typing — the runway recompute is debounced 300 ms. If you see the chart's cash-balance line jitter mid-type, the debounce regressed.

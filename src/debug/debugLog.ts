@@ -170,11 +170,27 @@ export function generateReport(): string {
 // Must run at module load time to catch early console calls.
 // HMR guard prevents duplicate patching during development.
 
-if (typeof window !== 'undefined' && !(window as any).__debugConsolePatched) {
-  (window as any).__debugConsolePatched = true
+// Window augmentation for HMR guard flags — matches the pattern used by the
+// other HMR-safe composables (useDialogA11y, usePWAInstall, usePWAUpdate,
+// useDarkMode). `__debugLogReady` is also read by the pre-framework inline
+// pill in index.html to know whether to skip its own error capture.
+declare global {
+  interface Window {
+    __debugConsolePatched?: boolean
+    __debugLogListenersAttached?: boolean
+    __debugLogReady?: boolean
+  }
+}
 
-  const originalError = console.error
-  const originalWarn = console.warn
+// Module-scoped so dispose() can restore the originals.
+let originalError: typeof console.error | undefined
+let originalWarn: typeof console.warn | undefined
+
+if (typeof window !== 'undefined' && !window.__debugConsolePatched) {
+  window.__debugConsolePatched = true
+
+  originalError = console.error
+  originalWarn = console.warn
 
   // Re-entrancy guard: if a subscriber error triggers console.error before
   // being caught, the patched console.error would call debugLog again, which
@@ -182,7 +198,7 @@ if (typeof window !== 'undefined' && !(window as any).__debugConsolePatched) {
   let intercepting = false
 
   console.error = (...args: unknown[]) => {
-    originalError.apply(console, args)
+    originalError!.apply(console, args)
     if (intercepting) return
     intercepting = true
     debugLog('global', 'error', args.map(String).join(' '))
@@ -190,7 +206,7 @@ if (typeof window !== 'undefined' && !(window as any).__debugConsolePatched) {
   }
 
   console.warn = (...args: unknown[]) => {
-    originalWarn.apply(console, args)
+    originalWarn!.apply(console, args)
     if (intercepting) return
     intercepting = true
     debugLog('global', 'warn', args.map(String).join(' '))
@@ -201,21 +217,43 @@ if (typeof window !== 'undefined' && !(window as any).__debugConsolePatched) {
 // ── Global error listeners (installed once at module load) ──
 // HMR guard prevents duplicate listeners during development.
 
-if (typeof window !== 'undefined' && !(window as any).__debugLogListenersAttached) {
-  (window as any).__debugLogListenersAttached = true
+// Named handlers so removeEventListener can reach them on HMR dispose.
+function handleGlobalError(event: ErrorEvent) {
+  debugLog('global', 'error', event.message || 'Unknown error', {
+    filename: event.filename,
+    line: event.lineno,
+    col: event.colno,
+  })
+}
+
+function handleUnhandledRejection(event: PromiseRejectionEvent) {
+  debugLog('global', 'error', `Unhandled rejection: ${String(event.reason)}`)
+}
+
+if (typeof window !== 'undefined' && !window.__debugLogListenersAttached) {
+  window.__debugLogListenersAttached = true
   // Signal to inline pill's error listeners (index.html) that debugLog.ts is active.
   // They check this flag and skip capture to prevent duplicate entries.
-  ;(window as any).__debugLogReady = true
+  window.__debugLogReady = true
 
-  window.addEventListener('error', (event) => {
-    debugLog('global', 'error', event.message || 'Unknown error', {
-      filename: event.filename,
-      line: event.lineno,
-      col: event.colno,
-    })
-  })
+  window.addEventListener('error', handleGlobalError)
+  window.addEventListener('unhandledrejection', handleUnhandledRejection)
+}
 
-  window.addEventListener('unhandledrejection', (event) => {
-    debugLog('global', 'error', `Unhandled rejection: ${String(event.reason)}`)
+// HMR-safe teardown of module-level console patches and listeners. Without
+// this, each HMR cycle leaves the patched console pointing at the orphaned
+// old module's debugLog (wrong buffer, stale subscribers) while the new
+// module's HMR guard skips re-patching — silently dropping events.
+// Reference: glow-props docs/implementations/TIMER_LEAKS.md §5
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    if (typeof window === 'undefined') return
+    if (originalError) console.error = originalError
+    if (originalWarn) console.warn = originalWarn
+    window.removeEventListener('error', handleGlobalError)
+    window.removeEventListener('unhandledrejection', handleUnhandledRejection)
+    window.__debugConsolePatched = false
+    window.__debugLogListenersAttached = false
+    window.__debugLogReady = false
   })
 }

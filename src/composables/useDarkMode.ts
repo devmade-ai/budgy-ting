@@ -72,18 +72,23 @@ function applyTheme(dark: boolean, comboId: string, skipPersist = false): void {
   }
 }
 
-// Watch isDark and combo changes — skipped during cross-tab sync
+// Watch isDark and combo changes — skipped during cross-tab sync.
+// flush: 'sync' is required because handleStorageSync below sets syncing=true,
+// mutates the refs, then sets syncing=false — all synchronously. With the
+// default post-flush scheduling, watchers fire on the next microtask when
+// syncing is already false, defeating the guard and running applyTheme twice
+// (once inside handleStorageSync, once per watcher — three total per sync event).
 watch(isDark, (dark) => {
   if (syncing) return
   applyTheme(dark, currentComboId.value)
   debugLog('boot', 'info', `Theme changed to ${dark ? 'dark' : 'light'}`)
-})
+}, { flush: 'sync' })
 
 watch(currentComboId, (comboId) => {
   if (syncing) return
   applyTheme(isDark.value, comboId)
   debugLog('boot', 'info', `Theme combo changed to ${comboId}`)
-})
+}, { flush: 'sync' })
 
 // Cross-tab sync — storage event only fires in OTHER tabs (not the one that wrote),
 // so there's no infinite loop risk. The syncing flag prevents the watchers from
@@ -106,7 +111,6 @@ function handleStorageSync(e: StorageEvent): void {
     applyTheme(isDark.value, comboId, true)
   }
 }
-window.addEventListener('storage', handleStorageSync)
 
 // Track OS preference changes — only when user hasn't made an explicit choice.
 // If they've manually toggled, their choice persists and system changes are ignored.
@@ -116,7 +120,33 @@ function handleSystemPreferenceChange(e: MediaQueryListEvent): void {
     isDark.value = e.matches
   }
 }
-mediaQuery.addEventListener('change', handleSystemPreferenceChange)
+
+// Requirement: HMR-safe module-level listener attachment
+// Approach: Per-concern guard flag prevents double-subscription when Vite
+//   re-evaluates this module on hot reload. import.meta.hot.dispose() releases
+//   the listeners when the old module copy is torn down.
+// Reference: glow-props docs/implementations/TIMER_LEAKS.md §5
+declare global {
+  interface Window {
+    __darkModeAttached?: boolean
+  }
+}
+
+if (typeof window !== 'undefined' && !window.__darkModeAttached) {
+  window.__darkModeAttached = true
+  window.addEventListener('storage', handleStorageSync)
+  mediaQuery.addEventListener('change', handleSystemPreferenceChange)
+}
+
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    window.removeEventListener('storage', handleStorageSync)
+    mediaQuery.removeEventListener('change', handleSystemPreferenceChange)
+    if (typeof window !== 'undefined') {
+      window.__darkModeAttached = false
+    }
+  })
+}
 
 export function useDarkMode() {
   function toggle(): void {

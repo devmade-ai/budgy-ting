@@ -10,8 +10,9 @@
  *   - Lazy-load engines: Considered — data is small enough to compute eagerly
  */
 
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import { Wallet } from 'lucide-vue-next'
+import { ref, computed, defineAsyncComponent, h, onMounted, onUnmounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import { Wallet, Upload } from 'lucide-vue-next'
 import { db } from '@/db'
 import { buildForecast } from '@/engine/forecast'
 import { calculateRunway } from '@/engine/runway'
@@ -21,10 +22,34 @@ import { formatAmount } from '@/composables/useFormat'
 import { safeGetItem, safeSetItem } from '@/composables/useSafeStorage'
 import { touchTags } from '@/composables/useTagAutocomplete'
 import { useTagSuggestions } from '@/ml/useTagSuggestions'
-import CashflowGraph from '@/components/CashflowGraph.vue'
+import { debugLog } from '@/debug/debugLog'
 import MetricsGrid from '@/components/MetricsGrid.vue'
 import TransactionTable from '@/components/TransactionTable.vue'
 import ErrorAlert from '@/components/ErrorAlert.vue'
+import EmptyState from '@/components/EmptyState.vue'
+
+// Lazy-load the chart so workspaces with no transactions skip ApexCharts's
+// ~500 KB chunk. Skeleton avoids layout shift; error fallback covers the
+// chunk-fetch-failed case (Vue otherwise renders nothing).
+const ChartSkeleton = {
+  render: () => h('div', {
+    role: 'status',
+    'aria-label': 'Loading chart…',
+    class: 'skeleton h-[280px] sm:h-[350px] lg:h-[420px] w-full mb-6',
+  }),
+}
+const ChartLoadError = {
+  render: () => h('div', {
+    role: 'alert',
+    class: 'text-center py-12 text-sm text-base-content/60 bg-base-200 rounded-lg mb-6',
+  }, 'Couldn\'t load the chart. Refresh the page and try again.'),
+}
+const CashflowGraph = defineAsyncComponent({
+  loader: () => import('@/components/CashflowGraph.vue'),
+  loadingComponent: ChartSkeleton,
+  errorComponent: ChartLoadError,
+  delay: 100,
+})
 import type { Workspace, Transaction, RecurringPattern } from '@/types/models'
 import type { ForecastResult } from '@/engine/forecast'
 import type { RunwayResult } from '@/engine/runway'
@@ -35,6 +60,8 @@ const props = defineProps<{
   workspace: Workspace
 }>()
 
+const router = useRouter()
+const loading = ref(true)
 const transactions = ref<Transaction[]>([])
 const patterns = ref<RecurringPattern[]>([])
 const error = ref('')
@@ -65,8 +92,34 @@ watch(forecastMonths, (val) => {
   safeSetItem(FORECAST_MONTHS_KEY, String(val))
 })
 
+// Debounced mirror of cashOnHand used by the runway computation.
+// Typing in the cash-on-hand input fires a keystroke per digit; the immediate
+// recompute of runway → CashflowGraph series → ApexCharts re-render causes
+// visible flicker during typing. The debounce absorbs bursts of input so the
+// chart updates once the user stops typing.
+// DB persistence already has its own 500ms debounce further down; this one is
+// purely for the reactive recompute path.
+const DEBOUNCE_RUNWAY_MS = 300
+const cashOnHandForRunway = ref<number | null>(props.workspace.cashOnHand)
+let runwayDebounceTimer: ReturnType<typeof setTimeout> | null = null
+watch(cashOnHand, (val) => {
+  if (runwayDebounceTimer) clearTimeout(runwayDebounceTimer)
+  runwayDebounceTimer = setTimeout(() => {
+    cashOnHandForRunway.value = val
+  }, DEBOUNCE_RUNWAY_MS)
+})
+
 // ML tag suggestions
-const { preloadModel, suggestTags, inferring, dispose } = useTagSuggestions()
+const {
+  preloadModel,
+  retryModel,
+  suggestTags,
+  inferring,
+  modelError,
+  modelReady,
+  waitForModel,
+  dispose,
+} = useTagSuggestions()
 const tagSuggestions = ref(new Map<string, TagSuggestion[]>())
 
 // Load data
@@ -80,14 +133,21 @@ onMounted(async () => {
     patterns.value = pats
   } catch {
     error.value = 'Couldn\'t load workspace data. Please try again.'
+  } finally {
+    loading.value = false
   }
 
   // Preload ML model for tag suggestions
   preloadModel()
 })
 
+function goToImport() {
+  router.push({ name: 'import-actuals', params: { id: props.workspace.id } })
+}
+
 onUnmounted(() => {
   if (cashSaveTimeout) clearTimeout(cashSaveTimeout)
+  if (runwayDebounceTimer) clearTimeout(runwayDebounceTimer)
   dispose()
 })
 
@@ -122,11 +182,12 @@ const accuracy = computed<AccuracySummary | null>(() => {
   return summarizeAccuracy(dailyAccuracy)
 })
 
-// Compute runway
+// Compute runway — uses the debounced cash-on-hand ref so the chart doesn't
+// thrash while the user is mid-type. DB persistence uses the raw ref below.
 const runway = computed<RunwayResult | null>(() => {
-  if (cashOnHand.value === null || cashOnHand.value <= 0) return null
+  if (cashOnHandForRunway.value === null || cashOnHandForRunway.value <= 0) return null
   if (!forecast.value) return null
-  return calculateRunway(cashOnHand.value, forecast.value.daily)
+  return calculateRunway(cashOnHandForRunway.value, forecast.value.daily)
 })
 
 // Persist cash on hand when changed
@@ -136,8 +197,10 @@ watch(cashOnHand, (val) => {
   cashSaveTimeout = setTimeout(async () => {
     try {
       await db.workspaces.update(props.workspace.id, { cashOnHand: val, updatedAt: new Date().toISOString() })
-    } catch {
-      // Silent — non-critical persistence
+    } catch (e) {
+      // Non-blocking: the value stays in the input ref so the UI remains usable,
+      // but persistence failed — alpha debug reports surface it instead of going silent.
+      debugLog('db', 'error', 'Failed to persist cash-on-hand', { error: String(e), val })
     }
   }, 500)
 })
@@ -176,6 +239,16 @@ async function handleDeleteTransaction(id: string) {
 async function handleRequestSuggestions(id: string, description: string) {
   if (tagSuggestions.value.has(id)) return
 
+  // Wait for model to be ready. preloadModel() starts on mount, but the first
+  // transaction may open before the download finishes — without this await,
+  // suggestTags returns [] silently and the user never sees suggestions for
+  // their first row. Also makes the retry flow work: after retryModel kicks
+  // off a reload, a subsequent request waits for the new load to complete.
+  if (!modelReady.value) {
+    const ok = await waitForModel()
+    if (!ok) return
+  }
+
   try {
     const suggestions = await suggestTags(description)
     const updated = new Map(tagSuggestions.value)
@@ -191,20 +264,47 @@ async function handleRequestSuggestions(id: string, description: string) {
   <div>
     <ErrorAlert v-if="error" :message="error" @dismiss="error = ''" />
 
-    <!-- Cash on hand input -->
+    <!-- Empty state: no transactions imported yet.
+         Requirement: New workspace lands on a useful CTA, not a blank dashboard.
+         The header's Import button is not discoverable from an empty graph.
+         Approach: Full-width EmptyState with a primary action routing to the
+         import wizard. Suppressed while loading to avoid a flash. -->
+    <EmptyState
+      v-if="!loading && transactions.length === 0"
+      :icon="Upload"
+      title="No transactions yet"
+      description="Import a CSV or JSON bank statement to see your cashflow, forecast, and runway."
+    >
+      <button class="btn btn-primary" @click="goToImport">
+        <Upload :size="16" class="mr-1 inline-block" aria-hidden="true" />
+        Import transactions
+      </button>
+    </EmptyState>
+
+    <template v-else>
+    <!-- Cash on hand input.
+         Requirement: AT users must hear the label when focusing the input, and
+         mobile users should get the decimal keypad on iOS.
+         Approach: Explicit for/id label association (prior markup had a label
+         as a sibling with no binding); inputmode="decimal" triggers the iOS
+         numeric keypad; step="0.01" lets users enter granular amounts (was 100,
+         which forced cents to be a multiple of 100 units). -->
     <div class="flex flex-wrap items-center gap-3 mb-6">
-      <label class="text-sm text-base-content/70 flex items-center gap-2">
-        <Wallet :size="16" class="text-base-content/40" />
+      <label for="cash-on-hand" class="text-sm text-base-content/70 flex items-center gap-2">
+        <Wallet :size="16" class="text-base-content/40" aria-hidden="true" />
         Cash on hand
       </label>
       <div class="flex items-center gap-1">
-        <span class="text-sm text-base-content/60">{{ workspace.currencyLabel }}</span>
+        <span class="text-sm text-base-content/60" aria-hidden="true">{{ workspace.currencyLabel }}</span>
         <input
+          id="cash-on-hand"
           v-model.number="cashOnHand"
           type="number"
+          inputmode="decimal"
           min="0"
-          step="100"
+          step="0.01"
           placeholder="0.00"
+          :aria-label="`Cash on hand in ${workspace.currencyLabel}`"
           class="input input-bordered w-32 text-base min-h-[44px] no-print"
         />
         <!-- Print-only: static value replaces the interactive input -->
@@ -250,10 +350,13 @@ async function handleRequestSuggestions(id: string, description: string) {
         :currency-label="workspace.currencyLabel"
         :tag-suggestions="tagSuggestions"
         :suggestions-loading="inferring"
+        :suggestions-error="modelError"
         @update-transaction="handleUpdateTransaction"
         @delete-transaction="handleDeleteTransaction"
         @request-suggestions="handleRequestSuggestions"
+        @retry-suggestions="retryModel"
       />
     </div>
+    </template>
   </div>
 </template>

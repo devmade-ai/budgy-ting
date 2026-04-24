@@ -158,7 +158,7 @@ watch(open, (isOpen) => {
     <button
       ref="triggerRef"
       type="button"
-      class="w-10 h-10 rounded-full flex items-center justify-center text-base-content/50 hover:text-primary hover:bg-primary/10 transition-colors"
+      class="w-10 h-10 rounded-full flex items-center justify-center text-base-content/60 hover:text-primary hover:bg-primary/10 transition-colors"
       aria-label="Menu"
       :aria-expanded="open"
       :aria-controls="menuId"

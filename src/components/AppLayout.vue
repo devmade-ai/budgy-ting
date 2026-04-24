@@ -98,7 +98,12 @@ function onAfterPrint() {
   const html = document.documentElement
   if (html.dataset.printWasDark === 'true') {
     html.classList.add('dark')
-    html.setAttribute('data-theme', html.dataset.printTheme || 'black')
+    // Fallback must be a theme registered in src/index.css (cmyk, night).
+    // Previous fallback was 'black' which isn't registered — if onAfterPrint
+    // ever fires without a matching onBeforePrint, DaisyUI would silently
+    // reset to the default theme. 'night' is the correct dark-theme fallback
+    // here since we only reach this branch when printWasDark === 'true'.
+    html.setAttribute('data-theme', html.dataset.printTheme || 'night')
     delete html.dataset.printWasDark
     delete html.dataset.printTheme
   }
@@ -147,7 +152,7 @@ const menuItems = computed<MenuItem[]>(() => [
   {
     label: isDark.value ? 'Light mode' : 'Dark mode',
     icon: isDark.value ? Sun : Moon,
-    iconClass: isDark.value ? 'text-warning' : 'text-base-content/40',
+    iconClass: isDark.value ? 'text-warning' : 'text-base-content/60',
     action: () => toggleDarkMode(),
     separator: true,
   },
@@ -275,8 +280,15 @@ const menuItems = computed<MenuItem[]>(() => [
       :markdown="sampleCsvMd"
       @close="closeDrawer"
     />
-    <!-- Restore from backup: error + replace confirm -->
-    <div v-if="restore.importError.value" class="fixed bottom-20 left-4 right-4 z-[70] max-w-md mx-auto">
+    <!-- Restore from backup: error + replace confirm.
+         Bottom offset accounts for iOS home indicator + keyboard region via
+         env(safe-area-inset-bottom). Without this, the alert sat behind the
+         on-screen keyboard when restore surfaced a validation error. -->
+    <div
+      v-if="restore.importError.value"
+      class="fixed left-4 right-4 z-[70] max-w-md mx-auto"
+      style="bottom: calc(1.5rem + env(safe-area-inset-bottom))"
+    >
       <ErrorAlert :message="restore.importError.value" @dismiss="restore.importError.value = ''" />
     </div>
     <ConfirmDialog
@@ -285,6 +297,7 @@ const menuItems = computed<MenuItem[]>(() => [
       :message="`A workspace named '${restore.pendingImportData.value.workspace.name}' already exists. Replacing it will overwrite all its transactions, patterns, and imported data.`"
       confirm-label="Replace"
       :danger="true"
+      :busy="restore.restoring.value"
       @confirm="restore.confirmReplace"
       @cancel="restore.cancelReplace"
     />

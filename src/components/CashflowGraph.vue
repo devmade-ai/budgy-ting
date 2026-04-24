@@ -97,6 +97,14 @@ function handleResize() { windowWidth.value = window.innerWidth }
 onMounted(() => window.addEventListener('resize', handleResize))
 onUnmounted(() => window.removeEventListener('resize', handleResize))
 
+// Read prefers-reduced-motion once at init. ApexCharts draws SVG animations
+// imperatively via its own RAF loop, so the global CSS reduced-motion clamp
+// doesn't reach it — we have to pass `chart.animations.enabled` explicitly.
+// Mid-session OS-level toggles don't update the chart; users reload to pick
+// up a preference change. Acceptable trade-off for an OS-level preference.
+const reducedMotion = typeof window !== 'undefined' &&
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
 // Build actual daily points from transactions
 const actualDailyMap = computed(() => {
   const map = new Map<string, number>()
@@ -126,7 +134,7 @@ const series = computed(() => {
   // Actuals
   if (actualPoints.value.length > 0) {
     result.push({
-      name: 'Actuals',
+      name: 'Spending',
       data: actualPoints.value.map((p) => ({
         x: p.date,
         y: chartMode.value === 'cumulative' ? p.cumulative : p.amount,
@@ -190,7 +198,7 @@ const chartOptions = computed(() => {
   //   converts to hex via canvas pixel — ApexCharts can't use CSS variables.
   //   Colors re-resolve on every chartOptions recompute (isDark triggers this).
   const colors = series.value.map((s) => {
-    if (s.name === 'Actuals') return resolveThemeColor('--color-info', '#3b82f6')
+    if (s.name === 'Spending') return resolveThemeColor('--color-info', '#3b82f6')
     if (s.name === 'Forecast') return resolveThemeColor('--color-warning', '#f59e0b')
     if (s.name === 'Cash balance') return resolveThemeColor('--color-success', '#10b981')
     return resolveThemeColor('--color-base-content', '#6b7280')
@@ -212,6 +220,7 @@ const chartOptions = computed(() => {
       zoom: { enabled: false },
       fontFamily: 'inherit',
       background: 'transparent',
+      animations: { enabled: !reducedMotion },
     },
     theme: { mode: isDark.value ? 'dark' as const : 'light' as const },
     stroke: {
@@ -224,7 +233,17 @@ const chartOptions = computed(() => {
       type: 'datetime' as const,
       ...(xaxisRange.value.min !== undefined ? { min: xaxisRange.value.min } : {}),
       labels: {
-        format: 'dd MMM',
+        // Browser-locale-aware axis labels. ApexCharts' internal `format: 'dd MMM'`
+        // always emits English month abbreviations; a custom formatter lets us
+        // defer to `toLocaleDateString(undefined, …)`, matching the formatting
+        // already used by the tooltip Y value, the SR chart summary, and
+        // `useFormat.formatDateForDisplay()`. Currently moot while the UI is
+        // English-only, but zero-cost to wire now so chart axes track the
+        // locale the moment any copy is translated.
+        formatter: (_value: string, timestamp?: number) =>
+          timestamp === undefined
+            ? ''
+            : new Date(timestamp).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }),
         style: { fontSize: '11px', colors: labelColor },
       },
     },
@@ -241,7 +260,11 @@ const chartOptions = computed(() => {
     tooltip: {
       shared: true,
       theme: tooltipTheme,
-      x: { format: 'dd MMM yyyy' },
+      x: {
+        // Same locale-aware custom formatter as the x-axis labels (see above).
+        formatter: (value: number) =>
+          new Date(value).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }),
+      },
       y: {
         formatter: (val: number) =>
           `${props.currencyLabel}${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
@@ -272,6 +295,44 @@ const chartOptions = computed(() => {
 })
 
 const hasData = computed(() => actualPoints.value.length > 0 || props.forecastPoints.length > 0)
+
+// Screen-reader summary of the chart — ApexCharts renders SVG with no
+// semantic hooks, so AT users get nothing about the primary visual surface
+// without a text alternative. Sentence form (not data-table) keeps it scannable.
+const chartSummary = computed(() => {
+  if (!hasData.value) return ''
+  const parts: string[] = ['Cashflow chart.']
+
+  if (actualPoints.value.length > 0) {
+    const first = actualPoints.value[0]!
+    const last = actualPoints.value[actualPoints.value.length - 1]!
+    const direction = last.cumulative > first.cumulative
+      ? 'up'
+      : last.cumulative < first.cumulative
+        ? 'down'
+        : 'flat'
+    parts.push(
+      `Spending from ${first.date} to ${last.date}, cumulative ${direction} to ${props.currencyLabel}${last.cumulative.toLocaleString(undefined, { maximumFractionDigits: 0 })}.`,
+    )
+  }
+
+  if (props.forecastPoints.length > 0) {
+    const lastForecast = props.forecastPoints[props.forecastPoints.length - 1]!
+    parts.push(
+      `Forecast extends to ${lastForecast.date}, projected cumulative ${props.currencyLabel}${lastForecast.cumulative.toLocaleString(undefined, { maximumFractionDigits: 0 })}.`,
+    )
+  }
+
+  if (props.runway?.depletionDate) {
+    parts.push(`Cash runs out on ${props.runway.depletionDate}.`)
+  } else if (props.runway) {
+    parts.push(
+      `Projected end balance ${props.currencyLabel}${props.runway.endBalance.toLocaleString(undefined, { maximumFractionDigits: 0 })}.`,
+    )
+  }
+
+  return parts.join(' ')
+})
 </script>
 
 <template>
@@ -297,7 +358,7 @@ const hasData = computed(() => actualPoints.value.length > 0 || props.forecastPo
       </div>
 
       <div class="flex items-center gap-2 sm:ml-auto overflow-x-auto">
-        <span class="text-xs text-base-content/50 shrink-0">History</span>
+        <span class="text-xs text-base-content/60 shrink-0">History</span>
         <div class="join shrink-0">
           <button
             v-for="opt in timeRangeOptions"
@@ -310,7 +371,7 @@ const hasData = computed(() => actualPoints.value.length > 0 || props.forecastPo
           </button>
         </div>
 
-        <span class="text-xs text-base-content/50 shrink-0">Forecast</span>
+        <span class="text-xs text-base-content/60 shrink-0">Forecast</span>
         <div class="join shrink-0">
           <button
             v-for="opt in forecastHorizonOptions"
@@ -326,19 +387,24 @@ const hasData = computed(() => actualPoints.value.length > 0 || props.forecastPo
     </div>
 
     <!-- Chart -->
-    <div v-if="hasData">
+    <div v-if="hasData" role="img" :aria-label="chartSummary">
+      <!-- Screen-reader summary — sr-only ensures it doesn't render visually.
+           role="img" + aria-label on the wrapper gives AT users a concise
+           description without announcing every SVG element inside. -->
+      <span class="sr-only">{{ chartSummary }}</span>
       <VueApexCharts
         :key="`${chartMode}-${chartHeight}-${isDark}-${timeRange}-${forecastMonths}`"
         type="line"
         :height="chartHeight"
         :options="chartOptions"
         :series="series"
+        aria-hidden="true"
       />
     </div>
     <div v-else class="text-center py-12">
-      <LineChart :size="36" class="text-base-content/20 mx-auto mb-3" />
-      <p class="text-base-content/60">No data to chart</p>
-      <p class="text-base-content/40 text-sm mt-1">Import transactions to see your cashflow</p>
+      <LineChart :size="36" class="text-base-content/20 mx-auto mb-3" aria-hidden="true" />
+      <p class="text-base-content/70">No data to chart</p>
+      <p class="text-base-content/60 text-sm mt-1">Import transactions to see your cashflow</p>
     </div>
   </div>
 </template>

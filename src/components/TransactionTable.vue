@@ -26,6 +26,8 @@ const props = defineProps<{
   tagSuggestions?: Map<string, TagSuggestion[]>
   /** Whether ML model is currently inferring */
   suggestionsLoading?: boolean
+  /** ML model error — passed through to the edit modal so users can retry */
+  suggestionsError?: string | null
 }>()
 
 const emit = defineEmits<{
@@ -33,6 +35,8 @@ const emit = defineEmits<{
   'delete-transaction': [id: string]
   /** Emitted when a row is selected — parent can trigger ML suggestion for this transaction */
   'request-suggestions': [id: string, description: string]
+  /** Emitted from the edit modal's retry button when ML model failed */
+  'retry-suggestions': []
 }>()
 
 const search = ref('')
@@ -128,6 +132,15 @@ function handleRowKeydown(e: KeyboardEvent, txn: Transaction) {
 function getSuggestions(id: string): TagSuggestion[] {
   return props.tagSuggestions?.get(id) ?? []
 }
+
+function handleRetrySuggestions() {
+  emit('retry-suggestions')
+  // Re-request for the currently open transaction once the model is back.
+  // The parent triggers model load; we re-ask for this row's suggestions.
+  if (editingTransaction.value) {
+    emit('request-suggestions', editingTransaction.value.id, editingTransaction.value.description)
+  }
+}
 </script>
 
 <template>
@@ -157,13 +170,21 @@ function getSuggestions(id: string): TagSuggestion[] {
       </select>
     </div>
 
-    <!-- Mobile card layout (< sm breakpoint) — hidden in print (table is better for PDF) -->
-    <div class="sm:hidden space-y-2 no-print">
+    <!-- Card layout on phones AND small tablets (< md ≈ 768px) — hidden in print.
+         Requirement: Tablets at 640-768px couldn't fit the Tags column cleanly in
+         the desktop table; badges wrapped awkwardly. Keeping cards through md
+         gives readable layout until laptop-class widths.
+         Alternatives:
+           - Collapse Tags to a count bubble on sm: Rejected — hides data the user
+             is actively reading in the table view
+           - Horizontal scroll: Rejected — poor affordance, tables scroll awkwardly on touch -->
+    <div class="md:hidden space-y-2 no-print">
       <div
         v-for="txn in displayRows"
         :key="txn.id"
         role="button"
         tabindex="0"
+        :aria-label="`Edit transaction: ${txn.description}`"
         class="bg-base-100 rounded-lg border border-base-300 p-3 cursor-pointer hover:border-base-content/20 transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
         @click="openEdit(txn)"
         @keydown="handleRowKeydown($event, txn)"
@@ -193,13 +214,13 @@ function getSuggestions(id: string): TagSuggestion[] {
           </span>
         </div>
       </div>
-      <div v-if="displayRows.length === 0" class="py-8 text-center text-base-content/40 text-sm">
+      <div v-if="displayRows.length === 0" class="py-8 text-center text-base-content/60 text-sm">
         {{ search || filterTag || filterClassification ? 'No matching transactions' : 'No transactions yet' }}
       </div>
     </div>
 
-    <!-- Desktop table (sm+ breakpoint) — forced visible in print via print-show -->
-    <div class="hidden sm:block overflow-x-auto print-show">
+    <!-- Desktop table (md+ breakpoint) — forced visible in print via print-show -->
+    <div class="hidden md:block overflow-x-auto print-show">
       <table class="w-full text-sm">
         <thead>
           <!-- Mobile UX: text-sm for readable table headers (was text-xs) -->
@@ -216,6 +237,8 @@ function getSuggestions(id: string): TagSuggestion[] {
             v-for="txn in displayRows"
             :key="txn.id"
             tabindex="0"
+            role="button"
+            :aria-label="`Edit transaction: ${txn.description}`"
             class="border-b border-base-200 hover:bg-base-200 cursor-pointer focus:outline-none focus:bg-primary/10"
             @click="openEdit(txn)"
             @keydown="handleRowKeydown($event, txn)"
@@ -246,7 +269,7 @@ function getSuggestions(id: string): TagSuggestion[] {
             </td>
           </tr>
           <tr v-if="displayRows.length === 0">
-            <td colspan="5" class="py-8 text-center text-base-content/40">
+            <td colspan="5" class="py-8 text-center text-base-content/60">
               {{ search || filterTag || filterClassification ? 'No matching transactions' : 'No transactions yet' }}
             </td>
           </tr>
@@ -255,19 +278,21 @@ function getSuggestions(id: string): TagSuggestion[] {
     </div>
 
     <!-- Pagination -->
-    <div v-if="totalPages > 1" class="flex items-center justify-between mt-4 text-sm text-base-content/60 no-print">
+    <div v-if="totalPages > 1" class="flex items-center justify-between mt-4 text-sm text-base-content/70 no-print">
       <span>{{ filtered.length }} transaction{{ filtered.length === 1 ? '' : 's' }}</span>
-      <div class="flex gap-1">
+      <div class="flex gap-1" role="navigation" aria-label="Transaction pagination">
         <button
-          class="btn btn-ghost btn-sm min-h-[44px] min-w-[44px]"
+          class="btn btn-ghost btn-sm min-h-[44px] min-w-[44px] disabled:opacity-50"
+          aria-label="Previous page of transactions"
           :disabled="currentPage <= 1"
           @click="currentPage--"
         >
           Previous
         </button>
-        <span class="px-3 py-2">{{ currentPage }} / {{ totalPages }}</span>
+        <span class="px-3 py-2" aria-live="polite">{{ currentPage }} / {{ totalPages }}</span>
         <button
-          class="btn btn-ghost btn-sm min-h-[44px] min-w-[44px]"
+          class="btn btn-ghost btn-sm min-h-[44px] min-w-[44px] disabled:opacity-50"
+          aria-label="Next page of transactions"
           :disabled="currentPage >= totalPages"
           @click="currentPage++"
         >
@@ -282,11 +307,13 @@ function getSuggestions(id: string): TagSuggestion[] {
       :transaction="editingTransaction"
       :suggestions="getSuggestions(editingTransaction.id)"
       :suggestions-loading="!!suggestionsLoading"
+      :suggestions-error="suggestionsError"
       :currency-label="currencyLabel"
       :known-tags="allTags"
       @save="handleSave"
       @delete="handleDelete"
       @close="editingTransaction = null"
+      @retry-suggestions="handleRetrySuggestions"
     />
   </div>
 </template>
