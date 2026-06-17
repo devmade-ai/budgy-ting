@@ -344,6 +344,7 @@ async function handleRequestSuggestions(id: string, description: string) {
     <!-- Advanced forecast diagnostics (collapsed) -->
     <ForecastDiagnostics
       :summary="backtestSummary"
+      :conformal="forecast?.conformal ?? null"
       :currency-label="workspace.currencyLabel"
     />
 

@@ -12,10 +12,13 @@
  */
 import { computed } from 'vue'
 import type { BacktestSummary } from '@/engine/validation'
+import type { AciResult } from '@/engine/conformal'
 import { formatAmount } from '@/composables/useFormat'
 
 const props = defineProps<{
   summary: BacktestSummary | null
+  /** Adaptive-conformal calibration of the live forecast's bands */
+  conformal?: AciResult | null
   currencyLabel: string
 }>()
 
@@ -43,6 +46,19 @@ function pct(v: number): string {
       <p class="text-xs text-base-content/60">
         Out-of-sample, from a walk-forward backtest over {{ summary.records }} predictions.
         These check whether the forecast and its confidence bands are honestly calibrated.
+      </p>
+
+      <!-- Adaptive band calibration (ACI) on the live forecast -->
+      <p v-if="conformal" class="text-xs text-base-content/60">
+        <span class="font-medium text-base-content/80">Adaptive bands (ACI):</span>
+        <template v-if="conformal.adapted">
+          tuned to ≈{{ Math.round((1 - conformal.alpha) * 100) }}% coverage over
+          {{ conformal.steps }} past steps
+          <template v-if="conformal.alpha < 0.19"> (widened — bands were running narrow)</template>
+          <template v-else-if="conformal.alpha > 0.21"> (tightened — bands were running wide)</template>
+          <template v-else> (already well-calibrated)</template>.
+        </template>
+        <template v-else>not enough history yet; using the fixed 80% band.</template>
       </p>
 
       <!-- Headline calibration figures -->

@@ -26,9 +26,9 @@
 
 <!-- From deep-research validation pass 2026-06-17. Full rationale + citations: docs/FORECASTING_RESEARCH.md §16.4-16.6. -->
 
-- [ ] Layer ACI/DtACI online miscoverage adjustment for a long-run coverage guarantee under drift (~40-70 LOC, no deps). §16.4
-- [ ] Calibrate intervals on daily/weekly residuals, never monthly totals; below ~100 residuals render bands as explicitly provisional (n too small for stable coverage). §16.4
-- [ ] Fix interval UI copy: bands mean "~80% of the time over the long run," not "80% confident about this month" (conformal gives marginal, not conditional, coverage). §16.4
+- [ ] DtACI (grid of γ experts) — deferred upgrade over single-γ ACI (`conformal.ts`). Only worth it if a single learning rate proves too slow/fast to track regime changes in practice. §16.4
+- [ ] Mark the bands as provisional in the *main* UI (not just the advanced panel) when residuals are below ~100 / ACI hasn't adapted — n too small for stable coverage. The diagnostics panel already reports the adapted/not-adapted state; this is about a user-visible cue on the chart. §16.4
+- [ ] Fix interval UI copy: bands mean "~80% of the time over the long run," not "80% confident about this month" (the ACI guarantee is marginal/long-run, not per-forecast conditional). §16.4
 
 ## Performance
 

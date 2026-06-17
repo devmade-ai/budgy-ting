@@ -25,6 +25,7 @@ import { mean, quantile, linearRegression } from 'simple-statistics'
 import type { Transaction, RecurringPattern } from '@/types/models'
 import { projectPattern } from './patterns'
 import { formatDate } from './dateUtils'
+import { adaptiveConformal, type AciResult } from './conformal'
 import { debugLog } from '@/debug/debugLog'
 
 // ── Holt's Double Exponential Smoothing ──
@@ -306,19 +307,22 @@ export interface PredictionBand {
  * empirical quantiles capture the real asymmetry, so the optimistic vs pessimistic edges
  * differ as they should. FPP3 §5.5 warns the closed-form interval is simply wrong when
  * residuals aren't normal.
+ * The tail probabilities default to 0.1 / 0.9 (an 80% band) but are overridable: ACI
+ * (conformal.ts) learns adapted tail probabilities from realized coverage and passes them in,
+ * widening or tightening the band to hit the target coverage. The empirical-quantile shape is
+ * unchanged — only which quantiles are read.
  * Alternatives:
  *   - ±1.28·σ Gaussian (previous): Rejected — symmetric, assumes normality, ignores bias.
- *   - Split-conformal / ACI calibrated bands: the next upgrade (FORECASTING_RESEARCH.md §16.4,
- *     docs/TODO.md). Needs ~100+ residuals and per-horizon residual pools; this empirical
- *     method is the cheap honest first step that reuses residuals already computed for MAE/RMSE.
  *   - 95% interval: Rejected — too wide to be actionable for cashflow tracking.
  * Caveat: the √horizon widening is a random-walk approximation (one-step residuals scaled to
- * h-steps); true per-horizon residual pools come with the conformal upgrade.
+ * h-steps); true per-horizon residual pools are a later upgrade.
  */
 export function calculatePredictionBands(
   historicalErrors: number[],
   forecast: number,
   stepsAhead: number,
+  lowerProb: number = 0.1,
+  upperProb: number = 0.9,
 ): PredictionBand {
   if (historicalErrors.length < 2) {
     return { point: forecast, upper: forecast, lower: forecast }
@@ -327,8 +331,8 @@ export function calculatePredictionBands(
   // Bias = mean residual. Centre the spread on it so horizon scaling widens the spread,
   // not the (constant) bias offset.
   const bias = mean(historicalErrors)
-  const lowerSpread = quantile(historicalErrors, 0.1) - bias  // ≤ 0
-  const upperSpread = quantile(historicalErrors, 0.9) - bias  // ≥ 0
+  const lowerSpread = quantile(historicalErrors, lowerProb) - bias  // ≤ 0
+  const upperSpread = quantile(historicalErrors, upperProb) - bias  // ≥ 0
 
   // Prediction uncertainty grows with forecast horizon (random walk assumption).
   // Cap at 90 days — beyond that, bands grow so wide they're not actionable.
@@ -367,6 +371,8 @@ export interface ForecastResult {
   predictionErrors: number[]
   /** Method used for variable spending */
   variableMethod: 'combination' | 'average' | 'none'
+  /** Adaptive-conformal band calibration (ACI) learned from the residual stream */
+  conformal: AciResult
 }
 
 /**
@@ -495,6 +501,7 @@ function assembleDailyForecast(
   dowFactors: number[] | null,
   startDate: string,
   endDate: string,
+  bandProbs: { lowerProb: number; upperProb: number },
 ): DailyForecastPoint[] {
   const daily: DailyForecastPoint[] = []
   let cumulative = 0
@@ -524,7 +531,7 @@ function assembleDailyForecast(
 
     let band: PredictionBand | null = null
     if (predictionErrors.length >= 2) {
-      band = calculatePredictionBands(predictionErrors, amount, dayIndex)
+      band = calculatePredictionBands(predictionErrors, amount, dayIndex, bandProbs.lowerProb, bandProbs.upperProb)
     }
 
     const source = variableMethod === 'none' ? 'recurring-only' : 'recurring+variable'
@@ -552,9 +559,9 @@ function assembleDailyForecast(
  *
  * 1. Compute recurring item schedule from patterns
  * 2. Calculate variable spending residual from historical transactions
- * 3. Apply Holt's method to the residual for trend-aware forecasting
+ * 3. Apply the Theta + damped-ETS combination to the residual
  * 4. Add day-of-week seasonal factors where data permits
- * 5. Produce confidence bands that widen over the forecast horizon
+ * 5. Produce confidence bands that widen over the horizon, with ACI-calibrated coverage
  */
 export function buildForecast(
   transactions: Transaction[],
@@ -573,9 +580,14 @@ export function buildForecast(
 
   const dowFactors = calculateDayOfWeekFactors(residualByDate)
 
+  // Adaptive Conformal Inference: learn band tail probabilities from realized coverage on the
+  // residual stream, correcting systematic over/under-coverage of the fixed 80% band.
+  const conformal = adaptiveConformal(predictionErrors)
+
   const daily = assembleDailyForecast(
     recurringDaily, forecastAt, variableMethod,
     predictionErrors, dowFactors, startDate, endDate,
+    { lowerProb: conformal.lowerProb, upperProb: conformal.upperProb },
   )
 
   debugLog('engine', 'info', 'Forecast built', {
@@ -586,8 +598,10 @@ export function buildForecast(
     hasDowFactors: dowFactors !== null,
     holtLevel: variableState?.level,
     holtTrend: variableState?.trend,
+    conformalAdapted: conformal.adapted,
+    conformalAlpha: conformal.alpha,
   })
 
-  return { daily, variableState, dowFactors, predictionErrors, variableMethod }
+  return { daily, variableState, dowFactors, predictionErrors, variableMethod, conformal }
 }
 

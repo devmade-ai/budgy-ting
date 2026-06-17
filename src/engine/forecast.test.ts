@@ -289,6 +289,10 @@ describe('buildForecast', () => {
     // variableState exposes the damped-ETS component of the combination
     expect(result.variableState).not.toBeNull()
     expect(result.predictionErrors.length).toBeGreaterThan(0)
+    // ACI calibration result is always present (adapted once enough residuals exist)
+    expect(result.conformal).toBeDefined()
+    expect(result.conformal.lowerProb).toBeGreaterThan(0)
+    expect(result.conformal.lowerProb).toBeLessThan(result.conformal.upperProb)
   })
 
   it('includes prediction bands when errors exist', () => {
