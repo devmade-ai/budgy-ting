@@ -167,7 +167,7 @@ function handleWorkerMessage(event: MessageEvent<WorkerResponse>) {
 }
 
 // Fallback labels for new users who have no tags yet (first import).
-// Common personal finance categories — enough for zero-shot to score against.
+// Common spending categories — enough for zero-shot to score against.
 const DEFAULT_LABELS = [
   'groceries', 'rent', 'utilities', 'transport', 'insurance',
   'salary', 'subscriptions', 'dining', 'entertainment', 'medical',

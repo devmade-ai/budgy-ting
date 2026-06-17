@@ -25,7 +25,7 @@ The app is pivoting from a **budget-first** paradigm (define expenses, project f
 
 ## 1. Forecasting Architecture: The Hybrid Approach
 
-Personal finance cashflow has a unique structure that pure statistical models don't capture well. The best approach is a **hybrid model** that separates transactions into components and handles each appropriately.
+Cashflow data has a unique structure that pure statistical models don't capture well. The best approach is a **hybrid model** that separates transactions into components and handles each appropriately.
 
 ### Component Decomposition
 
@@ -42,7 +42,7 @@ Total Daily Cashflow = Recurring Items + Variable Spending + Seasonal Adjustment
 
 ### Why Hybrid Beats Pure Statistical
 
-Pure time-series models (ARIMA, EMA) treat all data points equally. But personal finance has **known structure**:
+Pure time-series models (ARIMA, EMA) treat all data points equally. But this kind of cashflow has **known structure**:
 - Rent is exactly $1,500 on the 1st of every month
 - Salary is exactly $4,200 on the 25th
 - Netflix is exactly $15.99 monthly
@@ -150,7 +150,7 @@ When 3+ months of data exist, upgrade to Holt-Winters with weekly seasonality (m
 
 ### Parameter Selection
 
-For daily personal finance data:
+For daily cashflow data:
 - `alpha = 0.2` — responds to changes but doesn't overreact to single-day spikes
 - `beta = 0.05` — trend changes slowly (spending habits don't shift daily)
 
@@ -230,7 +230,7 @@ For non-normal error distributions (common with bank transactions — heavy tail
 Bootstrap handles heavy tails better than the parametric formula above. Viable in-browser with typical dataset sizes (365-1000 daily points).
 
 **Why 80% CI instead of 95%:**
-- 95% bands are too wide to be useful for personal finance (range of "you'll spend between $20 and $200 today" isn't helpful)
+- 95% bands are too wide to be useful here (range of "you'll spend between $20 and $200 today" isn't helpful)
 - 80% is narrow enough to be actionable while still being honest about uncertainty
 - Can offer a toggle: "likely range" (80%) vs "possible range" (95%)
 

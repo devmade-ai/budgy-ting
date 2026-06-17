@@ -43,7 +43,7 @@ const DEFAULT_ALPHA = 0.2
 
 /**
  * Trend smoothing factor for Holt's method.
- * 0.05 dampens trend updates to avoid overfitting daily noise in personal spending.
+ * 0.05 dampens trend updates to avoid overfitting daily noise in cashflow data.
  */
 const DEFAULT_BETA = 0.05
 
@@ -197,7 +197,7 @@ export interface PredictionBand {
  * Alternatives:
  *   - Bootstrap from residuals: More robust for non-normal tails, viable for <1000 daily points.
  *     Deferred as an upgrade path — parametric is simpler and sufficient initially.
- *   - 95% CI: Rejected — too wide to be actionable for personal finance
+ *   - 95% CI: Rejected — too wide to be actionable for cashflow tracking
  */
 export function calculatePredictionBands(
   historicalErrors: number[],

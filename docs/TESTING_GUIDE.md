@@ -178,7 +178,7 @@ Run through this checklist after any change to verify nothing is broken:
 2. Reload the app
 
 **Expected:**
-- A "Demo Household" workspace appears automatically
+- A "Demo Workspace" appears automatically
 - Contains sample transactions and recurring patterns
 - Dashboard is functional with the demo data
 
