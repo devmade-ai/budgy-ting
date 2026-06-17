@@ -151,18 +151,18 @@ function handleRetrySuggestions() {
         v-model="search"
         type="text"
         placeholder="Search transactions..."
-        class="input input-bordered text-base flex-1 min-w-48 min-h-[44px]"
+        class="fl-input fl-input--bare flex-1 min-w-48 min-h-[44px]"
       />
       <select
         v-model="filterTag"
-        class="select select-bordered text-base w-auto min-h-[44px]"
+        class="fl-select-el w-auto min-h-[44px]"
       >
         <option value="">All tags</option>
         <option v-for="tag in allTags" :key="tag" :value="tag">{{ tag }}</option>
       </select>
       <select
         v-model="filterClassification"
-        class="select select-bordered text-base w-auto min-h-[44px]"
+        class="fl-select-el w-auto min-h-[44px]"
       >
         <option value="">All types</option>
         <option value="recurring">Recurring</option>
@@ -185,21 +185,21 @@ function handleRetrySuggestions() {
         role="button"
         tabindex="0"
         :aria-label="`Edit transaction: ${txn.description}`"
-        class="bg-base-100 rounded-lg border border-base-300 p-3 cursor-pointer hover:border-base-content/20 transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
+        class="bg-card rounded-lg border border-line-2 p-3 cursor-pointer hover:border-line-3 transition-colors focus:outline-none focus:ring-2 focus:ring-accent"
         @click="openEdit(txn)"
         @keydown="handleRowKeydown($event, txn)"
       >
         <div class="flex items-start justify-between gap-2">
           <div class="min-w-0 flex-1">
-            <p class="text-sm font-medium text-base-content truncate">{{ txn.description }}</p>
-            <p class="text-xs text-base-content/60 mt-0.5">
-              {{ formatDateForDisplay(txn.date) }}
+            <p class="text-sm font-medium text-ink truncate">{{ txn.description }}</p>
+            <p class="text-xs text-ink-muted mt-0.5">
+              <span class="fl-num">{{ formatDateForDisplay(txn.date) }}</span>
               <ClassificationBadge :classification="txn.classification" class="ml-1.5 inline-block" />
             </p>
           </div>
           <span
-            class="text-sm font-semibold whitespace-nowrap"
-            :class="isIncome(txn.amount) ? 'text-success' : 'text-error'"
+            class="fl-num text-sm font-semibold whitespace-nowrap"
+            :class="isIncome(txn.amount) ? 'text-pos' : 'text-neg'"
           >
             {{ isIncome(txn.amount) ? '+' : '-' }}{{ currencyLabel }}{{ formatAmount(Math.abs(txn.amount)) }}
           </span>
@@ -208,28 +208,27 @@ function handleRetrySuggestions() {
           <span
             v-for="tag in txn.tags"
             :key="tag"
-            class="badge badge-ghost badge-sm"
+            class="fl-tag fl-tag--sm"
           >
             {{ tag }}
           </span>
         </div>
       </div>
-      <div v-if="displayRows.length === 0" class="py-8 text-center text-base-content/60 text-sm">
+      <div v-if="displayRows.length === 0" class="py-8 text-center text-ink-muted text-sm">
         {{ search || filterTag || filterClassification ? 'No matching transactions' : 'No transactions yet' }}
       </div>
     </div>
 
     <!-- Desktop table (md+ breakpoint) — forced visible in print via print-show -->
-    <div class="hidden md:block overflow-x-auto print-show">
-      <table class="w-full text-sm">
+    <div class="fl-table-wrap hidden md:block print-show">
+      <table class="fl-table fl-table--hover">
         <thead>
-          <!-- Mobile UX: text-sm for readable table headers (was text-xs) -->
-          <tr class="border-b border-base-300 text-left text-sm text-base-content/60 uppercase tracking-wide">
-            <th class="py-2 pr-3">Date</th>
-            <th class="py-2 pr-3">Description</th>
-            <th class="py-2 pr-3">Tags</th>
-            <th class="py-2 pr-3">Type</th>
-            <th class="py-2 text-right">Amount</th>
+          <tr>
+            <th>Date</th>
+            <th>Description</th>
+            <th>Tags</th>
+            <th>Type</th>
+            <th class="fl-td--right">Amount</th>
           </tr>
         </thead>
         <tbody>
@@ -239,37 +238,37 @@ function handleRetrySuggestions() {
             tabindex="0"
             role="button"
             :aria-label="`Edit transaction: ${txn.description}`"
-            class="border-b border-base-200 hover:bg-base-200 cursor-pointer focus:outline-none focus:bg-primary/10"
+            class="focus:outline-none focus:bg-accent-soft"
             @click="openEdit(txn)"
             @keydown="handleRowKeydown($event, txn)"
           >
-            <td class="py-2 pr-3 whitespace-nowrap text-base-content/60">
+            <td class="fl-td--mono fl-td--muted whitespace-nowrap">
               {{ formatDateForDisplay(txn.date) }}
             </td>
-            <td class="py-2 pr-3 text-base-content max-w-xs truncate">
+            <td class="max-w-xs truncate">
               {{ txn.description }}
             </td>
-            <td class="py-2 pr-3">
+            <td>
               <span
                 v-for="tag in txn.tags"
                 :key="tag"
-                class="badge badge-ghost badge-sm inline-block mr-1"
+                class="fl-tag fl-tag--sm inline-flex mr-1"
               >
                 {{ tag }}
               </span>
             </td>
-            <td class="py-2 pr-3">
+            <td>
               <ClassificationBadge :classification="txn.classification" />
             </td>
             <td
-              class="py-2 text-right font-medium whitespace-nowrap"
-              :class="isIncome(txn.amount) ? 'text-success' : 'text-error'"
+              class="fl-td--right fl-td--mono font-medium whitespace-nowrap"
+              :class="isIncome(txn.amount) ? 'fl-td--pos' : 'fl-td--neg'"
             >
               {{ isIncome(txn.amount) ? '+' : '-' }}{{ currencyLabel }}{{ formatAmount(Math.abs(txn.amount)) }}
             </td>
           </tr>
           <tr v-if="displayRows.length === 0">
-            <td colspan="5" class="py-8 text-center text-base-content/60">
+            <td colspan="5" class="fl-td--center fl-td--muted py-8">
               {{ search || filterTag || filterClassification ? 'No matching transactions' : 'No transactions yet' }}
             </td>
           </tr>
@@ -278,20 +277,20 @@ function handleRetrySuggestions() {
     </div>
 
     <!-- Pagination -->
-    <div v-if="totalPages > 1" class="flex items-center justify-between mt-4 text-sm text-base-content/70 no-print">
+    <div v-if="totalPages > 1" class="flex items-center justify-between mt-4 text-sm text-ink-soft no-print">
       <span>{{ filtered.length }} transaction{{ filtered.length === 1 ? '' : 's' }}</span>
       <div class="flex gap-1" role="navigation" aria-label="Transaction pagination">
         <button
-          class="btn btn-ghost btn-sm min-h-[44px] min-w-[44px] disabled:opacity-50"
+          class="fl-btn fl-btn--ghost fl-btn--sm min-h-[44px] min-w-[44px]"
           aria-label="Previous page of transactions"
           :disabled="currentPage <= 1"
           @click="currentPage--"
         >
           Previous
         </button>
-        <span class="px-3 py-2" aria-live="polite">{{ currentPage }} / {{ totalPages }}</span>
+        <span class="fl-num px-3 py-2" aria-live="polite">{{ currentPage }} / {{ totalPages }}</span>
         <button
-          class="btn btn-ghost btn-sm min-h-[44px] min-w-[44px] disabled:opacity-50"
+          class="fl-btn fl-btn--ghost fl-btn--sm min-h-[44px] min-w-[44px]"
           aria-label="Next page of transactions"
           :disabled="currentPage >= totalPages"
           @click="currentPage++"

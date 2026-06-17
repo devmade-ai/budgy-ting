@@ -445,43 +445,47 @@ function handleImport() {
 
     <!-- Loading state while ML models load -->
     <template v-if="preparing">
-      <p class="text-sm text-base-content/60 mb-4">
+      <p class="text-sm text-ink-muted mb-4">
         Preparing tag suggestions and recurring detection…
       </p>
       <div class="max-w-sm mx-auto mt-8 mb-8 space-y-4">
         <!-- Embedding model (fuzzy pattern matching) -->
         <div>
-          <div class="flex items-center justify-between text-xs text-base-content/60 mb-1">
+          <div class="flex items-center justify-between text-xs text-ink-muted mb-1">
             <span>Recurring detection</span>
-            <span v-if="embeddingError" class="text-warning">Unavailable</span>
+            <span v-if="embeddingError" class="text-accent-active">Unavailable</span>
             <span v-else-if="!embeddingLoading && !embeddingError">Ready</span>
-            <span v-else-if="embeddingProgress > 0">{{ Math.round(embeddingProgress) }}%</span>
+            <span v-else-if="embeddingProgress > 0" class="fl-num">{{ Math.round(embeddingProgress) }}%</span>
           </div>
-          <progress
-            class="progress h-1.5 w-full"
-            :class="embeddingError ? 'progress-warning' : 'progress-primary'"
-            :value="embeddingError ? 100 : embeddingLoading ? Math.max(5, embeddingProgress) : 100"
-            max="100"
-          />
+          <!-- Progress: div.fl-progress > div.fl-progress__bar with width style.
+               Error state tints the bar via the accent (warning) token. -->
+          <div class="fl-progress h-1.5">
+            <div
+              class="fl-progress__bar"
+              :class="{ 'bg-accent-active': embeddingError }"
+              :style="{ width: `${embeddingError ? 100 : embeddingLoading ? Math.max(5, embeddingProgress) : 100}%` }"
+            />
+          </div>
         </div>
 
         <!-- Tag suggestion model -->
         <div>
-          <div class="flex items-center justify-between text-xs text-base-content/60 mb-1">
+          <div class="flex items-center justify-between text-xs text-ink-muted mb-1">
             <span>Tag suggestions</span>
-            <span v-if="tagModelError" class="text-warning">Unavailable</span>
+            <span v-if="tagModelError" class="text-accent-active">Unavailable</span>
             <span v-else-if="!tagModelLoading && !tagModelError">Ready</span>
-            <span v-else-if="tagModelProgress > 0">{{ Math.round(tagModelProgress) }}%</span>
+            <span v-else-if="tagModelProgress > 0" class="fl-num">{{ Math.round(tagModelProgress) }}%</span>
           </div>
-          <progress
-            class="progress h-1.5 w-full"
-            :class="tagModelError ? 'progress-warning' : 'progress-primary'"
-            :value="tagModelError ? 100 : tagModelLoading ? Math.max(5, tagModelProgress) : 100"
-            max="100"
-          />
+          <div class="fl-progress h-1.5">
+            <div
+              class="fl-progress__bar"
+              :class="{ 'bg-accent-active': tagModelError }"
+              :style="{ width: `${tagModelError ? 100 : tagModelLoading ? Math.max(5, tagModelProgress) : 100}%` }"
+            />
+          </div>
         </div>
 
-        <p class="text-xs text-base-content/60 text-center">
+        <p class="text-xs text-ink-muted text-center">
           <template v-if="embeddingLoading || tagModelLoading">
             Downloading models for first use — this only happens once
           </template>
@@ -490,7 +494,7 @@ function handleImport() {
             <span v-else-if="embeddingError">Recurring detection unavailable</span>
             <span v-else>Tag suggestions unavailable</span>
             <button
-              class="block mx-auto mt-2 text-primary hover:text-primary/80 underline"
+              class="fl-link block mx-auto mt-2 text-xs"
               @click="embeddingError ? retryEmbeddingModel() : retryTagModel()"
             >
               Retry download
@@ -505,17 +509,17 @@ function handleImport() {
 
     <!-- Main review UI -->
     <template v-else>
-      <p class="text-sm text-base-content/60 mb-4">
+      <p class="text-sm text-ink-muted mb-4">
         Review each transaction. Set as recurring or once-off, add tags, or ignore.
         {{ summary.autoMatched > 0 ? `${summary.autoMatched} auto-matched from your patterns.` : '' }}
       </p>
 
       <!-- Summary bar -->
       <div class="flex flex-wrap gap-3 mb-4 text-sm">
-        <span class="text-info">{{ summary.recurring }} recurring</span>
-        <span class="text-base-content/70">{{ summary.onceOff }} once-off</span>
-        <span class="text-base-content/60">{{ summary.ignored }} ignored</span>
-        <span class="ml-auto text-base-content/60">{{ summary.active }} of {{ summary.total }} will be imported</span>
+        <span class="text-info"><span class="fl-num">{{ summary.recurring }}</span> recurring</span>
+        <span class="text-ink-soft"><span class="fl-num">{{ summary.onceOff }}</span> once-off</span>
+        <span class="text-ink-muted"><span class="fl-num">{{ summary.ignored }}</span> ignored</span>
+        <span class="ml-auto text-ink-muted"><span class="fl-num">{{ summary.active }}</span> of <span class="fl-num">{{ summary.total }}</span> will be imported</span>
       </div>
 
       <!-- Search + bulk actions -->
@@ -525,15 +529,15 @@ function handleImport() {
           type="search"
           placeholder="Search descriptions..."
           aria-label="Search transactions by description"
-          class="input input-bordered text-base py-1.5 px-3 w-48 min-h-[44px]"
+          class="fl-input fl-input--bare w-48 min-h-[44px]"
         />
         <button
-          class="text-xs text-base-content/60 hover:text-base-content underline"
+          class="fl-link text-xs"
           @click="markAllOnceOff"
         >
           Mark remaining as one-time
         </button>
-        <span v-if="tagModelLoading" class="text-xs text-base-content/60 italic">
+        <span v-if="tagModelLoading" class="text-xs text-ink-muted italic">
           Loading tag suggestions...
         </span>
       </div>
@@ -544,13 +548,13 @@ function handleImport() {
            surfacing a clear message + Back affordance is kinder. -->
       <div
         v-if="transactions.length === 0"
-        class="text-center py-12 border border-base-300 rounded-lg bg-base-200/30 mb-4"
+        class="text-center py-12 border border-line-2 rounded-lg bg-app/30 mb-4"
         role="status"
       >
-        <p class="text-sm text-base-content/70 mb-3">
+        <p class="text-sm text-ink-soft mb-3">
           No transactions left to import. You removed all of them.
         </p>
-        <button class="btn btn-ghost btn-sm" @click="emit('back')">
+        <button class="fl-btn fl-btn--ghost fl-btn--sm" @click="emit('back')">
           Go back to upload
         </button>
       </div>
@@ -561,16 +565,16 @@ function handleImport() {
           :key="originalIndex"
           class="border rounded-lg p-3"
           :class="{
-            'border-info/20 bg-info/5': !tx.ignored && tx.classification === 'recurring',
-            'border-base-300': !tx.ignored && tx.classification === 'once-off',
-            'border-base-200 bg-base-200 opacity-60': tx.ignored,
+            'border-info/20 bg-info-soft': !tx.ignored && tx.classification === 'recurring',
+            'border-line-2 bg-card': !tx.ignored && tx.classification === 'once-off',
+            'border-line bg-app opacity-60': tx.ignored,
           }"
         >
           <div class="flex flex-wrap items-start gap-2">
             <!-- Transaction info -->
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2">
-                <p class="font-medium text-base-content truncate text-sm">{{ tx.description }}</p>
+                <p class="font-medium text-ink truncate text-sm">{{ tx.description }}</p>
                 <span
                   v-if="tx.matchedPatternId && !tx.fuzzyMatchHint"
                   class="text-[10px] text-info whitespace-nowrap"
@@ -579,16 +583,16 @@ function handleImport() {
                 </span>
                 <span
                   v-else-if="tx.fuzzyMatchHint"
-                  class="text-[10px] text-warning whitespace-nowrap"
+                  class="text-[10px] text-accent-active whitespace-nowrap"
                   :title="`Similar to pattern: ${tx.fuzzyMatchHint}`"
                 >
                   similar to "{{ tx.fuzzyMatchHint }}"
                 </span>
               </div>
-              <p class="text-xs text-base-content/60 mt-0.5">
-                {{ tx.date }}
+              <p class="text-xs text-ink-muted mt-0.5">
+                <span class="fl-num">{{ tx.date }}</span>
                 &middot;
-                <span :class="isIncome(tx.amount) ? 'text-success' : 'text-error'">
+                <span class="fl-num" :class="isIncome(tx.amount) ? 'text-pos' : 'text-neg'">
                   {{ isIncome(tx.amount) ? '+' : '-' }}{{ currencyLabel }}{{ formatAmount(Math.abs(tx.amount)) }}
                 </span>
               </p>
@@ -598,11 +602,11 @@ function handleImport() {
                 <span
                   v-for="tag in tx.tags"
                   :key="tag"
-                  class="badge badge-ghost badge-sm inline-flex items-center gap-0.5"
+                  class="fl-tag fl-tag--sm"
                 >
                   {{ tag }}
                   <button
-                    class="opacity-50 hover:opacity-100 ml-0.5"
+                    class="fl-tag__x"
                     :aria-label="`Remove ${tag}`"
                     @click="removeTag(originalIndex, tag)"
                   >
@@ -624,7 +628,7 @@ function handleImport() {
               <div v-if="!tx.ignored" class="mt-1.5">
                 <button
                   v-if="tagInputIndex !== originalIndex"
-                  class="text-xs text-base-content/40 hover:text-info transition-colors"
+                  class="text-xs text-ink-faint hover:text-accent transition-colors"
                   @click="toggleTagInput(originalIndex)"
                 >
                   + Tag
@@ -635,7 +639,7 @@ function handleImport() {
                     type="text"
                     placeholder="Type a tag..."
                     :aria-label="`Add tag to ${tx.description}`"
-                    class="input input-bordered w-full text-xs py-1.5 px-2"
+                    class="fl-input fl-input--bare w-full text-xs"
                     role="combobox"
                     :aria-expanded="tagAutocompleteVisible"
                     aria-autocomplete="list"
@@ -649,7 +653,7 @@ function handleImport() {
                     v-if="tagAutocompleteVisible"
                     :id="`tag-list-${originalIndex}`"
                     role="listbox"
-                    class="absolute z-10 left-0 right-0 mt-0.5 bg-base-100 border border-base-300 rounded shadow-lg max-h-32 overflow-y-auto"
+                    class="fl-popover absolute z-10 left-0 right-0 mt-0.5 max-h-32 overflow-y-auto"
                   >
                     <li
                       v-for="(result, ri) in tagAutocompleteResults"
@@ -657,8 +661,8 @@ function handleImport() {
                       :key="result"
                       role="option"
                       :aria-selected="ri === tagSelectedIndex"
-                      class="text-xs px-2.5 py-1.5 hover:bg-info/10 cursor-pointer"
-                      :class="{ 'bg-info/10': ri === tagSelectedIndex }"
+                      class="text-xs px-2.5 py-1.5 rounded-[var(--radius-sm)] hover:bg-accent-soft cursor-pointer"
+                      :class="{ 'bg-accent-soft': ri === tagSelectedIndex }"
                       @mousedown.prevent="addTag(originalIndex, result)"
                     >
                       {{ result }}
@@ -672,13 +676,16 @@ function handleImport() {
                 v-if="!tx.ignored && tx.classification === 'recurring'"
                 class="mt-2 pt-2 border-t border-info/20"
               >
-                <p class="text-xs text-base-content/60 mb-1.5">How does the amount work?</p>
-                <div class="flex gap-1">
+                <p class="text-xs text-ink-muted mb-1.5">How does the amount work?</p>
+                <!-- Three-way amount-behaviour toggle → segmented control.
+                     Approach: fl-seg with one fl-seg__opt per option, active via :data-active.
+                     Alternatives:
+                       - Individual bordered buttons (prior DaisyUI markup): Rejected —
+                         fl-seg is the design's primitive for mutually-exclusive choices. -->
+                <div class="fl-seg fl-seg--sm">
                   <button
-                    class="text-xs px-2 py-1 rounded border transition-colors"
-                    :class="tx.variability === 'fixed'
-                      ? 'bg-info/15 text-info border-info/30'
-                      : 'bg-base-100 text-base-content/60 border-base-300 hover:border-info/20'"
+                    class="fl-seg__opt"
+                    :data-active="tx.variability === 'fixed'"
                     @click="setVariability(originalIndex, 'fixed')"
                     :title="isIncome(tx.amount)
                       ? 'Same amount every time (e.g. salary, fixed retainer)'
@@ -687,10 +694,8 @@ function handleImport() {
                     Fixed amount
                   </button>
                   <button
-                    class="text-xs px-2 py-1 rounded border transition-colors"
-                    :class="tx.variability === 'variable'
-                      ? 'bg-info/15 text-info border-info/30'
-                      : 'bg-base-100 text-base-content/60 border-base-300 hover:border-info/20'"
+                    class="fl-seg__opt"
+                    :data-active="tx.variability === 'variable'"
                     @click="setVariability(originalIndex, 'variable')"
                     :title="isIncome(tx.amount)
                       ? 'Comes at regular times but the amount changes (e.g. commission)'
@@ -699,10 +704,8 @@ function handleImport() {
                     Varies each time
                   </button>
                   <button
-                    class="text-xs px-2 py-1 rounded border transition-colors"
-                    :class="tx.variability === 'irregular'
-                      ? 'bg-info/15 text-info border-info/30'
-                      : 'bg-base-100 text-base-content/60 border-base-300 hover:border-info/20'"
+                    class="fl-seg__opt"
+                    :data-active="tx.variability === 'irregular'"
                     @click="setVariability(originalIndex, 'irregular')"
                     :title="isIncome(tx.amount)
                       ? 'No fixed schedule (e.g. freelance gigs)'
@@ -716,22 +719,20 @@ function handleImport() {
 
             <!-- Controls: classification + ignore -->
             <div class="flex flex-col gap-1 items-end flex-shrink-0">
-              <div class="flex gap-1">
+              <!-- Recurring / Once-off → segmented control (mutually exclusive).
+                   Disabled while the row is ignored; active via :data-active. -->
+              <div class="fl-seg fl-seg--sm">
                 <button
-                  class="text-xs px-2.5 py-1.5 rounded border transition-colors"
-                  :class="!tx.ignored && tx.classification === 'recurring'
-                    ? 'bg-info text-info-content border-info'
-                    : 'bg-base-100 text-base-content/70 border-base-300 hover:border-info/30'"
+                  class="fl-seg__opt"
+                  :data-active="!tx.ignored && tx.classification === 'recurring'"
                   :disabled="tx.ignored"
                   @click="setClassification(originalIndex, 'recurring')"
                 >
                   Recurring
                 </button>
                 <button
-                  class="text-xs px-2.5 py-1.5 rounded border transition-colors"
-                  :class="!tx.ignored && tx.classification === 'once-off'
-                    ? 'bg-neutral text-neutral-content border-neutral'
-                    : 'bg-base-100 text-base-content/70 border-base-300 hover:border-neutral/50'"
+                  class="fl-seg__opt"
+                  :data-active="!tx.ignored && tx.classification === 'once-off'"
                   :disabled="tx.ignored"
                   @click="setClassification(originalIndex, 'once-off')"
                 >
@@ -742,8 +743,8 @@ function handleImport() {
                 <button
                   class="text-xs px-2 py-1 transition-colors"
                   :class="tx.ignored
-                    ? 'text-error hover:text-error/80 font-medium'
-                    : 'text-base-content/60 hover:text-base-content/80'"
+                    ? 'text-neg hover:text-neg/80 font-medium'
+                    : 'text-ink-muted hover:text-ink-soft'"
                   @click="toggleIgnore(originalIndex)"
                 >
                   {{ tx.ignored ? 'Ignored — undo' : 'Ignore' }}
@@ -752,7 +753,7 @@ function handleImport() {
                      the row visible; Remove drops it from the review entirely
                      for users who want the screen quieter. -->
                 <button
-                  class="w-7 h-7 flex items-center justify-center rounded-full text-base-content/40 hover:text-error hover:bg-error/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-error transition-colors"
+                  class="w-7 h-7 flex items-center justify-center rounded-full text-ink-faint hover:text-neg hover:bg-neg-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-neg transition-colors"
                   :aria-label="`Remove ${tx.description} from this import`"
                   @click="removeRow(originalIndex)"
                 >
@@ -769,18 +770,18 @@ function handleImport() {
            the page context for screen readers beyond the short visual label. -->
       <div v-if="totalPages > 1" class="flex items-center justify-center gap-2 mb-4">
         <button
-          class="text-xs px-2 py-1 rounded border border-base-300 hover:bg-base-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          class="fl-btn fl-btn--secondary fl-btn--sm"
           aria-label="Previous page of transactions"
           :disabled="currentPage === 1"
           @click="currentPage--"
         >
           Previous
         </button>
-        <span class="text-xs text-base-content/70" aria-live="polite">
-          Page {{ currentPage }} of {{ totalPages }}
+        <span class="text-xs text-ink-soft" aria-live="polite">
+          Page <span class="fl-num">{{ currentPage }}</span> of <span class="fl-num">{{ totalPages }}</span>
         </span>
         <button
-          class="text-xs px-2 py-1 rounded border border-base-300 hover:bg-base-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          class="fl-btn fl-btn--secondary fl-btn--sm"
           aria-label="Next page of transactions"
           :disabled="currentPage === totalPages"
           @click="currentPage++"
@@ -791,13 +792,13 @@ function handleImport() {
 
       <!-- Actions -->
       <div class="flex justify-between">
-        <button class="btn btn-ghost" @click="emit('back')">Back</button>
+        <button class="fl-btn fl-btn--ghost" @click="emit('back')">Back</button>
         <button
-          class="btn btn-primary"
+          class="fl-btn fl-btn--primary"
           :disabled="summary.active === 0"
           @click="handleImport"
         >
-          Import {{ summary.active }} transaction{{ summary.active === 1 ? '' : 's' }}
+          Import <span class="fl-num">{{ summary.active }}</span> transaction{{ summary.active === 1 ? '' : 's' }}
         </button>
       </div>
     </template>

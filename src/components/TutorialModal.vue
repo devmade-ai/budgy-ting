@@ -89,90 +89,86 @@ function goToStep(index: number) {
 
 <template>
   <Teleport to="body">
-    <div class="modal modal-open z-[60]">
-      <!-- Backdrop -->
-      <div
-        class="modal-backdrop"
-        aria-hidden="true"
-        @click="emit('close')"
-      />
-
+    <div class="fl-overlay z-[60]" @click.self="emit('close')">
       <!-- Dialog -->
       <div
         ref="dialogRef"
         role="dialog"
         aria-label="How it works"
         aria-modal="true"
-        class="modal-box max-w-sm max-h-[90vh] overflow-y-auto"
+        class="fl-dialog max-w-sm"
       >
         <!-- Skip/close button — 40×40 touch target matches other modal close buttons -->
         <button
-          class="absolute top-2 right-2 w-10 h-10 rounded-full flex items-center justify-center text-base-content/40 hover:text-base-content/70 hover:bg-base-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary transition-colors"
+          class="fl-dialog__x absolute top-2 right-2 w-10 h-10 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           aria-label="Close tutorial"
           @click="emit('close')"
         >
           <X :size="18" aria-hidden="true" />
         </button>
 
-        <!-- Step content -->
-        <div class="text-center pt-2 pb-4">
-          <component
-            :is="activeStep.icon"
-            :size="36"
-            class="text-primary mx-auto mb-4"
-            aria-hidden="true"
-          />
-          <h3 class="text-lg font-semibold text-base-content mb-2">
-            {{ activeStep.title }}
-          </h3>
-          <p class="text-sm text-base-content/70 leading-relaxed">
-            {{ activeStep.description }}
-          </p>
-        </div>
-
-        <!-- Step dots — the visible dot is 8px but each button is a 32×32 touch
-             target (inner-span styled) so mobile users can reliably tap them. -->
-        <div class="flex justify-center gap-0.5 mb-5" role="tablist" aria-label="Tutorial steps">
-          <button
-            v-for="(s, index) in steps"
-            :key="index"
-            role="tab"
-            :aria-selected="index === currentStep"
-            :aria-label="`Step ${index + 1}: ${s.title}`"
-            class="w-8 h-8 flex items-center justify-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-            @click="goToStep(index)"
-          >
-            <span
-              class="w-2 h-2 rounded-full transition-colors"
-              :class="index === currentStep ? 'bg-primary' : 'bg-base-300'"
+        <!-- Padded scroll container — the dialog clips overflow, so the body scrolls. -->
+        <div class="p-6 overflow-y-auto">
+          <!-- Step content -->
+          <div class="text-center pt-2 pb-4">
+            <component
+              :is="activeStep.icon"
+              :size="36"
+              class="text-accent mx-auto mb-4"
               aria-hidden="true"
             />
-          </button>
-        </div>
+            <h3 class="text-lg font-semibold text-ink mb-2">
+              {{ activeStep.title }}
+            </h3>
+            <p class="text-sm text-ink-soft leading-relaxed">
+              {{ activeStep.description }}
+            </p>
+          </div>
 
-        <!-- Navigation buttons -->
-        <div class="flex gap-3">
-          <button
-            v-if="!isFirst"
-            class="btn btn-ghost flex-1"
-            @click="prev"
-          >
-            Back
-          </button>
-          <button
-            v-if="!isLast"
-            class="btn btn-primary flex-1"
-            @click="next"
-          >
-            Next
-          </button>
-          <button
-            v-if="isLast"
-            class="btn btn-primary flex-1"
-            @click="emit('close')"
-          >
-            Get started
-          </button>
+          <!-- Step dots — the visible dot is 8px but each button is a 32×32 touch
+               target (inner-span styled) so mobile users can reliably tap them. -->
+          <div class="flex justify-center gap-0.5 mb-5" role="tablist" aria-label="Tutorial steps">
+            <button
+              v-for="(s, index) in steps"
+              :key="index"
+              role="tab"
+              :aria-selected="index === currentStep"
+              :aria-label="`Step ${index + 1}: ${s.title}`"
+              class="w-8 h-8 flex items-center justify-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              @click="goToStep(index)"
+            >
+              <span
+                class="w-2 h-2 rounded-full transition-colors"
+                :class="index === currentStep ? 'bg-accent' : 'bg-line-2'"
+                aria-hidden="true"
+              />
+            </button>
+          </div>
+
+          <!-- Navigation buttons -->
+          <div class="flex gap-3">
+            <button
+              v-if="!isFirst"
+              class="fl-btn fl-btn--ghost flex-1"
+              @click="prev"
+            >
+              Back
+            </button>
+            <button
+              v-if="!isLast"
+              class="fl-btn fl-btn--primary flex-1"
+              @click="next"
+            >
+              Next
+            </button>
+            <button
+              v-if="isLast"
+              class="fl-btn fl-btn--primary flex-1"
+              @click="emit('close')"
+            >
+              Get started
+            </button>
+          </div>
         </div>
       </div>
     </div>

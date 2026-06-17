@@ -14,10 +14,12 @@ import type { Component } from 'vue'
 
 const { state, dismiss } = useToast()
 
+// Farlume toast tone classes. Warning maps to the accent tone (the design
+// system has no dedicated warning toast; amber accent reads as "caution").
 const variantClasses: Record<string, string> = {
-  success: 'bg-success text-success-content',
-  error: 'bg-error text-error-content',
-  warning: 'bg-warning text-warning-content',
+  success: 'fl-toast--success',
+  error: 'fl-toast--error',
+  warning: 'fl-toast--accent',
 }
 
 const variantIcons: Record<string, Component> = {
@@ -39,17 +41,21 @@ const variantIcons: Record<string, Component> = {
     >
       <div
         v-if="state.visible"
-        class="fixed left-1/2 -translate-x-1/2 z-[70] px-4 py-2.5 rounded-lg shadow-lg flex items-center gap-2 text-sm font-medium max-w-sm"
+        class="fl-toast fixed left-1/2 -translate-x-1/2 z-[70] max-w-sm"
         style="bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px))"
         :class="variantClasses[state.variant]"
         role="status"
         aria-live="polite"
       >
-        <component :is="variantIcons[state.variant]" :size="16" aria-hidden="true" />
-        <span>{{ state.message }}</span>
+        <span class="fl-toast__icon">
+          <component :is="variantIcons[state.variant]" :size="20" aria-hidden="true" />
+        </span>
+        <div class="fl-toast__body">
+          <p class="fl-toast__msg">{{ state.message }}</p>
+        </div>
         <!-- Mobile UX: 32x32px touch target for dismiss (was 14px icon) -->
         <button
-          class="ml-2 w-8 h-8 flex items-center justify-center opacity-70 hover:opacity-100 transition-opacity rounded-full"
+          class="fl-toast__x w-8 h-8"
           aria-label="Dismiss"
           @click="dismiss"
         >

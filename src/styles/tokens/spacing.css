@@ -1,0 +1,35 @@
+/* ============================================================
+   SPACING — Farlume
+   4px base grid. Use --space-* for padding/margins/gaps.
+
+   Source of truth: Farlume design system (tokens/spacing.css).
+   ============================================================ */
+
+:root {
+  --space-0:   0;
+  --space-px:  1px;
+  --space-1:   4px;
+  --space-2:   8px;
+  --space-3:   12px;
+  --space-4:   16px;
+  --space-5:   20px;
+  --space-6:   24px;
+  --space-7:   32px;
+  --space-8:   40px;
+  --space-9:   48px;
+  --space-10:  64px;
+  --space-11:  80px;
+  --space-12:  96px;
+  --space-14:  128px;
+  --space-16:  160px;
+
+  /* Layout rhythm */
+  --gutter:        24px;   /* default gap between cards */
+  --page-pad:      32px;   /* app shell padding */
+  --content-max:   1240px; /* dashboard max width */
+  --prose-max:     68ch;   /* readable text column */
+  --control-h:     40px;   /* default control height (inputs, buttons) */
+  --control-h-sm:  32px;
+  --control-h-lg:  48px;
+  --tap-target:    44px;   /* minimum mobile hit target */
+}

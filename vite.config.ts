@@ -161,14 +161,14 @@ export default defineConfig({
       manifest: {
         name: 'Farlume',
         short_name: 'Farlume',
-        description: 'Plan and track expenses against budgets',
+        description: 'Forecast your cash position — local-first, on your device.',
         // Requirement: Stable identity for Chrome PWA install system.
         // Approach: Explicit id so Chrome doesn't derive it from start_url
         //   (which can cause mismatches on path changes).
         id: '/',
-        // Must match default combo's light metaColor (vivid = cmyk → #45aeee)
-        theme_color: '#45aeee',
-        background_color: '#ffffff',
+        // Must match default combo's light metaColor (farlume → paper #F4F0E8)
+        theme_color: '#F4F0E8',
+        background_color: '#F4F0E8',
         display: 'standalone',
         scope: '/',
         start_url: '/',

@@ -11,7 +11,7 @@
 
 - [ ] Virtual scrolling for long transaction lists (vue-virtual-scroller) — current pagination filters full array on every change, 10K+ transactions will lag
 - [ ] Keyboard shortcuts for common actions
-- [ ] Theme combo picker UI in burger menu — useDarkMode() exposes setCombo() + themeCombos but no UI exists yet. Currently only "Vivid" (cmyk/night) combo registered. Add more combos to src/config/themes.ts + register themes in CSS + sync flash script.
+- [ ] Theme combo picker UI in burger menu — useDarkMode() exposes setCombo() + themeCombos but no UI exists yet. Currently only the single "Farlume" brand combo (light/dark) is registered. A picker is only worth building if more brand palettes are added to src/config/themes.ts (+ mirror in index.html flash script). With one brand theme, the existing light/dark toggle is sufficient.
 
 ## Forecasting / Projection
 
@@ -43,8 +43,18 @@
 
 ## A11y / Dark mode
 
-- [ ] Visually verify the 12 `text-base-content/40` → `/60` bumps against both cmyk and night themes using an actual contrast checker. Current bumps were made by heuristic (body/helper vs icon) — dark-theme readability unverified.
+- [ ] Re-verify text contrast (formerly the `text-base-content/40`→`/60` bumps, now `text-ink-*`) against the Farlume light + dark themes with a real contrast checker. Token values changed in the facelift — the ink scale (`--ink-0..3`) and muted/faint utilities should be re-checked for AA, especially `text-ink-faint` on `bg-app`/`bg-card`.
 - [ ] Verify `CashflowGraph` chart-loading error state (`ChartLoadError` component) renders as expected when a chunk fetch fails — e.g. by disabling the network tab after initial paint.
+
+## Design / Facelift follow-ups (Farlume design system)
+
+<!-- The DaisyUI→Farlume facelift landed: tokens in src/styles/, .fl-* component layer, self-hosted fonts. Build/typecheck/178 tests pass. These are the remaining polish items. -->
+
+- [ ] **Visual QA pass across every screen in light + dark.** The migration was verified by build + grep + tests, but no in-browser visual pass was run. Walk every surface (dashboard, import wizard upload + review, transaction table + edit modal, workspace list/detail/create/edit, tutorial, help drawers, install modal, toasts, bottom sheet) in both themes and on mobile widths; fix any spacing/contrast/alignment regressions.
+- [ ] **Regenerate app icons + favicon from the Farlume logomark.** `public/*.png`, `favicon.ico`, `icon.svg`, and the maskable icon still show the pre-facelift mark. Regenerate from `src/assets/brand/logo-mark.svg` (amber beacon on ink) via `scripts/generate-icons.mjs` (needs `sharp`), then let the PWA_ICON_CACHE_BUST hash flow pick up the new bytes. See docs/USER_ACTIONS.md.
+- [ ] Native `<progress>` elements in WorkspaceListView (pull-to-refresh + storage bar) are token-styled via Tailwind arbitrary variants rather than the `.fl-progress` div component — swap to `.fl-progress` for visual parity if desired.
+- [ ] ForecastDiagnostics keeps a native `<details>/<summary>` disclosure (accessible, zero-JS) styled with Farlume tokens rather than a `.fl-card` + chevron-button. Fine as-is; revisit only if a chevron-toggle look is wanted.
+- [ ] TagSuggestions accept-chip lost its hover text-color affordance (would clash inside the solid accent pill). If a hover cue is wanted, use a subtle chip background/opacity shift instead.
 
 ## Refactor
 

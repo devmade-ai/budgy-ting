@@ -35,11 +35,11 @@ function handleShowInstructions() {
 <template>
   <div
     v-if="showInstallPrompt"
-    class="bg-primary/10 border-b border-primary/20 px-4 py-2.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-3"
+    class="bg-accent-soft border-b border-line-2 px-4 py-2.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-3"
   >
     <div class="flex items-center gap-2 min-w-0">
-      <Smartphone :size="16" class="text-primary shrink-0" />
-      <span class="text-sm text-primary truncate">
+      <Smartphone :size="16" class="text-accent shrink-0" />
+      <span class="text-sm text-accent-active truncate">
         Install Farlume for quick access
       </span>
     </div>
@@ -48,7 +48,7 @@ function handleShowInstructions() {
       <!-- Chromium: native install button -->
       <button
         v-if="isNativeInstallAvailable"
-        class="btn btn-primary btn-sm"
+        class="fl-btn fl-btn--primary fl-btn--sm"
         @click="handleInstall"
       >
         Install
@@ -57,7 +57,7 @@ function handleShowInstructions() {
       <!-- Safari/Firefox: show instructions -->
       <button
         v-else-if="needsManualInstructions"
-        class="btn btn-primary btn-sm"
+        class="fl-btn fl-btn--primary fl-btn--sm"
         @click="handleShowInstructions"
       >
         How to Install
@@ -65,7 +65,7 @@ function handleShowInstructions() {
 
       <!-- Dismiss -->
       <button
-        class="text-sm text-primary hover:text-primary/70 transition-colors"
+        class="text-sm text-accent hover:text-accent-hover transition-colors"
         @click="dismiss"
       >
         Not now

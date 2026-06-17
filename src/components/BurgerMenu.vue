@@ -158,7 +158,7 @@ watch(open, (isOpen) => {
     <button
       ref="triggerRef"
       type="button"
-      class="w-10 h-10 rounded-full flex items-center justify-center text-base-content/60 hover:text-primary hover:bg-primary/10 transition-colors"
+      class="fl-iconbtn w-10 h-10 rounded-full"
       aria-label="Menu"
       :aria-expanded="open"
       :aria-controls="menuId"
@@ -181,28 +181,21 @@ watch(open, (isOpen) => {
         :id="menuId"
         ref="menuRef"
         aria-label="Main navigation"
-        class="absolute right-0 top-full mt-1 z-50
-               w-48 max-w-[calc(100vw-1rem)] rounded-lg shadow-lg
-               bg-base-100 border border-base-300
-               py-1 overflow-hidden overscroll-contain"
+        class="fl-popover absolute right-0 top-full mt-1 z-50
+               w-48 max-w-[calc(100vw-1rem)]
+               overflow-hidden overscroll-contain"
         @keydown="handleMenuKeyDown"
       >
-        <ul class="list-none m-0 p-0">
+        <ul class="fl-menu list-none m-0 p-0">
           <template v-for="(item, i) in visibleItems" :key="item.label">
             <li v-if="item.separator && i > 0" role="separator">
-              <div class="divider my-0 h-0" />
+              <div class="fl-menu__sep" />
             </li>
             <li>
               <button
                 type="button"
-                class="w-full text-left px-4 py-2 min-h-[44px] text-sm
-                       transition-colors outline-none
-                       focus-visible:ring-2 focus-visible:ring-primary
-                       flex items-center gap-2
-                       disabled:opacity-50 disabled:cursor-not-allowed"
-                :class="item.destructive
-                  ? 'text-error hover:bg-error/10'
-                  : 'text-base-content/80 hover:bg-base-200'"
+                class="fl-menu__item min-h-[44px] truncate"
+                :class="{ 'fl-menu__item--danger': item.destructive }"
                 :disabled="item.disabled"
                 @click="handleItem(item)"
               >
@@ -210,7 +203,7 @@ watch(open, (isOpen) => {
                   v-if="item.icon"
                   :is="item.icon"
                   :size="16"
-                  :class="item.iconClass ?? (item.destructive ? 'text-error/60' : 'text-base-content/40')"
+                  :class="item.iconClass ?? (item.destructive ? 'text-neg/60' : 'text-ink-faint')"
                   aria-hidden="true"
                 />
                 <span class="truncate">{{ item.label }}</span>

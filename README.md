@@ -45,6 +45,7 @@ npm run test
 - **Vue 3** (Composition API) + **Vite**
 - **TypeScript**
 - **Tailwind CSS v4** (with Vite integration)
+- **Farlume design system** — the app's own styling layer (CSS tokens + `.fl-*` components). Warm paper surfaces, a single lume-amber accent, editorial Newsreader serif headings, Hanken Grotesk UI, and JetBrains Mono for every numeral (money is always mono + tabular). Self-hosted fonts; Lucide icons. Tokens live in `src/styles/`. (Replaced DaisyUI.)
 - **Dexie.js** (IndexedDB)
 - **vite-plugin-pwa** (Workbox)
 - **ApexCharts** + **vue3-apexcharts** (cashflow graph)

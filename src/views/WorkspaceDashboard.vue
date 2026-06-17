@@ -36,13 +36,13 @@ const ChartSkeleton = {
   render: () => h('div', {
     role: 'status',
     'aria-label': 'Loading chart…',
-    class: 'skeleton h-[280px] sm:h-[350px] lg:h-[420px] w-full mb-6',
+    class: 'fl-skeleton h-[280px] sm:h-[350px] lg:h-[420px] w-full mb-6',
   }),
 }
 const ChartLoadError = {
   render: () => h('div', {
     role: 'alert',
-    class: 'text-center py-12 text-sm text-base-content/60 bg-base-200 rounded-lg mb-6',
+    class: 'text-center py-12 text-sm text-ink-muted bg-app rounded-lg mb-6',
   }, 'Couldn\'t load the chart. Refresh the page and try again.'),
 }
 const CashflowGraph = defineAsyncComponent({
@@ -277,7 +277,7 @@ async function handleRequestSuggestions(id: string, description: string) {
       title="No transactions yet"
       description="Import a CSV or JSON bank statement to see your cashflow, forecast, and runway."
     >
-      <button class="btn btn-primary" @click="goToImport">
+      <button class="fl-btn fl-btn--primary" @click="goToImport">
         <Upload :size="16" class="mr-1 inline-block" aria-hidden="true" />
         Import transactions
       </button>
@@ -292,12 +292,12 @@ async function handleRequestSuggestions(id: string, description: string) {
          numeric keypad; step="0.01" lets users enter granular amounts (was 100,
          which forced cents to be a multiple of 100 units). -->
     <div class="flex flex-wrap items-center gap-3 mb-6">
-      <label for="cash-on-hand" class="text-sm text-base-content/70 flex items-center gap-2">
-        <Wallet :size="16" class="text-base-content/40" aria-hidden="true" />
+      <label for="cash-on-hand" class="text-sm text-ink-soft flex items-center gap-2">
+        <Wallet :size="16" class="text-ink-faint" aria-hidden="true" />
         Cash on hand
       </label>
       <div class="flex items-center gap-1">
-        <span class="text-sm text-base-content/60" aria-hidden="true">{{ workspace.currencyLabel }}</span>
+        <span class="text-sm text-ink-muted fl-num" aria-hidden="true">{{ workspace.currencyLabel }}</span>
         <input
           id="cash-on-hand"
           v-model.number="cashOnHand"
@@ -307,18 +307,18 @@ async function handleRequestSuggestions(id: string, description: string) {
           step="0.01"
           placeholder="0.00"
           :aria-label="`Cash on hand in ${workspace.currencyLabel}`"
-          class="input input-bordered w-32 text-base min-h-[44px] no-print"
+          class="fl-input fl-input--bare fl-input--num w-32 text-base min-h-[44px] no-print"
         />
         <!-- Print-only: static value replaces the interactive input -->
-        <span class="hidden print-show text-sm font-medium text-base-content">
+        <span class="hidden print-show text-sm font-medium text-ink fl-num">
           {{ cashOnHand !== null ? formatAmount(cashOnHand) : '—' }}
         </span>
       </div>
-      <span v-if="runway && runway.daysRemaining !== null" class="text-sm text-error">
-        Runs out {{ runway.depletionDate }}
+      <span v-if="runway && runway.daysRemaining !== null" class="text-sm text-neg">
+        Runs out <span class="fl-num">{{ runway.depletionDate }}</span>
       </span>
-      <span v-else-if="runway" class="text-sm text-success">
-        Projected {{ workspace.currencyLabel }}{{ formatAmount(runway.endBalance) }}
+      <span v-else-if="runway" class="text-sm text-pos">
+        Projected <span class="fl-num">{{ workspace.currencyLabel }}{{ formatAmount(runway.endBalance) }}</span>
       </span>
     </div>
 
@@ -353,7 +353,7 @@ async function handleRequestSuggestions(id: string, description: string) {
     <!-- Transaction table -->
     <div class="mt-2">
       <div class="flex items-center justify-between mb-3">
-        <h2 class="text-lg font-semibold text-base-content">Transactions</h2>
+        <h2 class="font-display text-lg font-semibold text-ink">Transactions</h2>
       </div>
       <TransactionTable
         :transactions="transactions"

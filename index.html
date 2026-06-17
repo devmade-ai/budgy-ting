@@ -5,14 +5,13 @@
     <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png" />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- Requirement: PWA status bar color must match active theme combo
-         Approach: Initial values match default combo (vivid = cmyk/night). Flash prevention
-           script updates these before first paint. useDarkMode.ts composable
-           updates them on subsequent toggles/combo changes.
-         Reference: glow-props docs/implementations/THEME_DARK_MODE.md -->
-    <meta name="theme-color" content="#45aeee" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)" />
-    <meta name="description" content="Plan and track expenses against budgets" />
+    <!-- Requirement: PWA status bar color must match active theme
+         Approach: Initial values match the Farlume brand theme (paper / deep ink).
+           Flash-prevention script updates these before first paint; useDarkMode.ts
+           updates them on subsequent toggles. -->
+    <meta name="theme-color" content="#F4F0E8" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0F1217" media="(prefers-color-scheme: dark)" />
+    <meta name="description" content="Forecast your cash position — local-first, on your device." />
     <!-- Requirement: Improve iOS standalone PWA appearance
          Approach: apple-mobile-web-app meta tags for status bar, title, and splash -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -21,25 +20,24 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="apple-touch-startup-image" href="/apple-touch-icon.png" />
     <title>Farlume</title>
-    <!-- Requirement: Prevent white flash on dark mode page load
+    <!-- Requirement: Prevent flash of the wrong theme on page load
          Approach: Classic (non-module) inline script reads localStorage and applies
-           both .dark class (Tailwind) and data-theme (DaisyUI) before first paint.
-           Duplicates the combo lookup logic from useDarkMode.ts — composable runs
-           after Vue mount, too late for first paint.
-         Why classic script: Module scripts are deferred — they run after DOM parse.
-         Reference: glow-props docs/implementations/THEME_DARK_MODE.md -->
+           the .dark class (Tailwind safety net) and the data-theme attribute (Farlume
+           token layer) before first paint. Mirrors src/config/themes.ts — the composable
+           (useDarkMode.ts) runs after Vue mount, too late for first paint.
+         Why classic script: Module scripts are deferred — they run after DOM parse. -->
     <script>
       (function() {
         try {
           var combos = {
-            vivid: { light: 'cmyk', dark: 'night', mcL: '#45aeee', mcD: '#0f172a' }
+            farlume: { light: 'light', dark: 'dark', mcL: '#F4F0E8', mcD: '#0F1217' }
           };
           var stored = localStorage.getItem('darkMode');
           var isDark = stored !== null
             ? stored === 'true'
             : window.matchMedia('(prefers-color-scheme: dark)').matches;
-          var comboId = localStorage.getItem('themeCombo') || 'vivid';
-          var combo = combos[comboId] || combos.vivid;
+          var comboId = localStorage.getItem('themeCombo') || 'farlume';
+          var combo = combos[comboId] || combos.farlume;
           var theme = isDark ? combo.dark : combo.light;
           var root = document.documentElement;
           if (isDark) root.classList.add('dark');

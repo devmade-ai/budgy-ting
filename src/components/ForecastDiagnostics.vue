@@ -6,9 +6,10 @@
  * non-technical per the UX rule. This panel is for verifying the forecast is honestly calibrated.
  *
  * Requirement (FORECASTING_RESEARCH.md §16.5): surface the harness's interval-calibration metrics.
- * Approach: native <details>/<summary> collapse (zero JS, accessible, DaisyUI-compatible in v5),
- *   DaisyUI table + badges + semantic tokens. PIT histogram drawn as plain bars (flat = calibrated,
- *   U = bands too narrow, ∩ = too wide); bar heights are data dimensions, not tokens.
+ * Approach: native <details>/<summary> collapse (zero JS, accessible), styled with the Farlume
+ *   design system — fl-table + fl-num + semantic tokens. PIT histogram drawn as plain bars
+ *   (flat = calibrated, U = bands too narrow, ∩ = too wide); bar heights are data dimensions,
+ *   not tokens.
  */
 import { computed } from 'vue'
 import type { BacktestSummary } from '@/engine/validation'
@@ -37,23 +38,23 @@ function pct(v: number): string {
 </script>
 
 <template>
-  <details v-if="summary && summary.records > 0" class="mt-4 border-t border-base-300 pt-3">
-    <summary class="text-xs text-base-content/60 cursor-pointer hover:text-base-content select-none">
+  <details v-if="summary && summary.records > 0" class="mt-4 border-t border-line-2 pt-3">
+    <summary class="text-xs text-ink-muted cursor-pointer hover:text-ink select-none">
       Forecast diagnostics (advanced)
     </summary>
 
-    <div class="mt-3 bg-base-200 rounded-box p-4 space-y-4">
-      <p class="text-xs text-base-content/60">
-        Out-of-sample, from a walk-forward backtest over {{ summary.records }} predictions.
+    <div class="mt-3 bg-sunken rounded-lg p-4 space-y-4">
+      <p class="text-xs text-ink-muted">
+        Out-of-sample, from a walk-forward backtest over <span class="fl-num">{{ summary.records }}</span> predictions.
         These check whether the forecast and its confidence bands are honestly calibrated.
       </p>
 
       <!-- Adaptive band calibration (ACI) on the live forecast -->
-      <p v-if="conformal" class="text-xs text-base-content/60">
-        <span class="font-medium text-base-content/80">Adaptive bands (ACI):</span>
+      <p v-if="conformal" class="text-xs text-ink-muted">
+        <span class="font-medium text-ink-soft">Adaptive bands (ACI):</span>
         <template v-if="conformal.adapted">
-          tuned to ≈{{ Math.round((1 - conformal.alpha) * 100) }}% coverage over
-          {{ conformal.steps }} past steps
+          tuned to ≈<span class="fl-num">{{ Math.round((1 - conformal.alpha) * 100) }}%</span> coverage over
+          <span class="fl-num">{{ conformal.steps }}</span> past steps
           <template v-if="conformal.alpha < 0.19"> (widened — bands were running narrow)</template>
           <template v-else-if="conformal.alpha > 0.21"> (tightened — bands were running wide)</template>
           <template v-else> (already well-calibrated)</template>.
@@ -63,42 +64,42 @@ function pct(v: number): string {
 
       <!-- Headline calibration figures -->
       <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        <div class="bg-base-100 rounded-field border border-base-300 p-3">
-          <p class="text-xs text-base-content/60 uppercase tracking-wide mb-1">Band coverage</p>
+        <div class="bg-card rounded-md border border-line-2 p-3">
+          <p class="fl-eyebrow mb-1">Band coverage</p>
           <p
-            class="text-lg font-semibold"
-            :class="coverageOk === true ? 'text-success' : coverageOk === false ? 'text-warning' : 'text-base-content'"
+            class="fl-num text-lg font-semibold"
+            :class="coverageOk === true ? 'text-pos' : coverageOk === false ? 'text-accent-active' : 'text-ink'"
           >
             {{ summary.coverage ? pct(summary.coverage.picp) : '—' }}
           </p>
-          <p v-if="summary.coverage" class="text-xs text-base-content/60 mt-0.5">
-            target {{ pct(summary.coverage.nominal) }} · 95% CI
-            {{ pct(summary.coverage.wilsonLo) }}–{{ pct(summary.coverage.wilsonHi) }}
+          <p v-if="summary.coverage" class="text-xs text-ink-muted mt-0.5">
+            target <span class="fl-num">{{ pct(summary.coverage.nominal) }}</span> · 95% CI
+            <span class="fl-num">{{ pct(summary.coverage.wilsonLo) }}–{{ pct(summary.coverage.wilsonHi) }}</span>
           </p>
         </div>
 
-        <div class="bg-base-100 rounded-field border border-base-300 p-3">
-          <p class="text-xs text-base-content/60 uppercase tracking-wide mb-1">Pinball loss</p>
-          <p class="text-lg font-semibold text-base-content">
+        <div class="bg-card rounded-md border border-line-2 p-3">
+          <p class="fl-eyebrow mb-1">Pinball loss</p>
+          <p class="fl-num text-lg font-semibold text-ink">
             {{ summary.meanPinball !== null ? `${currencyLabel}${formatAmount(summary.meanPinball)}` : '—' }}
           </p>
-          <p class="text-xs text-base-content/60 mt-0.5">lower is better</p>
+          <p class="text-xs text-ink-muted mt-0.5">lower is better</p>
         </div>
 
-        <div class="bg-base-100 rounded-field border border-base-300 p-3">
-          <p class="text-xs text-base-content/60 uppercase tracking-wide mb-1">Interval width</p>
-          <p class="text-lg font-semibold text-base-content">
+        <div class="bg-card rounded-md border border-line-2 p-3">
+          <p class="fl-eyebrow mb-1">Interval width</p>
+          <p class="fl-num text-lg font-semibold text-ink">
             {{ summary.pinaw !== null ? summary.pinaw.toFixed(2) : '—' }}
           </p>
-          <p class="text-xs text-base-content/60 mt-0.5">PINAW (width ÷ range)</p>
+          <p class="text-xs text-ink-muted mt-0.5">PINAW (width ÷ range)</p>
         </div>
       </div>
 
       <!-- Per-horizon accuracy + coverage -->
       <div v-if="summary.perHorizon.length > 0">
-        <p class="text-xs text-base-content/60 uppercase tracking-wide mb-2">Accuracy by horizon</p>
-        <div class="overflow-x-auto">
-          <table class="table table-xs">
+        <p class="fl-eyebrow mb-2">Accuracy by horizon</p>
+        <div class="fl-table-wrap">
+          <table class="fl-table">
             <thead>
               <tr>
                 <th>Days ahead</th>
@@ -109,10 +110,10 @@ function pct(v: number): string {
             </thead>
             <tbody>
               <tr v-for="h in summary.perHorizon" :key="h.horizon">
-                <td>{{ h.horizon }}</td>
-                <td>{{ h.mae !== null ? `${currencyLabel}${formatAmount(h.mae)}` : '—' }}</td>
-                <td>{{ h.coverage !== null ? pct(h.coverage) : '—' }}</td>
-                <td>{{ h.n }}</td>
+                <td class="fl-num">{{ h.horizon }}</td>
+                <td class="fl-num">{{ h.mae !== null ? `${currencyLabel}${formatAmount(h.mae)}` : '—' }}</td>
+                <td class="fl-num">{{ h.coverage !== null ? pct(h.coverage) : '—' }}</td>
+                <td class="fl-num">{{ h.n }}</td>
               </tr>
             </tbody>
           </table>
@@ -121,18 +122,18 @@ function pct(v: number): string {
 
       <!-- PIT histogram (calibration shape) -->
       <div>
-        <p class="text-xs text-base-content/60 uppercase tracking-wide mb-2">
+        <p class="fl-eyebrow mb-2">
           Calibration (PIT) — flat is good
         </p>
         <div class="flex items-end gap-1 h-16" aria-hidden="true">
           <div
             v-for="(count, i) in summary.pitHistogram"
             :key="i"
-            class="flex-1 bg-primary rounded-selector min-h-px"
+            class="flex-1 bg-accent rounded-md min-h-px"
             :style="{ height: `${(count / pitMax) * 100}%` }"
           ></div>
         </div>
-        <p class="text-xs text-base-content/50 mt-1">
+        <p class="text-xs text-ink-faint mt-1">
           U-shape = bands too narrow · arch = too wide · flat = well calibrated
         </p>
       </div>

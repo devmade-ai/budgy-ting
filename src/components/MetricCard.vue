@@ -15,19 +15,20 @@ defineProps<{
 </script>
 
 <template>
-  <div class="bg-base-100 rounded-lg border border-base-300 p-4">
-    <!-- Mobile UX: text-sm for readable labels on small screens (was text-xs) -->
-    <p class="text-sm text-base-content/60 uppercase tracking-wide mb-1">{{ label }}</p>
+  <div class="fl-card fl-card--pad">
+    <!-- Eyebrow label (uppercase, wide tracking) per the Stat specimen. -->
+    <p class="fl-eyebrow mb-1.5">{{ label }}</p>
+    <!-- Money/data is always mono + tabular. -->
     <p
-      class="text-lg font-semibold"
+      class="fl-num text-2xl font-semibold leading-none"
       :class="{
-        'text-success': trend === 'positive',
-        'text-error': trend === 'negative',
-        'text-base-content': !trend || trend === 'neutral',
+        'text-pos': trend === 'positive',
+        'text-neg': trend === 'negative',
+        'text-ink': !trend || trend === 'neutral',
       }"
     >
       {{ value }}
     </p>
-    <p v-if="sublabel" class="text-xs text-base-content/60 mt-0.5">{{ sublabel }}</p>
+    <p v-if="sublabel" class="text-xs text-ink-muted mt-1">{{ sublabel }}</p>
   </div>
 </template>

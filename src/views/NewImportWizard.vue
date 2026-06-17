@@ -340,7 +340,7 @@ function goBack() {
 <template>
   <div>
     <button
-      class="text-sm text-base-content/60 hover:text-base-content mb-4 flex items-center gap-1"
+      class="text-sm text-ink-muted hover:text-ink mb-4 flex items-center gap-1"
       @click="goBack"
     >
       <ArrowLeft :size="16" />
@@ -352,20 +352,28 @@ function goBack() {
     <LoadingSpinner v-if="loading" />
 
     <template v-else-if="workspace">
-      <!-- Step indicator — DaisyUI steps component
+      <!-- Step indicator — Farlume steps component
            Requirement: Step numbers + text labels for non-technical users
-           Approach: DaisyUI `steps` with step-primary for completed/active steps -->
-      <ul class="steps steps-horizontal w-full mb-2">
-        <li
-          v-for="(label, i) in stepLabels"
-          :key="i"
-          class="step"
-          :class="{ 'step-primary': i + 1 <= step }"
-        >
-          {{ label }}
-        </li>
-      </ul>
-      <p class="text-xs text-base-content/60 mb-4">
+           Approach: fl-steps/fl-step with a connector bar between each step.
+             Current step → fl-step--active; already-completed steps → fl-step--done.
+           Alternatives:
+             - DaisyUI `steps`: Rejected — DaisyUI removed; design system ships fl-steps -->
+      <div class="fl-steps w-full mb-2">
+        <template v-for="(label, i) in stepLabels" :key="i">
+          <span class="fl-step__bar" :class="{ 'fl-step__bar--done': i <= step - 1 }" v-if="i > 0" />
+          <div
+            class="fl-step"
+            :class="{
+              'fl-step--active': i + 1 === step,
+              'fl-step--done': i + 1 < step,
+            }"
+          >
+            <span class="fl-step__dot">{{ i + 1 }}</span>
+            <span class="fl-step__label">{{ label }}</span>
+          </div>
+        </template>
+      </div>
+      <p class="text-xs text-ink-muted mb-4">
         Step {{ step }} of 2
         <span v-if="step === 2 && parsedRows.length > 10">
           &middot; {{ parsedRows.length }} transactions to review

@@ -1,8 +1,9 @@
 <script setup lang="ts">
 /**
  * Requirement: Daily cashflow graph with actuals, forecast, confidence bands, and runway overlay
- * Approach: ApexCharts mixed line/area chart. Multiple series toggled by data availability.
- *   Actuals as solid blue, forecast as dashed amber, bands as shaded area, runway as filled gradient.
+ * Approach: ApexCharts mixed line chart following the Farlume chart language.
+ *   History (Spending) as a solid ink line, forecast as a dashed amber line,
+ *   cash balance as the positive green — colors pulled from the Farlume tokens.
  * Alternatives:
  *   - Chart.js: Rejected — ApexCharts has better Vue 3 integration and built-in tooltips
  *   - D3: Rejected — too low-level for this use case
@@ -192,20 +193,22 @@ const series = computed(() => {
 const chartOptions = computed(() => {
   const seriesCount = series.value.length
   const strokeWidths = Array(seriesCount).fill(2) as number[]
-  const dashArray = series.value.map((s) => s.name === 'Forecast' ? 5 : 0)
-  // Requirement: Chart colors must come from DaisyUI theme tokens
-  // Approach: resolveThemeColor reads computed oklch values from <html> and
-  //   converts to hex via canvas pixel — ApexCharts can't use CSS variables.
-  //   Colors re-resolve on every chartOptions recompute (isDark triggers this).
+  const dashArray = series.value.map((s) => s.name === 'Forecast' ? 6 : 0)
+  // Requirement: Chart colors follow the Farlume chart language — history is a
+  //   solid ink line, the forecast is a dashed amber line, the cash balance is
+  //   the positive green. Colors come from the Farlume token layer.
+  // Approach: resolveThemeColor reads the computed CSS custom property from
+  //   <html> and converts to hex via a canvas pixel — ApexCharts can't consume
+  //   CSS variables. Re-resolves on every chartOptions recompute (isDark deps).
   const colors = series.value.map((s) => {
-    if (s.name === 'Spending') return resolveThemeColor('--color-info', '#3b82f6')
-    if (s.name === 'Forecast') return resolveThemeColor('--color-warning', '#f59e0b')
-    if (s.name === 'Cash balance') return resolveThemeColor('--color-success', '#10b981')
-    return resolveThemeColor('--color-base-content', '#6b7280')
+    if (s.name === 'Spending') return resolveThemeColor('--chart-history', '#444A54')
+    if (s.name === 'Forecast') return resolveThemeColor('--chart-forecast', '#CC8A2E')
+    if (s.name === 'Cash balance') return resolveThemeColor('--pos', '#2E8B61')
+    return resolveThemeColor('--text-muted', '#777E89')
   })
 
-  const labelColor = resolveThemeColor('--color-base-content', '#9ca3af')
-  const gridColor = resolveThemeColor('--color-base-300', '#e5e7eb')
+  const labelColor = resolveThemeColor('--text-muted', '#777E89')
+  const gridColor = resolveThemeColor('--chart-grid', 'rgba(22,25,31,0.10)')
   const tooltipTheme = isDark.value ? 'dark' : 'light'
 
   return {
@@ -339,18 +342,18 @@ const chartSummary = computed(() => {
   <div class="mb-6">
     <!-- Chart controls — hidden in print (interactive toggles, no value on paper) -->
     <!-- Stacks vertically on mobile, single row on desktop -->
-    <div class="flex flex-col sm:flex-row sm:items-center gap-2 mb-4 no-print">
-      <div class="join">
+    <div class="flex flex-col sm:flex-row sm:items-center gap-3 mb-4 no-print">
+      <div class="fl-seg">
         <button
-          class="join-item btn btn-sm"
-          :class="chartMode === 'cumulative' ? 'btn-active' : ''"
+          class="fl-seg__opt"
+          :data-active="chartMode === 'cumulative'"
           @click="chartMode = 'cumulative'"
         >
           Cumulative
         </button>
         <button
-          class="join-item btn btn-sm"
-          :class="chartMode === 'daily' ? 'btn-active' : ''"
+          class="fl-seg__opt"
+          :data-active="chartMode === 'daily'"
           @click="chartMode = 'daily'"
         >
           Daily net
@@ -358,26 +361,26 @@ const chartSummary = computed(() => {
       </div>
 
       <div class="flex items-center gap-2 sm:ml-auto overflow-x-auto">
-        <span class="text-xs text-base-content/60 shrink-0">History</span>
-        <div class="join shrink-0">
+        <span class="fl-eyebrow shrink-0">History</span>
+        <div class="fl-seg fl-seg--sm fl-seg--mono shrink-0">
           <button
             v-for="opt in timeRangeOptions"
             :key="opt.value"
-            class="join-item btn btn-xs sm:btn-sm"
-            :class="timeRange === opt.value ? 'btn-active' : ''"
+            class="fl-seg__opt"
+            :data-active="timeRange === opt.value"
             @click="timeRange = opt.value"
           >
             {{ opt.label }}
           </button>
         </div>
 
-        <span class="text-xs text-base-content/60 shrink-0">Forecast</span>
-        <div class="join shrink-0">
+        <span class="fl-eyebrow shrink-0">Forecast</span>
+        <div class="fl-seg fl-seg--sm fl-seg--mono shrink-0">
           <button
             v-for="opt in forecastHorizonOptions"
             :key="opt.value"
-            class="join-item btn btn-xs sm:btn-sm"
-            :class="forecastMonths === opt.value ? 'btn-active' : ''"
+            class="fl-seg__opt"
+            :data-active="forecastMonths === opt.value"
             @click="emit('update:forecastMonths', opt.value)"
           >
             {{ opt.label }}
@@ -402,9 +405,9 @@ const chartSummary = computed(() => {
       />
     </div>
     <div v-else class="text-center py-12">
-      <LineChart :size="36" class="text-base-content/20 mx-auto mb-3" aria-hidden="true" />
-      <p class="text-base-content/70">No data to chart</p>
-      <p class="text-base-content/60 text-sm mt-1">Import transactions to see your cashflow</p>
+      <LineChart :size="36" class="text-ink-faint mx-auto mb-3" aria-hidden="true" />
+      <p class="text-ink-soft">No data to chart</p>
+      <p class="text-ink-muted text-sm mt-1">Import transactions to see your cashflow</p>
     </div>
   </div>
 </template>

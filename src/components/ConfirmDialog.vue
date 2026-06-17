@@ -30,14 +30,7 @@ useDialogA11y(dialogRef, () => { if (!props.busy) emit('cancel') })
 
 <template>
   <Teleport to="body">
-    <div class="modal modal-open z-[60]">
-      <!-- Backdrop -->
-      <div
-        class="modal-backdrop"
-        aria-hidden="true"
-        @click="busy || emit('cancel')"
-      />
-
+    <div class="fl-overlay" @click.self="busy || emit('cancel')">
       <!-- Dialog -->
       <div
         ref="dialogRef"
@@ -45,29 +38,31 @@ useDialogA11y(dialogRef, () => { if (!props.busy) emit('cancel') })
         :aria-label="title"
         aria-modal="true"
         :aria-busy="busy || undefined"
-        class="modal-box max-w-sm max-h-[90vh] overflow-y-auto"
+        class="fl-dialog max-w-sm"
       >
-        <h3 class="text-lg font-semibold text-base-content mb-2">{{ title }}</h3>
-        <p class="text-sm text-base-content/70 mb-6">{{ message }}</p>
+        <div class="fl-dialog__head">
+          <h3 class="fl-dialog__title">{{ title }}</h3>
+        </div>
+        <div class="fl-dialog__body">{{ message }}</div>
         <!-- Requirement: Standard button order — Cancel left, Confirm right
              Approach: Cancel (secondary) first, confirm (primary/danger) second
              Alternatives:
                - Confirm-first: Rejected — violates platform convention (macOS, Material, etc.) -->
-        <div class="flex gap-3">
+        <div class="fl-dialog__foot">
           <button
-            class="btn btn-ghost flex-1"
+            class="fl-btn fl-btn--ghost"
             :disabled="busy"
             @click="emit('cancel')"
           >
             Cancel
           </button>
           <button
-            class="btn flex-1"
-            :class="danger ? 'btn-error' : 'btn-primary'"
+            class="fl-btn"
+            :class="danger ? 'fl-btn--danger-solid' : 'fl-btn--primary'"
             :disabled="busy"
             @click="hapticConfirm(); emit('confirm')"
           >
-            <span v-if="busy" class="loading loading-spinner loading-xs mr-1" aria-hidden="true" />
+            <span v-if="busy" class="fl-btn__spin" aria-hidden="true" />
             {{ busy ? 'Working…' : (confirmLabel || 'Confirm') }}
           </button>
         </div>

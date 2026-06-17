@@ -83,11 +83,17 @@ Current working features:
 - Tag autocomplete from tagCache + pattern tags + ML suggestions
 - Duplicate detection on import (date + amount + description)
 - Pull-to-refresh, haptic feedback, bottom sheet modal
-- Dark mode: DaisyUI dual-layer theming (data-theme + .dark class), named combos (Approach B, single "Vivid" combo: cmyk/night), user-controlled toggle, system preference fallback, localStorage persistence, cross-tab sync, flash prevention, print overrides
+- Dark mode: Farlume token theming via `[data-theme="dark"]` (light is `:root`; `.dark` class kept in sync as a Tailwind safety net), single brand theme, user-controlled toggle, system preference fallback, localStorage persistence, cross-tab sync, flash prevention, print overrides
 - Save as PDF: window.print() via the per-workspace 3-dot actions menu (contextual to dashboard, co-located with Export/Edit), full print CSS (no-print classes, forced light mode, all transactions, table layout, static cash display, ApexCharts overrides)
 
 **Database:** Schema v8 (8 tables: workspaces, transactions, patterns, importBatches, tagCache, embeddingCache + 2 legacy)
-**Tech stack:** Vue 3 + TypeScript + Tailwind CSS v4 + DaisyUI v5 + Dexie.js + vite-plugin-pwa + ApexCharts + simple-statistics + Transformers.js (Web Worker)
+**Tech stack:** Vue 3 + TypeScript + Tailwind CSS v4 + Farlume design system (CSS tokens + `.fl-*` component layer) + Dexie.js + vite-plugin-pwa + ApexCharts + simple-statistics + Transformers.js (Web Worker)
+
+**Design system:** Farlume — an instrument for financial foresight. Warm paper surfaces, a single lume-amber accent, editorial Newsreader serif headings, Hanken Grotesk UI, JetBrains Mono for every numeral (money is always mono + tabular). DaisyUI was removed in favour of this system. Source lives in `src/styles/`:
+  - `tokens/` — `colors.css` (palette + semantic aliases, light `:root` / dark `[data-theme="dark"]`), `typography.css`, `spacing.css`, `effects.css` (radii/shadows/glow/z-index — z-scale aligned to the repo Z-Index Scale, NOT the design's raw 800/900/1000), `fonts.css` (self-hosted woff2 in `src/assets/fonts/`), `print.css`.
+  - `components.css` — the `.fl-*` component layer (buttons, inputs, selects, switch, checkbox, radio, tags, card, badge, stat/metric, table, chart, dialog/overlay, toast, tooltip, segmented control, tabs, empty state, alert, spinner, skeleton, steps, progress, range, popover/menu, divider, sticky bar, link, eyebrow, prose theming). Wrapped in `@layer components` so Tailwind utilities still win.
+  - `src/index.css` exposes the tokens to Tailwind via `@theme inline` so utilities like `bg-card`, `text-ink`, `text-accent`, `bg-pos`/`bg-neg`, `border-line`, `font-display`/`font-mono` resolve to live tokens that flip in dark mode.
+  - Logomark: `src/assets/brand/logo-mark.svg` (light bg) / `logo-mark-light.svg` (dark bg).
 
 ## Code Standards
 
@@ -333,12 +339,12 @@ All projects follow this scale to prevent stacking conflicts between the burger 
 - **NEVER use the AskUserQuestion tool.** It breaks the session UI — the input modal covers context, gets stuck awaiting input, and disrupts workflow. If you need user input, list options as numbered text in your response and let the user reply with a number or text. This is a hard rule with zero exceptions.
 - **Development phase:** App is pre-release with zero users. Features added now are provisional and will be changed or removed later. Don't over-polish or over-engineer — keep things easy to swap out. Don't push back on feature ideas based on "users don't need this" — there are no users yet, and the goal is exploration.
 - **Check build tools before building.** Run `npm install` or verify `node_modules/.bin/vite` exists before attempting `npm run build`. The `sharp` package may not be installed (used by prebuild icon generation), so use `./node_modules/.bin/vite build` directly to skip the prebuild step if sharp fails.
-- **DaisyUI theme sync points.** Four locations must stay in sync when adding/removing theme combos:
-  1. `src/config/themes.ts` — combo definitions (source of truth)
-  2. `src/index.css` — `@plugin "daisyui" { themes: ... }` (must list every DaisyUI theme name used by any combo)
-  3. `index.html` flash prevention script — hardcoded `combos` object with theme names + meta colors (must mirror themes.ts, vanilla JS)
-  4. `vite.config.ts` — manifest `theme_color` must match default combo's light metaColor
-- **DaisyUI modal z-index.** DaisyUI's `.modal` class sets `z-index: 999` internally. Our `z-[60]` override works because Tailwind `@layer utilities` takes precedence over `@layer daisyui.*`. Do NOT remove the `z-[60]` — it keeps modals within our z-index scale (modal=60, toast=70, debug=80).
+- **Farlume theme sync points.** Three locations must stay in sync when changing theme names / status-bar colors:
+  1. `src/config/themes.ts` — combo definitions (source of truth; the single `farlume` combo pairs `light`/`dark` data-theme values)
+  2. `index.html` flash-prevention script — hardcoded `combos` object with theme names + meta colors (must mirror themes.ts, vanilla JS)
+  3. `vite.config.ts` — manifest `theme_color` must match the default combo's light metaColor (`#F4F0E8`)
+- **Farlume overlay z-index.** Modals use `.fl-overlay` (z `var(--z-modal)` = 60) + `.fl-dialog`; toasts/banners use 70; the debug pill stays at 80 in its own Vue root. The Farlume z-index tokens in `src/styles/tokens/effects.css` are deliberately mapped to the repo Z-Index Scale (50/60/70), NOT the design system's raw 800/900/1000, so the debug pill stays on top. Keep `z-[60]`/`z-[70]` on any hand-placed overlays and the menu z-20/z-40/z-50 bands intact.
+- **No DaisyUI.** DaisyUI is removed. Never reintroduce `@plugin "daisyui"`, `btn`/`card`/`input`/`modal`/`badge`/`menu`/`base-100..300`/`base-content`/`-primary`/`-success`/etc. Use the `.fl-*` component classes (`src/styles/components.css`) and the Farlume color utilities (`bg-card`, `text-ink`, `text-accent`, `bg-pos`/`bg-neg`, `border-line`, …). Also avoid DaisyUI radius utilities `rounded-box`/`rounded-field`/`rounded-selector`/`rounded-btn` — they no longer resolve; use Tailwind `rounded-md`/`rounded-lg` (now mapped to Farlume radii) or `.fl-*` classes.
 - **Claude Code mobile/web — accessing sibling repos:**
   - Use `GITHUB_ALL_REPO_TOKEN` with the GitHub API (`api.github.com/repos/devmade-ai/{repo}/contents/{path}`) to read files from other devmade-ai repos
   - Use `$(printenv GITHUB_ALL_REPO_TOKEN)` not `$GITHUB_ALL_REPO_TOKEN` to avoid shell expansion issues

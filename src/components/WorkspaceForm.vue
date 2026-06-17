@@ -78,34 +78,34 @@ function handleSubmit() {
   <form class="space-y-5" @submit.prevent="handleSubmit">
     <!-- Workspace name -->
     <div>
-      <label class="block text-sm font-medium text-base-content/80 mb-1" for="workspace-name">
+      <label class="block text-sm font-medium text-ink-soft mb-1" for="workspace-name">
         Workspace name
       </label>
       <input
         id="workspace-name"
         v-model="name"
         type="text"
-        class="input input-bordered w-full text-base min-h-[44px]"
+        class="fl-input fl-input--bare w-full text-base min-h-[44px]"
         placeholder="e.g. Main Account, Freelance, Project Budget"
         autofocus
       />
-      <p v-if="errors['name']" class="text-sm text-error mt-1">{{ errors['name'] }}</p>
+      <p v-if="errors['name']" class="text-sm text-neg mt-1">{{ errors['name'] }}</p>
     </div>
 
     <!-- Currency label -->
     <div>
-      <label class="block text-sm font-medium text-base-content/80 mb-1" for="currency-label">
+      <label class="block text-sm font-medium text-ink-soft mb-1" for="currency-label">
         Currency symbol
       </label>
       <input
         id="currency-label"
         v-model="currencyLabel"
         type="text"
-        class="input input-bordered w-20 text-base min-h-[44px]"
+        class="fl-input fl-input--bare w-20 text-base min-h-[44px]"
         placeholder="R"
         maxlength="5"
       />
-      <p class="text-sm text-base-content/60 mt-1">Display only — shown next to amounts</p>
+      <p class="text-sm text-ink-muted mt-1">Display only — shown next to amounts</p>
     </div>
 
     <!-- Period type — ARIA radiogroup with arrow-key navigation.
@@ -115,16 +115,17 @@ function handleSubmit() {
          + aria-checked; left/right arrow keys shift selection. Only the
          selected option is in the tab order (roving tabindex).
          Alternatives:
-           - Native <input type="radio">: Rejected — button styling via DaisyUI
-             join/btn-active is easier than styling native radios cross-browser. -->
+           - Native <input type="radio">: Rejected — button styling via the
+             Farlume segmented control (fl-seg) is easier than styling native
+             radios cross-browser. -->
     <div>
-      <p id="period-label" class="block text-sm font-medium text-base-content/80 mb-2">
+      <p id="period-label" class="block text-sm font-medium text-ink-soft mb-2">
         Period
       </p>
       <div
         role="radiogroup"
         aria-labelledby="period-label"
-        class="join w-full"
+        class="fl-seg w-full"
         @keydown.left.prevent="selectPeriod('monthly')"
         @keydown.right.prevent="selectPeriod('custom')"
         @keydown.up.prevent="selectPeriod('monthly')"
@@ -136,8 +137,8 @@ function handleSubmit() {
           role="radio"
           :aria-checked="periodType === 'monthly'"
           :tabindex="periodType === 'monthly' ? 0 : -1"
-          class="join-item btn flex-1"
-          :class="periodType === 'monthly' ? 'btn-active' : ''"
+          class="fl-seg__opt flex-1"
+          :data-active="periodType === 'monthly'"
           @click="selectPeriod('monthly')"
         >
           Monthly
@@ -148,8 +149,8 @@ function handleSubmit() {
           role="radio"
           :aria-checked="periodType === 'custom'"
           :tabindex="periodType === 'custom' ? 0 : -1"
-          class="join-item btn flex-1"
-          :class="periodType === 'custom' ? 'btn-active' : ''"
+          class="fl-seg__opt flex-1"
+          :data-active="periodType === 'custom'"
           @click="selectPeriod('custom')"
         >
           Custom dates
@@ -160,26 +161,26 @@ function handleSubmit() {
     <!-- Custom date range -->
     <div v-if="periodType === 'custom'" class="space-y-3">
       <div>
-        <label class="block text-sm font-medium text-base-content/80 mb-1" for="start-date">
+        <label class="block text-sm font-medium text-ink-soft mb-1" for="start-date">
           Start date
         </label>
         <DateInput id="start-date" v-model="startDate" />
       </div>
       <div>
-        <label class="block text-sm font-medium text-base-content/80 mb-1" for="end-date">
+        <label class="block text-sm font-medium text-ink-soft mb-1" for="end-date">
           End date
         </label>
         <DateInput id="end-date" v-model="endDate" :min="startDate" />
       </div>
-      <p v-if="errors['dates']" class="text-sm text-error">{{ errors['dates'] }}</p>
+      <p v-if="errors['dates']" class="text-sm text-neg">{{ errors['dates'] }}</p>
     </div>
 
     <!-- Actions -->
     <div class="flex gap-3 pt-2">
-      <button type="submit" class="btn btn-primary flex-1">
+      <button type="submit" class="fl-btn fl-btn--primary flex-1">
         {{ isEditing ? 'Save changes' : 'Create workspace' }}
       </button>
-      <button type="button" class="btn btn-ghost" @click="emit('cancel')">
+      <button type="button" class="fl-btn fl-btn--ghost" @click="emit('cancel')">
         Cancel
       </button>
     </div>

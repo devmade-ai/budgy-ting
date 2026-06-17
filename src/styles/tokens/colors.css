@@ -1,0 +1,167 @@
+/* ============================================================
+   COLORS — Farlume
+   Base palette + semantic aliases. Light is the default (:root);
+   dark mode is the [data-theme="dark"] scope.
+
+   Motif: calm "ink" surfaces, lamplit "lume" amber as the single
+   signal accent (forecast lines, primary actions, focus). Finance
+   semantics — cash in (positive green), cash out (negative clay).
+
+   Source of truth: Farlume design system (tokens/colors.css).
+   Ported verbatim during the DaisyUI→Farlume facelift.
+   ============================================================ */
+
+:root {
+  /* ---- Neutrals: warm paper -> ink ------------------------- */
+  --paper-0:  #F4F0E8;   /* app background — warm bone */
+  --paper-1:  #FCFAF5;   /* card / raised surface */
+  --paper-2:  #ECE7DC;   /* sunken / inset */
+  --paper-3:  #E2DCCE;   /* deeper inset, table stripe */
+
+  --ink-0:    #16191F;   /* primary text, headlines */
+  --ink-1:    #444A54;   /* secondary text */
+  --ink-2:    #777E89;   /* muted text, captions */
+  --ink-3:    #9CA2AC;   /* placeholder, disabled */
+
+  /* ---- Lume: the signal amber ------------------------------ */
+  --lume-100: #FBF0D8;
+  --lume-200: #F4DCA6;
+  --lume-300: #EDC571;
+  --lume-400: #E0A63E;
+  --lume-500: #CC8A2E;   /* PRIMARY accent */
+  --lume-600: #AC7022;
+  --lume-700: #82531A;
+
+  /* ---- Finance semantics ----------------------------------- */
+  --green-500: #2E8B61;  /* cash in / positive */
+  --green-100: #DFEFE7;
+  --clay-500:  #C2533D;  /* cash out / negative */
+  --clay-100:  #F6E3DD;
+  --slate-500: #4E6E8E;  /* info / forecast-cool / neutral data */
+  --slate-100: #E1E8EF;
+
+  /* ---- Lines ----------------------------------------------- */
+  --hairline:    rgba(22, 25, 31, 0.10);
+  --hairline-2:  rgba(22, 25, 31, 0.18);
+  --hairline-3:  rgba(22, 25, 31, 0.30);
+
+  /* ========================================================
+     SEMANTIC ALIASES — use these in components
+     ======================================================== */
+  --surface-app:     var(--paper-0);
+  --surface-card:    var(--paper-1);
+  --surface-sunken:  var(--paper-2);
+  --surface-deep:    var(--paper-3);
+
+  --text-primary:    var(--ink-0);
+  --text-secondary:  var(--ink-1);
+  --text-muted:      var(--ink-2);
+  --text-disabled:   var(--ink-3);
+  --text-on-accent:  #1C1407;   /* dark ink on amber for AA contrast */
+
+  --accent:          var(--lume-500);
+  --accent-hover:    var(--lume-600);
+  --accent-active:   var(--lume-700);
+  --accent-soft:     var(--lume-100);
+  --accent-line:     var(--lume-300);
+
+  --border-subtle:   var(--hairline);
+  --border-default:  var(--hairline-2);
+  --border-strong:   var(--hairline-3);
+
+  --pos:        var(--green-500);
+  --pos-soft:   var(--green-100);
+  --neg:        var(--clay-500);
+  --neg-soft:   var(--clay-100);
+  --info:       var(--slate-500);
+  --info-soft:  var(--slate-100);
+
+  --focus-ring: color-mix(in oklch, var(--lume-500) 55%, transparent);
+
+  /* Chart roles */
+  --chart-history:   var(--ink-1);
+  --chart-forecast:  var(--lume-500);
+  --chart-band:      color-mix(in oklch, var(--lume-400) 22%, transparent);
+  --chart-grid:      var(--hairline);
+  --chart-zero:      var(--hairline-2);
+
+  color-scheme: light;
+}
+
+/* ============================================================
+   DARK — deep ink surfaces, the lume glows warmer
+   ============================================================ */
+[data-theme="dark"] {
+  --paper-0:  #0F1217;
+  --paper-1:  #171B22;
+  --paper-2:  #1F242C;
+  --paper-3:  #272D36;
+
+  --ink-0:    #ECEEF2;
+  --ink-1:    #B2B8C2;
+  --ink-2:    #7E8590;
+  --ink-3:    #5A616B;
+
+  --lume-500: #E0A63E;   /* brighter primary in the dark */
+  --lume-600: #EDC571;
+  --lume-700: #F4DCA6;
+  --lume-100: #2A2316;
+
+  --green-500: #4FB585;
+  --green-100: #18261F;
+  --clay-500:  #DD7A63;
+  --clay-100:  #2A1B17;
+  --slate-500: #7FA0C0;
+  --slate-100: #1A222B;
+
+  --hairline:    rgba(255, 255, 255, 0.08);
+  --hairline-2:  rgba(255, 255, 255, 0.15);
+  --hairline-3:  rgba(255, 255, 255, 0.26);
+
+  /* ----------------------------------------------------------------
+     Re-declare EVERY semantic alias here too. Aliases like
+     `--surface-app: var(--paper-0)` are substituted at the element
+     where they're declared and then inherit as resolved values — so
+     overriding only the base palette on a nested [data-theme="dark"]
+     element would NOT cascade through aliases declared on :root.
+     Declaring them again here lets scoped dark regions (a dark card
+     on a light page) resolve correctly. Keep in sync with :root.
+     ---------------------------------------------------------------- */
+  --surface-app:     var(--paper-0);
+  --surface-card:    var(--paper-1);
+  --surface-sunken:  var(--paper-2);
+  --surface-deep:    var(--paper-3);
+
+  --text-primary:    var(--ink-0);
+  --text-secondary:  var(--ink-1);
+  --text-muted:      var(--ink-2);
+  --text-disabled:   var(--ink-3);
+  --text-on-accent:  #1C1407;
+
+  --accent:          var(--lume-500);
+  --accent-hover:    var(--lume-600);
+  --accent-active:   var(--lume-700);
+  --accent-soft:     var(--lume-100);
+  --accent-line:     color-mix(in oklch, var(--lume-500) 50%, transparent);
+
+  --border-subtle:   var(--hairline);
+  --border-default:  var(--hairline-2);
+  --border-strong:   var(--hairline-3);
+
+  --pos:        var(--green-500);
+  --pos-soft:   var(--green-100);
+  --neg:        var(--clay-500);
+  --neg-soft:   var(--clay-100);
+  --info:       var(--slate-500);
+  --info-soft:  var(--slate-100);
+
+  --focus-ring: color-mix(in oklch, var(--lume-500) 55%, transparent);
+
+  --chart-history:   var(--ink-1);
+  --chart-forecast:  var(--lume-500);
+  --chart-band:      color-mix(in oklch, var(--lume-400) 22%, transparent);
+  --chart-grid:      var(--hairline);
+  --chart-zero:      var(--hairline-2);
+
+  color-scheme: dark;
+}
