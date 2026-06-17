@@ -171,8 +171,10 @@ const forecast = computed<ForecastResult | null>(() => {
 // accuracy + calibration are honest out-of-sample numbers, not the in-sample (leaky) figure the
 // previous single-fit backtest produced. See FORECASTING_RESEARCH.md §16.5 and engine/validation.ts.
 // Computed once; the MetricsGrid uses .accuracy, the diagnostics panel uses the full summary.
+// Depends only on transactions/patterns (NOT forecast) — the backtest is independent of the live
+// forecast horizon, so changing the chart's timeline preset must not re-run this expensive pass.
 const backtestSummary = computed<BacktestSummary | null>(() => {
-  if (!forecast.value || transactions.value.length === 0) return null
+  if (transactions.value.length === 0) return null
   return backtestForecast(transactions.value, patterns.value)
 })
 const accuracy = computed<AccuracySummary | null>(() => backtestSummary.value?.accuracy ?? null)
