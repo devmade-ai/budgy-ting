@@ -71,8 +71,8 @@ Current working features:
 - Embedding-based fuzzy pattern matching (cosine similarity)
 - Recurring pattern detection (daily/weekly/biweekly/monthly/quarterly/annually/irregular)
 - Variable recurring expenses (fixed/variable/irregular variability)
-- Holt's double exponential smoothing forecasting with day-of-week seasonality
-- Cash runway calculation with confidence bands (optimistic/expected/pessimistic)
+- Damped-trend exponential smoothing forecasting (Holt with φ=0.9) with day-of-week seasonality
+- Cash runway calculation with confidence bands from empirical residual quantiles (optimistic/expected/pessimistic)
 - Prediction accuracy metrics (MAE, RMSE, bias, WMAPE, hit rate)
 - Single-screen dashboard (cashflow graph with history/forecast timeline presets, metrics grid, transaction table)
 - Transaction edit modal with read-only view mode

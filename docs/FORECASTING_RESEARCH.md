@@ -719,6 +719,12 @@ The single-screen UI simplifies the user experience dramatically — everything 
 
 A multi-source research pass (5 parallel search agents, adversarial verification) was run to pressure-test the current forecasting design — Holt's double exponential smoothing + day-of-week seasonality, with heuristic optimistic/expected/pessimistic bands. The findings **validate the hybrid decomposition** (Section 1) and sharpen two specifics: which statistical method to apply to the residual, and how to make the confidence bands actually calibrated.
 
+> **Implementation status (2026-06-17):** Two recommendations from this section are now live in `src/engine/forecast.ts`:
+> 1. **Damped trend (φ=0.9)** on the variable-spending Holt model (§16.1) — caps trend extrapolation so a one-off spike no longer projects to the horizon. `HoltState.phi` is optional and defaults to undamped for externally-constructed states; the pipeline sets φ=0.9.
+> 2. **Empirical residual-quantile bands** (§16.4 step 1) — `calculatePredictionBands` now uses the 10th/90th percentiles of historical residuals (bias-centred, √horizon-scaled) instead of ±1.28σ, so the band reflects real residual skew.
+>
+> Still pending (see docs/TODO.md): the Theta+ETS+seasonal-naive combination (§16.1), ACI/DtACI conformal calibration (§16.4 step 2), the validation harness (§16.5), and the runway UI leading with the pessimistic edge.
+
 WebFetch was 403-blocked across arXiv/journals during the pass, so claims rest on search-extracted summaries of the primary sources (arXiv IDs / DOIs are correct and verifiable). Items flagged below as synthesis are reasoning, not direct citations; none is load-bearing for the headline recommendations, which are multiply-sourced.
 
 ### 16.1 Model choice for the variable residual

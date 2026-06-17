@@ -17,8 +17,7 @@
 
 <!-- From deep-research validation pass 2026-06-17. Full rationale + citations: docs/FORECASTING_RESEARCH.md §16. -->
 
-- [ ] Switch Holt's undamped trend to damped trend — immediate mitigation for spike-driven over-extrapolation on the variable residual (cheap interim fix before the full combine refactor). FORECASTING_RESEARCH.md §16.1
-- [ ] Replace single Holt residual model with an equal-weighted combination of Theta (SES-with-drift) + damped-trend ETS + seasonal-naive. Backtest against current Holt via rolling-origin. Evidence: M4/M5 + "Size Matters" — simple+combination beats complex on a single short series; M5's GBDT win doesn't transfer. §16.1
+- [ ] Replace single Holt residual model with an equal-weighted combination of Theta (SES-with-drift) + damped-trend ETS + seasonal-naive. Backtest against current Holt via rolling-origin. Evidence: M4/M5 + "Size Matters" — simple+combination beats complex on a single short series; M5's GBDT win doesn't transfer. §16.1 (damped trend now in place — see below)
 - [ ] Gate seasonality by history length: estimate weekly (period-7) only with enough weeks; never fit monthly/annual on <6 months daily data (overfits). Add a guard. §16.3
 - [ ] Spike test: split inflow/outflow into two non-negative streams and net the forecasts; compare accuracy vs forecasting signed totals. Croston/SBA/TSB don't fit signed net cashflow directly. §16.2
 
@@ -26,7 +25,7 @@
 
 <!-- From deep-research validation pass 2026-06-17. Full rationale + citations: docs/FORECASTING_RESEARCH.md §16.4-16.6. -->
 
-- [ ] Replace heuristic optimistic/expected/pessimistic bands with empirical residual-quantile intervals (reuse existing residual computation). Default 80% central band (10th/90th); lead runway display with the pessimistic/lower edge. §16.4
+- [ ] Lead the runway display with the pessimistic/lower band edge (bands are now empirical 10th/90th quantiles; this is the remaining UI-side change). §16.4
 - [ ] Layer ACI/DtACI online miscoverage adjustment for a long-run coverage guarantee under drift (~40-70 LOC, no deps). §16.4
 - [ ] Calibrate intervals on daily/weekly residuals, never monthly totals; below ~100 residuals render bands as explicitly provisional (n too small for stable coverage). §16.4
 - [ ] Fix interval UI copy: bands mean "~80% of the time over the long run," not "80% confident about this month" (conformal gives marginal, not conditional, coverage). §16.4

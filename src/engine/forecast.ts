@@ -1,21 +1,26 @@
 /**
  * Hybrid forecasting engine — combines deterministic recurring item scheduling
- * with Holt's double exponential smoothing for variable spending prediction.
+ * with damped-trend exponential smoothing for variable spending prediction.
  *
  * Requirement: Predict daily cashflow from historical patterns + known recurring items.
  *   Total Daily Cashflow = Recurring Items + Variable Spending + Day-of-Week Adjustment
- * Approach: Hybrid decomposition per FORECASTING_RESEARCH.md:
+ * Approach: Hybrid decomposition per FORECASTING_RESEARCH.md §1 + §16:
  *   1. Recurring items: deterministic scheduling from RecurringPattern (handled by patterns.ts)
- *   2. Variable spending residual: Holt's method (level + trend) for trend-aware smoothing
+ *   2. Variable spending residual: Holt's method with a DAMPED trend (level + damped trend)
  *   3. Day-of-week seasonality: multipliers for weekday/weekend patterns (needs 4+ weeks)
- *   4. Confidence bands: prediction error distribution with sqrt horizon scaling
+ *   4. Confidence bands: empirical residual quantiles (distribution-free) with sqrt horizon scaling
  * Alternatives:
+ *   - Undamped Holt trend: Rejected — extrapolates a constant trend indefinitely and
+ *     over-forecasts off one-off spikes (rent/salary read as slope). Damping flattens the
+ *     trend over the horizon. See FORECASTING_RESEARCH.md §16.1 (Gardner & McKenzie damped trend).
  *   - ARIMA: Rejected — complex parameter tuning, heavy WASM dependency (~500KB)
  *   - Simple EMA only: Rejected — misses spending trends (SES always underpredicts if spending increases)
  *   - Holt-Winters triple: Deferred — needs 2+ full seasonal cycles (14+ weeks) to initialise weekly seasonality
+ *   - Theta + ETS + seasonal-naive combination: the next upgrade (FORECASTING_RESEARCH.md §16.1,
+ *     tracked in docs/TODO.md) — damped trend here is the cheap interim step toward it.
  */
 
-import { standardDeviation, mean } from 'simple-statistics'
+import { mean, quantile } from 'simple-statistics'
 import type { Transaction, RecurringPattern } from '@/types/models'
 import { projectPattern } from './patterns'
 import { formatDate } from './dateUtils'
@@ -32,6 +37,12 @@ export interface HoltState {
   alpha: number
   /** Trend smoothing factor (0.01-0.1) */
   beta: number
+  /**
+   * Trend damping factor φ (0 < φ ≤ 1). 1 = classic (undamped) Holt.
+   * Optional so externally-constructed states default to undamped — the pipeline
+   * (initHolt/runHolt) sets it to DEFAULT_PHI.
+   */
+  phi?: number
 }
 
 /**
@@ -46,6 +57,22 @@ const DEFAULT_ALPHA = 0.2
  * 0.05 dampens trend updates to avoid overfitting daily noise in cashflow data.
  */
 const DEFAULT_BETA = 0.05
+
+/**
+ * Trend damping factor φ for the damped-trend method (Gardner & McKenzie 1985).
+ *
+ * Requirement (FORECASTING_RESEARCH.md §16.1): stop the variable-spending trend from
+ * extrapolating a one-off spike (rent/salary read as slope) out to the horizon.
+ * Approach: forecast h steps ahead = level + (φ + φ² + … + φ^h)·trend. With φ < 1 the
+ * geometric sum converges to φ/(1−φ), so the trend's cumulative contribution is bounded
+ * instead of growing linearly forever.
+ * Why 0.9: at the 90-day horizon cap, undamped adds 90·trend; φ=0.9 caps the contribution
+ * at ~9·trend (reached ~day 30), a large reduction in runaway extrapolation while still
+ * tracking genuine short-term trend. Alternatives: 0.98 (barely damped, ~49·trend cap —
+ * too close to undamped); 0.8 (aggressive, flattens trend within ~2 weeks — discards real
+ * signal). 0.9 is the middle ground the damped-trend literature converges on.
+ */
+const DEFAULT_PHI = 0.9
 
 /**
  * Minimum weeks of data required to compute day-of-week seasonality factors.
@@ -68,14 +95,15 @@ export function initHolt(
   dailyAmounts: number[],
   alpha: number = DEFAULT_ALPHA,
   beta: number = DEFAULT_BETA,
+  phi: number = DEFAULT_PHI,
 ): HoltState {
   if (dailyAmounts.length === 0) {
-    return { level: 0, trend: 0, alpha, beta }
+    return { level: 0, trend: 0, alpha, beta, phi }
   }
 
   if (dailyAmounts.length === 1) {
     const val = dailyAmounts[0]!
-    return { level: Number.isFinite(val) ? val : 0, trend: 0, alpha, beta }
+    return { level: Number.isFinite(val) ? val : 0, trend: 0, alpha, beta, phi }
   }
 
   // Initial level: first observation (guard against NaN/Infinity from upstream)
@@ -90,23 +118,35 @@ export function initHolt(
   }
   const trend = trendSum / (trendWindow - 1)
 
-  return { level, trend, alpha, beta }
+  return { level, trend, alpha, beta, phi }
 }
 
 /**
- * Update Holt state with a new observation.
+ * Sum of the damping geometric series φ + φ² + … + φ^h used to project the trend
+ * h steps ahead. Undamped (φ ≥ 1) reduces to h, recovering classic Holt (level + h·trend).
+ */
+function dampingSum(phi: number, steps: number): number {
+  if (phi >= 1) return steps
+  return (phi * (1 - Math.pow(phi, steps))) / (1 - phi)
+}
+
+/**
+ * Update Holt state with a new observation (damped-trend form).
+ * The one-step prediction uses level + φ·trend; with φ = 1 this is classic Holt.
  */
 export function holtUpdate(state: HoltState, observation: number): HoltState {
-  const newLevel = state.alpha * observation + (1 - state.alpha) * (state.level + state.trend)
-  const newTrend = state.beta * (newLevel - state.level) + (1 - state.beta) * state.trend
+  const phi = state.phi ?? 1
+  const newLevel = state.alpha * observation + (1 - state.alpha) * (state.level + phi * state.trend)
+  const newTrend = state.beta * (newLevel - state.level) + (1 - state.beta) * phi * state.trend
   return { ...state, level: newLevel, trend: newTrend }
 }
 
 /**
- * Forecast stepsAhead days from the current Holt state.
+ * Forecast stepsAhead days from the current Holt state, damping the trend by φ.
+ * With φ = 1 (or undefined) this is the classic level + stepsAhead·trend.
  */
 export function holtForecast(state: HoltState, stepsAhead: number): number {
-  return state.level + stepsAhead * state.trend
+  return state.level + dampingSum(state.phi ?? 1, stepsAhead) * state.trend
 }
 
 /**
@@ -117,15 +157,16 @@ export function runHolt(
   dailyAmounts: number[],
   alpha: number = DEFAULT_ALPHA,
   beta: number = DEFAULT_BETA,
+  phi: number = DEFAULT_PHI,
 ): { finalState: HoltState; errors: number[] } {
   if (dailyAmounts.length < 2) {
     return {
-      finalState: initHolt(dailyAmounts, alpha, beta),
+      finalState: initHolt(dailyAmounts, alpha, beta, phi),
       errors: [],
     }
   }
 
-  let state = initHolt(dailyAmounts, alpha, beta)
+  let state = initHolt(dailyAmounts, alpha, beta, phi)
   const errors: number[] = []
 
   // Walk through the series, collecting one-step-ahead prediction errors
@@ -189,15 +230,28 @@ export interface PredictionBand {
 }
 
 /**
- * Calculate prediction bands from historical errors.
- * Uses parametric method: stddev * sqrt(horizon) scaling.
+ * Calculate an 80% prediction band from historical one-step errors.
  *
- * Requirement: Show "fairly confident between $Y and $Z" not just point estimate
- * Approach: 80% CI using ±1.28 * stddev * sqrt(stepsAhead) — wider bands for further forecasts
+ * Requirement (FORECASTING_RESEARCH.md §16.4): replace the heuristic Gaussian band with
+ * a distribution-free one whose width reflects the ACTUAL residual distribution.
+ * Approach: empirical residual quantiles. Take the 10th/90th percentiles of the historical
+ * one-step errors (an 80% central interval), centre the spread on the residual mean so any
+ * model bias isn't amplified by horizon scaling, then widen by √horizon.
+ *   upper = forecast + bias + Q90centred · √h
+ *   lower = forecast + bias + Q10centred · √h
+ * Why empirical over ±1.28·σ: cashflow residuals are skewed (occasional large expenses, not
+ * symmetric noise). The Gaussian form forces a symmetric band and understates the fat tail;
+ * empirical quantiles capture the real asymmetry, so the optimistic vs pessimistic edges
+ * differ as they should. FPP3 §5.5 warns the closed-form interval is simply wrong when
+ * residuals aren't normal.
  * Alternatives:
- *   - Bootstrap from residuals: More robust for non-normal tails, viable for <1000 daily points.
- *     Deferred as an upgrade path — parametric is simpler and sufficient initially.
- *   - 95% CI: Rejected — too wide to be actionable for cashflow tracking
+ *   - ±1.28·σ Gaussian (previous): Rejected — symmetric, assumes normality, ignores bias.
+ *   - Split-conformal / ACI calibrated bands: the next upgrade (FORECASTING_RESEARCH.md §16.4,
+ *     docs/TODO.md). Needs ~100+ residuals and per-horizon residual pools; this empirical
+ *     method is the cheap honest first step that reuses residuals already computed for MAE/RMSE.
+ *   - 95% interval: Rejected — too wide to be actionable for cashflow tracking.
+ * Caveat: the √horizon widening is a random-walk approximation (one-step residuals scaled to
+ * h-steps); true per-horizon residual pools come with the conformal upgrade.
  */
 export function calculatePredictionBands(
   historicalErrors: number[],
@@ -208,18 +262,21 @@ export function calculatePredictionBands(
     return { point: forecast, upper: forecast, lower: forecast }
   }
 
-  const errorStdDev = standardDeviation(historicalErrors)
+  // Bias = mean residual. Centre the spread on it so horizon scaling widens the spread,
+  // not the (constant) bias offset.
+  const bias = mean(historicalErrors)
+  const lowerSpread = quantile(historicalErrors, 0.1) - bias  // ≤ 0
+  const upperSpread = quantile(historicalErrors, 0.9) - bias  // ≥ 0
 
   // Prediction uncertainty grows with forecast horizon (random walk assumption).
   // Cap at 90 days — beyond that, bands grow so wide they're not actionable.
   const cappedSteps = Math.min(stepsAhead, 90)
   const horizonFactor = Math.sqrt(Math.max(1, cappedSteps))
-  const adjustedStdDev = errorStdDev * horizonFactor
 
   return {
     point: forecast,
-    upper: forecast + 1.28 * adjustedStdDev,   // 80% CI upper
-    lower: forecast - 1.28 * adjustedStdDev,    // 80% CI lower
+    upper: forecast + bias + upperSpread * horizonFactor,  // empirical 90th pct
+    lower: forecast + bias + lowerSpread * horizonFactor,  // empirical 10th pct
   }
 }
 

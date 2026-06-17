@@ -122,14 +122,45 @@ describe('runHolt', () => {
     const series = Array.from({ length: 30 }, (_, i) => 100 + i * 2) // steady increase
     const result = runHolt(series)
     expect(result.finalState.trend).toBeGreaterThan(0)
-    // Forecast should continue the upward trend
-    expect(holtForecast(result.finalState, 1)).toBeGreaterThan(series[series.length - 1]!)
+    // Damped trend (phi=0.9) projects upward over the horizon — each step higher than the
+    // last and above the level — but deliberately does NOT extrapolate the full undamped
+    // slope past the last actual. That conservatism is the point (FORECASTING_RESEARCH §16.1).
+    expect(holtForecast(result.finalState, 1)).toBeGreaterThan(result.finalState.level)
+    expect(holtForecast(result.finalState, 2)).toBeGreaterThan(holtForecast(result.finalState, 1))
   })
 
   it('tracks a decreasing trend', () => {
     const series = Array.from({ length: 30 }, (_, i) => 200 - i * 3) // steady decrease
     const result = runHolt(series)
     expect(result.finalState.trend).toBeLessThan(0)
+  })
+})
+
+describe('damped trend', () => {
+  it('phi=1 recovers classic level + h*trend (undamped)', () => {
+    const state = { level: 100, trend: 5, alpha: 0.2, beta: 0.05, phi: 1 }
+    expect(holtForecast(state, 1)).toBe(105)
+    expect(holtForecast(state, 10)).toBe(150)
+  })
+
+  it('defaults to undamped when phi is absent (back-compat for literal states)', () => {
+    const state = { level: 100, trend: 5, alpha: 0.2, beta: 0.05 }
+    expect(holtForecast(state, 10)).toBe(150)
+  })
+
+  it('bounds the cumulative trend contribution by phi/(1-phi)', () => {
+    const state = { level: 0, trend: 10, alpha: 0.2, beta: 0.05, phi: 0.9 }
+    // Geometric cap: trend * phi/(1-phi) = 10 * (0.9/0.1) = 90, approached as h grows.
+    const farForecast = holtForecast(state, 1000)
+    expect(farForecast).toBeLessThanOrEqual(90 + 1e-6)
+    expect(farForecast).toBeGreaterThan(85)
+  })
+
+  it('forecasts below undamped at a long horizon (no runaway extrapolation)', () => {
+    const series = Array.from({ length: 30 }, (_, i) => 100 + i * 2)
+    const damped = runHolt(series).finalState // phi=0.9 by default
+    const undamped = { ...damped, phi: 1 }
+    expect(holtForecast(damped, 90)).toBeLessThan(holtForecast(undamped, 90))
   })
 })
 
@@ -190,6 +221,16 @@ describe('calculatePredictionBands', () => {
     const upperDist = band.upper - band.point
     const lowerDist = band.point - band.lower
     expect(upperDist).toBeCloseTo(lowerDist, 1)
+  })
+
+  it('produces an asymmetric band for skewed errors', () => {
+    // Mostly small positive errors with one large negative (an expense spike) → fat lower tail.
+    // A symmetric ±1.28σ band could not represent this; empirical quantiles can.
+    const errors = [2, 1, 3, 2, 1, 2, 3, 1, 2, -20]
+    const band = calculatePredictionBands(errors, 100, 1)
+    const upperDist = band.upper - band.point
+    const lowerDist = band.point - band.lower
+    expect(lowerDist).toBeGreaterThan(upperDist)
   })
 })
 
