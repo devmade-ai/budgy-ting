@@ -13,8 +13,6 @@
  */
 
 import { mean, standardDeviation } from 'simple-statistics'
-import type { Transaction } from '@/types/models'
-import type { DailyForecastPoint } from './forecast'
 import { debugLog } from '@/debug/debugLog'
 
 export interface DailyAccuracyPoint {
@@ -44,52 +42,6 @@ export interface AccuracySummary {
   hitRateThreshold: number
   /** Number of days with both forecast and actual */
   dataPoints: number
-}
-
-/**
- * Calculate daily accuracy points — comparing forecast vs actual.
- * Only includes days where both forecast and actual data exist.
- *
- * @param forecastPoints - Daily forecast points from the forecast engine
- * @param transactions - Actual transactions for the period
- */
-export function calculateDailyAccuracy(
-  forecastPoints: DailyForecastPoint[],
-  transactions: Transaction[],
-): DailyAccuracyPoint[] {
-  // Build actual daily totals
-  const actualByDate = new Map<string, number>()
-  for (const t of transactions) {
-    actualByDate.set(t.date, (actualByDate.get(t.date) ?? 0) + t.amount)
-  }
-
-  // Build forecast lookup
-  const forecastByDate = new Map<string, number>()
-  for (const p of forecastPoints) {
-    forecastByDate.set(p.date, p.amount)
-  }
-
-  const points: DailyAccuracyPoint[] = []
-
-  // For each date that has actuals, compare against forecast
-  for (const [date, actualAmount] of actualByDate) {
-    const forecastAmount = forecastByDate.get(date)
-    if (forecastAmount === undefined) continue
-    if (forecastAmount === 0 && actualAmount === 0) continue
-
-    const signedError = actualAmount - forecastAmount
-    const absoluteError = Math.abs(signedError)
-
-    points.push({
-      date,
-      forecastAmount: Math.round(forecastAmount * 100) / 100,
-      actualAmount: Math.round(actualAmount * 100) / 100,
-      absoluteError: Math.round(absoluteError * 100) / 100,
-      signedError: Math.round(signedError * 100) / 100,
-    })
-  }
-
-  return points.sort((a, b) => a.date.localeCompare(b.date))
 }
 
 /**
