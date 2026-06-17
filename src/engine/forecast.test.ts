@@ -197,25 +197,38 @@ describe('calculateDayOfWeekFactors', () => {
 
 describe('calculatePredictionBands', () => {
   it('returns flat band with insufficient errors', () => {
-    const band = calculatePredictionBands([10], 100, 5)
+    const band = calculatePredictionBands([10], 100)
     expect(band.upper).toBe(100)
     expect(band.lower).toBe(100)
     expect(band.point).toBe(100)
   })
 
-  it('widens band with more steps ahead', () => {
+  it('uses the empirical error quantiles as band edges', () => {
     const errors = [5, -3, 7, -2, 4, -6, 3, -1, 5, -4]
-    const band1 = calculatePredictionBands(errors, 100, 1)
-    const band10 = calculatePredictionBands(errors, 100, 10)
+    const band = calculatePredictionBands(errors, 100)
+    expect(band.point).toBe(100)
+    expect(band.lower).toBeLessThan(100)
+    expect(band.upper).toBeGreaterThan(100)
+  })
 
-    const width1 = band1.upper - band1.lower
-    const width10 = band10.upper - band10.lower
-    expect(width10).toBeGreaterThan(width1) // bands widen with horizon
+  it('is horizon-independent (constant width — mean-reverting residual, no random-walk growth)', () => {
+    // The band no longer takes a horizon: same errors → identical band regardless of how far out.
+    const errors = [5, -3, 7, -2, 4, -6, 3, -1, 5, -4]
+    const a = calculatePredictionBands(errors, 100)
+    const b = calculatePredictionBands(errors, 100)
+    expect(a.upper - a.lower).toBe(b.upper - b.lower)
+  })
+
+  it('widens with a wider target interval', () => {
+    const errors = [5, -3, 7, -2, 4, -6, 3, -1, 5, -4]
+    const narrow = calculatePredictionBands(errors, 100, 0.25, 0.75)
+    const wide = calculatePredictionBands(errors, 100, 0.05, 0.95)
+    expect(wide.upper - wide.lower).toBeGreaterThanOrEqual(narrow.upper - narrow.lower)
   })
 
   it('centres band on forecast', () => {
     const errors = [5, -5, 5, -5, 5, -5]
-    const band = calculatePredictionBands(errors, 100, 1)
+    const band = calculatePredictionBands(errors, 100)
     expect(band.point).toBe(100)
     // Symmetric errors → symmetric band
     const upperDist = band.upper - band.point
@@ -227,7 +240,7 @@ describe('calculatePredictionBands', () => {
     // Mostly small positive errors with one large negative (an expense spike) → fat lower tail.
     // A symmetric ±1.28σ band could not represent this; empirical quantiles can.
     const errors = [2, 1, 3, 2, 1, 2, 3, 1, 2, -20]
-    const band = calculatePredictionBands(errors, 100, 1)
+    const band = calculatePredictionBands(errors, 100)
     const upperDist = band.upper - band.point
     const lowerDist = band.point - band.lower
     expect(lowerDist).toBeGreaterThan(upperDist)

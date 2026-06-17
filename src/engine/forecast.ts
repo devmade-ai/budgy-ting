@@ -295,32 +295,32 @@ export interface PredictionBand {
 /**
  * Calculate an 80% prediction band from historical one-step errors.
  *
- * Requirement (FORECASTING_RESEARCH.md §16.4): replace the heuristic Gaussian band with
- * a distribution-free one whose width reflects the ACTUAL residual distribution.
- * Approach: empirical residual quantiles. Take the 10th/90th percentiles of the historical
- * one-step errors (an 80% central interval), centre the spread on the residual mean so any
- * model bias isn't amplified by horizon scaling, then widen by √horizon.
- *   upper = forecast + bias + Q90centred · √h
- *   lower = forecast + bias + Q10centred · √h
- * Why empirical over ±1.28·σ: cashflow residuals are skewed (occasional large expenses, not
- * symmetric noise). The Gaussian form forces a symmetric band and understates the fat tail;
- * empirical quantiles capture the real asymmetry, so the optimistic vs pessimistic edges
- * differ as they should. FPP3 §5.5 warns the closed-form interval is simply wrong when
- * residuals aren't normal.
- * The tail probabilities default to 0.1 / 0.9 (an 80% band) but are overridable: ACI
- * (conformal.ts) learns adapted tail probabilities from realized coverage and passes them in,
- * widening or tightening the band to hit the target coverage. The empirical-quantile shape is
- * unchanged — only which quantiles are read.
+ * Requirement (FORECASTING_RESEARCH.md §16.4): a distribution-free band whose width reflects the
+ * ACTUAL error distribution. Approach: the band edges are the empirical quantiles of the model's
+ * one-step errors added to the point forecast — lower = forecast + Q(errors, lowerProb),
+ * upper = forecast + Q(errors, upperProb). Skew-aware (optimistic vs pessimistic edges differ),
+ * captures bias (non-zero-mean errors shift the band), and assumes no distribution shape.
+ *
+ * No √horizon scaling. The earlier version inflated the band by √h on the random-walk assumption
+ * that forecast-error variance grows with horizon. That is WRONG for this model structure: the
+ * recurring component is deterministic (zero error growth) and the variable residual is
+ * mean-reverting (error variance approaches a constant marginal, not h·σ²). A rolling-origin
+ * backtest confirmed the √h version over-covered massively (~95–99% vs the 80% target, ∩-shaped
+ * PIT). Width is therefore constant across horizon — honest for a mean-reverting residual.
+ *
+ * The tail probabilities default to 0.1 / 0.9 (80% band) but are overridable: ACI (conformal.ts)
+ * learns adapted tail probabilities from realized coverage and passes them in, widening/tightening
+ * the band to hit the target. The empirical-quantile shape is unchanged — only which quantiles read.
  * Alternatives:
- *   - ±1.28·σ Gaussian (previous): Rejected — symmetric, assumes normality, ignores bias.
- *   - 95% interval: Rejected — too wide to be actionable for cashflow tracking.
- * Caveat: the √horizon widening is a random-walk approximation (one-step residuals scaled to
- * h-steps); true per-horizon residual pools are a later upgrade.
+ *   - ±1.28·σ Gaussian: Rejected — symmetric, assumes normality, ignores bias.
+ *   - √horizon-scaled (previous): Rejected — over-covered, wrong growth model (see above).
+ *   - Per-horizon empirical widths (h-step rolling-origin residuals): a possible future refinement
+ *     if long-horizon drift ever needs modelling; tracked in docs/TODO.md. Constant width is the
+ *     simpler, correct-for-this-structure default.
  */
 export function calculatePredictionBands(
   historicalErrors: number[],
   forecast: number,
-  stepsAhead: number,
   lowerProb: number = 0.1,
   upperProb: number = 0.9,
 ): PredictionBand {
@@ -328,21 +328,10 @@ export function calculatePredictionBands(
     return { point: forecast, upper: forecast, lower: forecast }
   }
 
-  // Bias = mean residual. Centre the spread on it so horizon scaling widens the spread,
-  // not the (constant) bias offset.
-  const bias = mean(historicalErrors)
-  const lowerSpread = quantile(historicalErrors, lowerProb) - bias  // ≤ 0
-  const upperSpread = quantile(historicalErrors, upperProb) - bias  // ≥ 0
-
-  // Prediction uncertainty grows with forecast horizon (random walk assumption).
-  // Cap at 90 days — beyond that, bands grow so wide they're not actionable.
-  const cappedSteps = Math.min(stepsAhead, 90)
-  const horizonFactor = Math.sqrt(Math.max(1, cappedSteps))
-
   return {
     point: forecast,
-    upper: forecast + bias + upperSpread * horizonFactor,  // empirical 90th pct
-    lower: forecast + bias + lowerSpread * horizonFactor,  // empirical 10th pct
+    lower: forecast + quantile(historicalErrors, lowerProb),  // empirical lower quantile
+    upper: forecast + quantile(historicalErrors, upperProb),  // empirical upper quantile
   }
 }
 
@@ -531,7 +520,7 @@ function assembleDailyForecast(
 
     let band: PredictionBand | null = null
     if (predictionErrors.length >= 2) {
-      band = calculatePredictionBands(predictionErrors, amount, dayIndex, bandProbs.lowerProb, bandProbs.upperProb)
+      band = calculatePredictionBands(predictionErrors, amount, bandProbs.lowerProb, bandProbs.upperProb)
     }
 
     const source = variableMethod === 'none' ? 'recurring-only' : 'recurring+variable'
