@@ -16,7 +16,7 @@ import { Wallet, Upload } from 'lucide-vue-next'
 import { db } from '@/db'
 import { buildForecast } from '@/engine/forecast'
 import { calculateRunwayWithBands } from '@/engine/runway'
-import { backtestForecast } from '@/engine/validation'
+import { backtestForecast, type BacktestSummary } from '@/engine/validation'
 import { formatDate } from '@/engine/dateUtils'
 import { formatAmount } from '@/composables/useFormat'
 import { safeGetItem, safeSetItem } from '@/composables/useSafeStorage'
@@ -24,6 +24,7 @@ import { touchTags } from '@/composables/useTagAutocomplete'
 import { useTagSuggestions } from '@/ml/useTagSuggestions'
 import { debugLog } from '@/debug/debugLog'
 import MetricsGrid from '@/components/MetricsGrid.vue'
+import ForecastDiagnostics from '@/components/ForecastDiagnostics.vue'
 import TransactionTable from '@/components/TransactionTable.vue'
 import ErrorAlert from '@/components/ErrorAlert.vue'
 import EmptyState from '@/components/EmptyState.vue'
@@ -166,14 +167,15 @@ const forecast = computed<ForecastResult | null>(() => {
   return buildForecast(transactions.value, patterns.value, startDate, endDate)
 })
 
-// Compute accuracy via a rolling-origin (walk-forward) backtest. Each forecast origin trains
-// only on data before it, so the reported MAE/RMSE/etc are honest out-of-sample numbers — not
-// the in-sample (leaky, over-optimistic) figure the previous single-fit backtest produced.
-// See FORECASTING_RESEARCH.md §16.5 and src/engine/validation.ts.
-const accuracy = computed<AccuracySummary | null>(() => {
+// Rolling-origin (walk-forward) backtest: each forecast origin trains only on data before it, so
+// accuracy + calibration are honest out-of-sample numbers, not the in-sample (leaky) figure the
+// previous single-fit backtest produced. See FORECASTING_RESEARCH.md §16.5 and engine/validation.ts.
+// Computed once; the MetricsGrid uses .accuracy, the diagnostics panel uses the full summary.
+const backtestSummary = computed<BacktestSummary | null>(() => {
   if (!forecast.value || transactions.value.length === 0) return null
-  return backtestForecast(transactions.value, patterns.value)?.accuracy ?? null
+  return backtestForecast(transactions.value, patterns.value)
 })
+const accuracy = computed<AccuracySummary | null>(() => backtestSummary.value?.accuracy ?? null)
 
 // Compute runway with prediction bands — uses the debounced cash-on-hand ref so the chart
 // doesn't thrash while the user is mid-type. DB persistence uses the raw ref below.
@@ -337,6 +339,12 @@ async function handleRequestSuggestions(id: string, description: string) {
       :runway="runway"
       :pessimistic-runway="pessimisticRunway"
       :accuracy="accuracy"
+    />
+
+    <!-- Advanced forecast diagnostics (collapsed) -->
+    <ForecastDiagnostics
+      :summary="backtestSummary"
+      :currency-label="workspace.currencyLabel"
     />
 
     <!-- Transaction table -->
