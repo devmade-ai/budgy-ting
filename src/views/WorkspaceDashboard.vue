@@ -15,8 +15,8 @@ import { useRouter } from 'vue-router'
 import { Wallet, Upload } from 'lucide-vue-next'
 import { db } from '@/db'
 import { buildForecast } from '@/engine/forecast'
-import { calculateRunway } from '@/engine/runway'
-import { calculateDailyAccuracy, summarizeAccuracy } from '@/engine/accuracy'
+import { calculateRunwayWithBands } from '@/engine/runway'
+import { backtestForecast, type BacktestSummary } from '@/engine/validation'
 import { formatDate } from '@/engine/dateUtils'
 import { formatAmount } from '@/composables/useFormat'
 import { safeGetItem, safeSetItem } from '@/composables/useSafeStorage'
@@ -24,6 +24,7 @@ import { touchTags } from '@/composables/useTagAutocomplete'
 import { useTagSuggestions } from '@/ml/useTagSuggestions'
 import { debugLog } from '@/debug/debugLog'
 import MetricsGrid from '@/components/MetricsGrid.vue'
+import ForecastDiagnostics from '@/components/ForecastDiagnostics.vue'
 import TransactionTable from '@/components/TransactionTable.vue'
 import ErrorAlert from '@/components/ErrorAlert.vue'
 import EmptyState from '@/components/EmptyState.vue'
@@ -166,29 +167,30 @@ const forecast = computed<ForecastResult | null>(() => {
   return buildForecast(transactions.value, patterns.value, startDate, endDate)
 })
 
-// Compute accuracy (compare past forecast to actuals)
-const accuracy = computed<AccuracySummary | null>(() => {
-  if (!forecast.value || transactions.value.length === 0) return null
-
-  // Build a "backtest" forecast for the historical period
-  const dates = transactions.value.map((t) => t.date).sort()
-  if (dates.length < 14) return null
-
-  const firstDate = dates[0]!
-  const lastDate = dates[dates.length - 1]!
-  const backtestForecast = buildForecast(transactions.value, patterns.value, firstDate, lastDate)
-
-  const dailyAccuracy = calculateDailyAccuracy(backtestForecast.daily, transactions.value)
-  return summarizeAccuracy(dailyAccuracy)
+// Rolling-origin (walk-forward) backtest: each forecast origin trains only on data before it, so
+// accuracy + calibration are honest out-of-sample numbers, not the in-sample (leaky) figure the
+// previous single-fit backtest produced. See FORECASTING_RESEARCH.md §16.5 and engine/validation.ts.
+// Computed once; the MetricsGrid uses .accuracy, the diagnostics panel uses the full summary.
+// Depends only on transactions/patterns (NOT forecast) — the backtest is independent of the live
+// forecast horizon, so changing the chart's timeline preset must not re-run this expensive pass.
+const backtestSummary = computed<BacktestSummary | null>(() => {
+  if (transactions.value.length === 0) return null
+  return backtestForecast(transactions.value, patterns.value)
 })
+const accuracy = computed<AccuracySummary | null>(() => backtestSummary.value?.accuracy ?? null)
 
-// Compute runway — uses the debounced cash-on-hand ref so the chart doesn't
-// thrash while the user is mid-type. DB persistence uses the raw ref below.
-const runway = computed<RunwayResult | null>(() => {
+// Compute runway with prediction bands — uses the debounced cash-on-hand ref so the chart
+// doesn't thrash while the user is mid-type. DB persistence uses the raw ref below.
+// Banded version computes expected/optimistic/pessimistic in one pass; we surface expected
+// as the primary runway and pessimistic as a "worst-case" safety figure (FORECASTING_RESEARCH §16.4:
+// downside under-coverage is the costly error for cashflow, so the cautious edge is shown explicitly).
+const runwayBands = computed(() => {
   if (cashOnHandForRunway.value === null || cashOnHandForRunway.value <= 0) return null
   if (!forecast.value) return null
-  return calculateRunway(cashOnHandForRunway.value, forecast.value.daily)
+  return calculateRunwayWithBands(cashOnHandForRunway.value, forecast.value.daily)
 })
+const runway = computed<RunwayResult | null>(() => runwayBands.value?.expected ?? null)
+const pessimisticRunway = computed<RunwayResult | null>(() => runwayBands.value?.pessimistic ?? null)
 
 // Persist cash on hand when changed
 let cashSaveTimeout: ReturnType<typeof setTimeout> | null = null
@@ -337,7 +339,15 @@ async function handleRequestSuggestions(id: string, description: string) {
       :currency-label="workspace.currencyLabel"
       :forecast="forecast"
       :runway="runway"
+      :pessimistic-runway="pessimisticRunway"
       :accuracy="accuracy"
+    />
+
+    <!-- Advanced forecast diagnostics (collapsed) -->
+    <ForecastDiagnostics
+      :summary="backtestSummary"
+      :conformal="forecast?.conformal ?? null"
+      :currency-label="workspace.currencyLabel"
     />
 
     <!-- Transaction table -->

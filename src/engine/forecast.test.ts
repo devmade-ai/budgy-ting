@@ -122,14 +122,45 @@ describe('runHolt', () => {
     const series = Array.from({ length: 30 }, (_, i) => 100 + i * 2) // steady increase
     const result = runHolt(series)
     expect(result.finalState.trend).toBeGreaterThan(0)
-    // Forecast should continue the upward trend
-    expect(holtForecast(result.finalState, 1)).toBeGreaterThan(series[series.length - 1]!)
+    // Damped trend (phi=0.9) projects upward over the horizon — each step higher than the
+    // last and above the level — but deliberately does NOT extrapolate the full undamped
+    // slope past the last actual. That conservatism is the point (FORECASTING_RESEARCH §16.1).
+    expect(holtForecast(result.finalState, 1)).toBeGreaterThan(result.finalState.level)
+    expect(holtForecast(result.finalState, 2)).toBeGreaterThan(holtForecast(result.finalState, 1))
   })
 
   it('tracks a decreasing trend', () => {
     const series = Array.from({ length: 30 }, (_, i) => 200 - i * 3) // steady decrease
     const result = runHolt(series)
     expect(result.finalState.trend).toBeLessThan(0)
+  })
+})
+
+describe('damped trend', () => {
+  it('phi=1 recovers classic level + h*trend (undamped)', () => {
+    const state = { level: 100, trend: 5, alpha: 0.2, beta: 0.05, phi: 1 }
+    expect(holtForecast(state, 1)).toBe(105)
+    expect(holtForecast(state, 10)).toBe(150)
+  })
+
+  it('defaults to undamped when phi is absent (back-compat for literal states)', () => {
+    const state = { level: 100, trend: 5, alpha: 0.2, beta: 0.05 }
+    expect(holtForecast(state, 10)).toBe(150)
+  })
+
+  it('bounds the cumulative trend contribution by phi/(1-phi)', () => {
+    const state = { level: 0, trend: 10, alpha: 0.2, beta: 0.05, phi: 0.9 }
+    // Geometric cap: trend * phi/(1-phi) = 10 * (0.9/0.1) = 90, approached as h grows.
+    const farForecast = holtForecast(state, 1000)
+    expect(farForecast).toBeLessThanOrEqual(90 + 1e-6)
+    expect(farForecast).toBeGreaterThan(85)
+  })
+
+  it('forecasts below undamped at a long horizon (no runaway extrapolation)', () => {
+    const series = Array.from({ length: 30 }, (_, i) => 100 + i * 2)
+    const damped = runHolt(series).finalState // phi=0.9 by default
+    const undamped = { ...damped, phi: 1 }
+    expect(holtForecast(damped, 90)).toBeLessThan(holtForecast(undamped, 90))
   })
 })
 
@@ -166,30 +197,53 @@ describe('calculateDayOfWeekFactors', () => {
 
 describe('calculatePredictionBands', () => {
   it('returns flat band with insufficient errors', () => {
-    const band = calculatePredictionBands([10], 100, 5)
+    const band = calculatePredictionBands([10], 100)
     expect(band.upper).toBe(100)
     expect(band.lower).toBe(100)
     expect(band.point).toBe(100)
   })
 
-  it('widens band with more steps ahead', () => {
+  it('uses the empirical error quantiles as band edges', () => {
     const errors = [5, -3, 7, -2, 4, -6, 3, -1, 5, -4]
-    const band1 = calculatePredictionBands(errors, 100, 1)
-    const band10 = calculatePredictionBands(errors, 100, 10)
+    const band = calculatePredictionBands(errors, 100)
+    expect(band.point).toBe(100)
+    expect(band.lower).toBeLessThan(100)
+    expect(band.upper).toBeGreaterThan(100)
+  })
 
-    const width1 = band1.upper - band1.lower
-    const width10 = band10.upper - band10.lower
-    expect(width10).toBeGreaterThan(width1) // bands widen with horizon
+  it('is horizon-independent (constant width — mean-reverting residual, no random-walk growth)', () => {
+    // The band no longer takes a horizon: same errors → identical band regardless of how far out.
+    const errors = [5, -3, 7, -2, 4, -6, 3, -1, 5, -4]
+    const a = calculatePredictionBands(errors, 100)
+    const b = calculatePredictionBands(errors, 100)
+    expect(a.upper - a.lower).toBe(b.upper - b.lower)
+  })
+
+  it('widens with a wider target interval', () => {
+    const errors = [5, -3, 7, -2, 4, -6, 3, -1, 5, -4]
+    const narrow = calculatePredictionBands(errors, 100, 0.25, 0.75)
+    const wide = calculatePredictionBands(errors, 100, 0.05, 0.95)
+    expect(wide.upper - wide.lower).toBeGreaterThanOrEqual(narrow.upper - narrow.lower)
   })
 
   it('centres band on forecast', () => {
     const errors = [5, -5, 5, -5, 5, -5]
-    const band = calculatePredictionBands(errors, 100, 1)
+    const band = calculatePredictionBands(errors, 100)
     expect(band.point).toBe(100)
     // Symmetric errors → symmetric band
     const upperDist = band.upper - band.point
     const lowerDist = band.point - band.lower
     expect(upperDist).toBeCloseTo(lowerDist, 1)
+  })
+
+  it('produces an asymmetric band for skewed errors', () => {
+    // Mostly small positive errors with one large negative (an expense spike) → fat lower tail.
+    // A symmetric ±1.28σ band could not represent this; empirical quantiles can.
+    const errors = [2, 1, 3, 2, 1, 2, 3, 1, 2, -20]
+    const band = calculatePredictionBands(errors, 100)
+    const upperDist = band.upper - band.point
+    const lowerDist = band.point - band.lower
+    expect(lowerDist).toBeGreaterThan(upperDist)
   })
 })
 
@@ -232,8 +286,8 @@ describe('buildForecast', () => {
     expect(result.variableMethod).toBe('average')
   })
 
-  it('uses holt method with sufficient history', () => {
-    // Create 20 days of history (above MIN_DAYS_FOR_HOLT=14)
+  it('uses combination method with sufficient history', () => {
+    // Create 20 days of history (above MIN_DAYS_FOR_COMBINATION=14)
     const txns: Transaction[] = []
     for (let i = 1; i <= 20; i++) {
       txns.push(makeTxn({
@@ -244,9 +298,14 @@ describe('buildForecast', () => {
     }
 
     const result = buildForecast(txns, [], '2026-03-01', '2026-03-07')
-    expect(result.variableMethod).toBe('holt')
+    expect(result.variableMethod).toBe('combination')
+    // variableState exposes the damped-ETS component of the combination
     expect(result.variableState).not.toBeNull()
     expect(result.predictionErrors.length).toBeGreaterThan(0)
+    // ACI calibration result is always present (adapted once enough residuals exist)
+    expect(result.conformal).toBeDefined()
+    expect(result.conformal.lowerProb).toBeGreaterThan(0)
+    expect(result.conformal.lowerProb).toBeLessThan(result.conformal.upperProb)
   })
 
   it('includes prediction bands when errors exist', () => {
@@ -328,8 +387,8 @@ describe('buildForecast', () => {
     }
   })
 
-  it('handles constant-series Holt initialization gracefully', () => {
-    // A constant series should produce near-zero trend
+  it('handles constant-series combination initialization gracefully', () => {
+    // A constant series should produce near-zero trend in the ETS component
     const txns: Transaction[] = []
     for (let i = 1; i <= 20; i++) {
       txns.push(makeTxn({
@@ -339,8 +398,30 @@ describe('buildForecast', () => {
       }))
     }
     const result = buildForecast(txns, [], '2026-03-01', '2026-03-07')
-    expect(result.variableMethod).toBe('holt')
+    expect(result.variableMethod).toBe('combination')
     // Trend should be near zero for constant series
     expect(Math.abs(result.variableState!.trend)).toBeLessThan(1)
+  })
+
+  it('combination forecast follows the residual trend direction', () => {
+    // Rising daily expense magnitude → forecast variable component stays negative and
+    // the combination (Theta drift + damped ETS) projects continued spend.
+    const txns: Transaction[] = []
+    for (let i = 1; i <= 20; i++) {
+      txns.push(makeTxn({
+        id: `t-${i}`,
+        date: `2026-02-${String(i).padStart(2, '0')}`,
+        amount: -(40 + i * 3), // steadily larger expenses
+      }))
+    }
+    const result = buildForecast(txns, [], '2026-03-01', '2026-03-07')
+    expect(result.variableMethod).toBe('combination')
+    const variablePoints = result.daily.filter((d) => d.source === 'recurring+variable')
+    expect(variablePoints.length).toBeGreaterThan(0)
+    // All forecast amounts are expenses (negative) and finite
+    for (const p of variablePoints) {
+      expect(p.amount).toBeLessThan(0)
+      expect(Number.isFinite(p.amount)).toBe(true)
+    }
   })
 })

@@ -13,6 +13,24 @@
 - [ ] Keyboard shortcuts for common actions
 - [ ] Theme combo picker UI in burger menu — useDarkMode() exposes setCombo() + themeCombos but no UI exists yet. Currently only "Vivid" (cmyk/night) combo registered. Add more combos to src/config/themes.ts + register themes in CSS + sync flash script.
 
+## Forecasting / Projection
+
+<!-- From deep-research validation pass 2026-06-17. Full rationale + citations: docs/FORECASTING_RESEARCH.md §16. -->
+
+- [ ] Backtest the Theta + damped-ETS combination against the previous single-Holt model via rolling-origin once the validation harness lands. The combination is live (decision 1a: Theta + damped-ETS, seasonal-naive deferred to avoid double-counting dowFactors); this item is just the empirical confirmation it helps. §16.1
+- [ ] Seasonal-naive as a third combination member — deferred (decision 1a). Only viable if dowFactors is replaced as the weekly-seasonality mechanism; otherwise it double-counts. Revisit if dowFactors is reworked. §16.1
+- [ ] Gate seasonality by history length: estimate weekly (period-7) only with enough weeks; never fit monthly/annual on <6 months daily data (overfits). Add a guard. §16.3
+- [ ] Spike test: split inflow/outflow into two non-negative streams and net the forecasts; compare accuracy vs forecasting signed totals. Croston/SBA/TSB don't fit signed net cashflow directly. §16.2
+
+## Calibrated Intervals
+
+<!-- From deep-research validation pass 2026-06-17. Full rationale + citations: docs/FORECASTING_RESEARCH.md §16.4-16.6. -->
+
+- [ ] **Residual mild over-coverage (~89% vs 80% target).** The √horizon over-coverage is FIXED — `calculatePredictionBands` now uses constant-width empirical quantiles (the residual is mean-reverting + recurring is deterministic, so no random-walk growth), measured via backtest at coverage 0.89 / PINAW 0.74 (was 0.996 / 1.91). The remaining ~9% is warm-up inflation: early model-convergence residuals widen the quantile sample. Optional fixes if it matters: drop the first ~5–7 residuals from the band sample, or per-horizon empirical widths from the harness's out-of-sample residuals. Low priority — errs conservative and close to target. §16.4/§16.5
+- [ ] DtACI (grid of γ experts) — deferred upgrade over single-γ ACI (`conformal.ts`). Only worth it if a single learning rate proves too slow/fast to track regime changes in practice. §16.4
+- [ ] Mark the bands as provisional in the *main* UI (not just the advanced panel) when residuals are below ~100 / ACI hasn't adapted — n too small for stable coverage. The diagnostics panel already reports the adapted/not-adapted state; this is about a user-visible cue on the chart. §16.4
+- [ ] Fix interval UI copy: bands mean "~80% of the time over the long run," not "80% confident about this month" (the ACI guarantee is marginal/long-run, not per-forecast conditional). §16.4
+
 ## Performance
 
 - [ ] CashflowGraph `:key` triggers full ApexCharts re-init on chartMode / timeRange / forecastMonths / isDark change. Investigate mutating the chart instance (via `this.chart.updateOptions`) instead of a keyed remount.

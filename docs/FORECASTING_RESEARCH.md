@@ -712,3 +712,72 @@ The key insight is that **most of the forecasting quality comes from the hybrid 
 The `simple-statistics` library plus ~300 lines of custom TypeScript (Holt's method, frequency detection, day-of-week factors, confidence bands) covers the entire forecasting engine. No heavy ML libraries needed.
 
 The single-screen UI simplifies the user experience dramatically — everything on one page, one graph, clear metrics, and a table for detail. The import wizard becomes the primary interaction point for getting data in, with the classification step being the core value-add.
+
+---
+
+## 16. Deep-Research Validation — Model Choice & Calibrated Intervals (2026-06-17)
+
+A multi-source research pass (5 parallel search agents, adversarial verification) was run to pressure-test the current forecasting design — Holt's double exponential smoothing + day-of-week seasonality, with heuristic optimistic/expected/pessimistic bands. The findings **validate the hybrid decomposition** (Section 1) and sharpen two specifics: which statistical method to apply to the residual, and how to make the confidence bands actually calibrated.
+
+> **Implementation status (2026-06-17):** Six recommendations from this section are now live:
+> 1. **Damped trend (φ=0.9)** on the variable-spending ETS model (§16.1) — caps trend extrapolation so a one-off spike no longer projects to the horizon. `HoltState.phi` is optional and defaults to undamped for externally-constructed states; the pipeline sets φ=0.9.
+> 2. **Empirical residual-quantile bands** (§16.4 step 1) — `calculatePredictionBands` uses the 10th/90th percentiles of historical residuals (added to the point forecast) instead of ±1.28σ, so the band reflects real residual skew. Width is constant across horizon: the residual is mean-reverting and the recurring component deterministic, so forecast-error variance does not grow like a random walk — an earlier √horizon scaling over-covered ~99% (confirmed by backtest) and was removed (backtest now ~89% coverage, PINAW 0.74).
+> 3. **Theta + damped-ETS combination** (§16.1, decision 1a) — `runCombination` in `forecast.ts` equal-weights Theta (SES-with-drift, drift = ½·OLS-slope) and the damped-ETS Holt model on the variable residual. Seasonal-naive was *deferred* (decision 1a) because the pipeline already models weekly seasonality via `dowFactors`; adding it would double-count. Equal weights, not learned (Stock & Watson).
+> 4. **Worst-case runway metric** (§16.4) — `WorkspaceDashboard` computes `calculateRunwayWithBands` once and surfaces the pessimistic depletion date / balance as its own "Worst-case" card alongside the expected one (shown only when it differs).
+> 5. **Validation harness** (§16.5) — `src/engine/validation.ts`: rolling-origin (walk-forward) backtest (each origin trains on past-only data, no leakage), scored per horizon, plus pinball loss, PICP + Wilson CI, PINAW, and a PIT histogram. The dashboard's accuracy now runs through this out-of-sample backtest instead of the old leaky in-sample single fit, so the headline MAE/RMSE/etc are honest. The calibration metrics are surfaced in a collapsed "Forecast diagnostics (advanced)" panel (`ForecastDiagnostics.vue`) — kept out of the non-technical MetricsGrid.
+> 6. **Adaptive Conformal Inference** (§16.4 step 2) — `src/engine/conformal.ts`: `adaptiveConformal` walks the residual stream with an expanding window, nudging the miscoverage level αₜ from realized hits/misses (miss → widen, hit → tighten) to converge on the target coverage without distributional assumptions. `buildForecast` applies the learned tail probabilities to the forward bands (keeping the asymmetric empirical quantiles); below the warm-up threshold it reports `adapted: false` and uses the fixed 80% band. The adapted level shows in the diagnostics panel.
+>
+> Still pending (see docs/TODO.md): DtACI (grid-of-γ upgrade over single-γ ACI), a user-visible "provisional" cue on the main chart below ~100 residuals, interval UI copy ("~80% over the long run", not "80% confident this month"), history-length seasonality gating (§16.3), and the inflow/outflow split spike (§16.2).
+
+WebFetch was 403-blocked across arXiv/journals during the pass, so claims rest on search-extracted summaries of the primary sources (arXiv IDs / DOIs are correct and verifiable). Items flagged below as synthesis are reasoning, not direct citations; none is load-bearing for the headline recommendations, which are multiply-sourced.
+
+### 16.1 Model choice for the variable residual
+
+**Replace single Holt with an equal-weighted combination of simple methods.** The decomposition already removes known recurring items (rent/salary) deterministically — the statistical model only ever sees the irregular residual. For that residual, on a single short series:
+
+- **Holt's undamped linear trend over-extrapolates** — a constant trend projected indefinitely, empirically over-forecasting and worsening with horizon. On lumpy data a single large spike is read as *slope* and projected forward. Use **damped trend** at minimum; better, don't run a trend model on the intermittent component at all. *(otexts.com/fpp3/holt.html; robjhyndman.com/papers/croston.pdf)*
+- **Simple + combination beats complex for one short series.** M4: 12 of 17 most-accurate methods were combinations; the 8 simple statistical benchmarks were "not too far" from the best. 2018 PLOS: pure ML dominated by statistical methods on monthly data. "Size Matters" (2022): statistical methods superior at small sample sizes. **M5's GBDT win does NOT transfer** — it required cross-learning across 42,840 related series, which a single-account series lacks. *(Makridakis M4 2020, S0169207019301128; PLOS ONE e0194889; arXiv:1909.13316; M5 2022, S0169207021001874)*
+- **Theta is the safe upgrade** — won M3, proven equivalent to SES-with-drift (Hyndman & Billah), parsimonious and robust for limited data. *(S0169207000000662; robjhyndman.com/papers/Theta.pdf)*
+- **Equal weights, not learned weights** — the "forecast combination puzzle" (Stock & Watson 2004): simple averaging beats estimated optimal weights out-of-sample because weight estimation adds variance that overwhelms the theoretical gain, acute on short data. *(mdpi.com/2225-1146/7/3/39)*
+
+Recommended residual model: equal-weighted average of **Theta (SES-with-drift) + damped-trend ETS + seasonal-naive**, backtested against current Holt.
+
+### 16.2 Croston/SBA/TSB — not a fit for signed net cashflow
+
+Classical intermittent-demand methods assume **non-negative, count-like demand** decomposed into size × interval — no concept of sign, can't represent "rent out vs salary in." Shenstone & Hyndman (2005) proved the underlying model is inconsistent even for its intended domain. The decomposition already handles most intermittency by extracting recurring items. The only defensible use is **splitting inflows and outflows into two separate non-negative streams**, forecasting each, then netting — worth a spike test, not blind adoption. *(robjhyndman.com/papers/croston.pdf)* (split-stream recommendation = synthesis)
+
+### 16.3 Seasonality, gated by history length
+
+- **Weekly (period-7) is estimable from a few months** — each weekday slot accumulates ~12 repeats in 12 weeks, clearing the Hyndman-Kostenko floor and the "2 cycles" bar. Keep it.
+- **Monthly/annual is NOT estimable on <6 months daily data** (≤1 observation per calendar month) — estimating it overfits noise. Gate it behind a history-length check. If a within-month shape is later wanted, use a couple of **Fourier harmonics**, not seasonal dummies. *(Hyndman & Kostenko 2007, shortseasonal.pdf; robjhyndman.com/hyndsight/longseasonality)*
+
+### 16.4 Calibrated confidence bands (replaces the heuristic optimistic/expected/pessimistic)
+
+**Step 1 — empirical residual quantiles (near-zero cost).** Collect backtest residuals `e = y − ŷ`, take empirical quantiles, add to the forecast: `[ŷ + Q₁₀(e), ŷ + Q₉₀(e)]`. The app already computes residuals for MAE/RMSE, so this is almost free. Default visible band = 80% central (10th/90th); lead the runway display with the **pessimistic/lower edge** (downside under-coverage is the costly error). Caveat: assumes stationary residuals, tends narrow at long horizons. *(cienciadedatos.net py42; fpp3/prediction-intervals)*
+
+**Step 2 — adaptive conformal (ACI/DtACI) for a real guarantee.** Conformal is the distribution-free upgrade, with sharp caveats:
+- Split conformal / CQR give finite-sample *marginal* coverage but only under **exchangeability, which time series violate** — lost on raw cashflow. *(CQR NeurIPS 2019; Barber et al. 2023, AOS2276)*
+- **ACI** (Gibbs & Candès) guarantees long-run average coverage → 1−α with **no distributional assumptions** by nudging the miscoverage level online (miss → widen, hit → tighten). **DtACI** runs a grid of step-sizes and reweights, removing learning-rate sensitivity. Right fit for streaming, drifting data. ~40–70 LOC, no deps. *(arXiv:2106.00170; JMLR 22-1218)*
+- **The guarantee is long-run/marginal/average, NOT per-forecast conditional.** Distribution-free conditional coverage is provably impossible. UI copy must say "~80% of the time over the long run," never "80% confident about this month." *(arXiv:2107.07511; arXiv:2511.13608)*
+
+**Binding constraint — calibration set size.** Conformal needs ~100 residuals for stable behavior; at n=10, α=0.1 there's a ~10.7% chance true coverage falls below 80%. **A few months of *monthly* aggregates (n≈3–12) is far below useful** — calibrate on **daily/weekly residuals** (3–6 months daily ≈ 90–180 points). Below ~100, render bands as explicitly provisional. *(Angelopoulos & Bates, arXiv:2107.07511)*
+
+### 16.5 Validation harness — measure, don't trust
+
+TS-conformal methods under-covered in published benchmarks, so validate:
+- **Rolling-origin backtest**, scored **per horizon** (coverage degrades as horizon grows; pooling hides it). Never random K-fold — it leaks future into past. *(fpp3/tscv; Tashman 2000)*
+- **Pinball loss** averaged over a quantile grid — strictly *proper* (can't be gamed), ≈ discrete CRPS, lower-variance at small N than coverage counting. *(M5 Uncertainty 2022; Gneiting & Raftery 2007)*
+- **PIT histogram** as the visual check: U-shaped = bands too narrow (the classic plug-in-Gaussian failure), ∩-shaped = too wide. *(scores.readthedocs.io PIT)*
+- **PICP/PINAW** for a human-readable "did 90% mean 90%?" — but with a **Wilson/binomial confidence band**, because on short series "PICP=0.85 vs 0.90" is often noise (binomial SE ≈ √(p(1−p)/N)). *(Koehler et al.)*
+
+### 16.6 Client-side feasibility
+
+JS forecasting ecosystem is sparse/stale — no maintained statsforecast/MAPIE equivalent. Hand-roll on `simple-statistics` (already shipped: `quantile`, `linearRegression`, `mean`, `standardDeviation`, `sample`, `shuffle`). `arima` (zemlyansky) is the only capable lib but WASM + frozen since 2021 — optional, not a foundation. Croston/SBA/TSB = ~20–40 LOC each to port. Conformal algorithms are arithmetic over residuals: split ~50–80 LOC, ACI ~40–70 LOC, EnbPI ~150–300 LOC (only one with real compute cost — needs a bootstrap ensemble). **Pyodide/WASM Python: skip** — several MB + multi-second cold start to replicate intervals computable in a few hundred lines of JS; wrong trade for an offline-first PWA.
+
+**Implementation ladder (each builds on the last, no new deps):** residual-quantile bands → split conformal → ACI/DtACI.
+
+### 16.7 Lowest-confidence items (flagged for re-verification)
+
+- Holt-on-sparse-spike is inferred from the general overshoot result, not stated verbatim.
+- Inflow/outflow split-stream recommendation (16.2) is synthesis, not a direct citation.
+- M5-non-transfer-to-single-series (16.1) is sound reasoning, not a direct experimental finding.
