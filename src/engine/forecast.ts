@@ -1,12 +1,13 @@
 /**
  * Hybrid forecasting engine — combines deterministic recurring item scheduling
- * with damped-trend exponential smoothing for variable spending prediction.
+ * with a statistical combination model for variable spending prediction.
  *
  * Requirement: Predict daily cashflow from historical patterns + known recurring items.
  *   Total Daily Cashflow = Recurring Items + Variable Spending + Day-of-Week Adjustment
  * Approach: Hybrid decomposition per FORECASTING_RESEARCH.md §1 + §16:
  *   1. Recurring items: deterministic scheduling from RecurringPattern (handled by patterns.ts)
- *   2. Variable spending residual: Holt's method with a DAMPED trend (level + damped trend)
+ *   2. Variable spending residual: equal-weighted combination of Theta (SES-with-drift) and
+ *      damped-trend ETS (Holt, φ=0.9). Equal weights beat learned weights on short series.
  *   3. Day-of-week seasonality: multipliers for weekday/weekend patterns (needs 4+ weeks)
  *   4. Confidence bands: empirical residual quantiles (distribution-free) with sqrt horizon scaling
  * Alternatives:
@@ -20,7 +21,7 @@
  *     tracked in docs/TODO.md) — damped trend here is the cheap interim step toward it.
  */
 
-import { mean, quantile } from 'simple-statistics'
+import { mean, quantile, linearRegression } from 'simple-statistics'
 import type { Transaction, RecurringPattern } from '@/types/models'
 import { projectPattern } from './patterns'
 import { formatDate } from './dateUtils'
@@ -81,10 +82,11 @@ const DEFAULT_PHI = 0.9
 const MIN_WEEKS_FOR_SEASONALITY = 4
 
 /**
- * Minimum days of history needed for Holt's method. Below this, the trend estimate
- * is too noisy to be useful, so we fall back to a simple average.
+ * Minimum days of history needed for the combination model (Theta + damped ETS).
+ * Below this, the trend/slope estimates are too noisy to be useful, so we fall back
+ * to a simple average.
  */
-const MIN_DAYS_FOR_HOLT = 14
+const MIN_DAYS_FOR_COMBINATION = 14
 
 /**
  * Initialise Holt state from a series of daily amounts.
@@ -178,6 +180,66 @@ export function runHolt(
   }
 
   return { finalState: state, errors }
+}
+
+// ── Theta (SES-with-drift) + Combination ──
+
+/** OLS slope of the series against its time index (0..n-1). */
+function olsSlope(series: number[]): number {
+  const points: Array<[number, number]> = series.map((y, t) => [t, y])
+  return linearRegression(points).m
+}
+
+/**
+ * Equal-weighted combination of Theta (SES-with-drift) and damped-trend ETS, fitted to the
+ * variable-spending residual. Returns a horizon-aware forecaster plus the combination's
+ * in-sample one-step errors (for prediction bands) and the ETS component state (for debug).
+ *
+ * Requirement (FORECASTING_RESEARCH.md §16.1): combine simple methods rather than rely on a
+ * single model. On a single short series an equal-weighted average of statistical methods is
+ * hard to beat (M4/M5), and equal weights beat learned weights (forecast-combination puzzle,
+ * Stock & Watson 2004).
+ * Approach: run SES and damped Holt incrementally over the series in lockstep; at each step the
+ * combined one-step prediction is the mean of the two, so the errors reflect the actual combined
+ * model. Theta drift per step = half the OLS slope (Hyndman & Billah's "unmasked Theta = SES
+ * with drift b/2"). Multi-step forecast averages Theta's drifting line with the damped-ETS path.
+ * Alternatives:
+ *   - Seasonal-naive as a third member: deferred (FORECASTING_RESEARCH.md §16 decision 1a) — the
+ *     pipeline already models weekly seasonality via dowFactors, so a seasonal-naive member would
+ *     double-count it. Revisit if dowFactors is ever replaced.
+ *   - Learned/optimal combination weights: Rejected — estimation variance overwhelms the gain on
+ *     short series (Stock & Watson 2004).
+ */
+function runCombination(
+  series: number[],
+  alpha: number = DEFAULT_ALPHA,
+  beta: number = DEFAULT_BETA,
+  phi: number = DEFAULT_PHI,
+): { forecastAt: (stepsAhead: number) => number; errors: number[]; etsState: HoltState } {
+  const drift = olsSlope(series) / 2 // Theta drift per step (half the OLS slope)
+
+  let sesLevel = series[0]!
+  let etsState = initHolt(series, alpha, beta, phi)
+  const errors: number[] = []
+
+  // Walk the series once, advancing SES and damped Holt together. The combined one-step
+  // prediction is the mean of the two members, so errors are the true combination errors.
+  for (let i = 1; i < series.length; i++) {
+    const thetaPred = sesLevel + drift
+    const etsPred = holtForecast(etsState, 1)
+    const combined = 0.5 * thetaPred + 0.5 * etsPred
+    errors.push(series[i]! - combined)
+
+    sesLevel = alpha * series[i]! + (1 - alpha) * sesLevel
+    etsState = holtUpdate(etsState, series[i]!)
+  }
+
+  const finalSes = sesLevel
+  const finalEts = etsState
+  const forecastAt = (stepsAhead: number): number =>
+    0.5 * (finalSes + drift * stepsAhead) + 0.5 * holtForecast(finalEts, stepsAhead)
+
+  return { forecastAt, errors, etsState: finalEts }
 }
 
 // ── Day-of-Week Seasonality ──
@@ -297,14 +359,14 @@ export interface DailyForecastPoint {
 export interface ForecastResult {
   /** Daily forecast points */
   daily: DailyForecastPoint[]
-  /** Holt state for the variable component (null if insufficient data) */
+  /** Damped-ETS (Holt) component state of the variable combination (null if insufficient data) */
   variableState: HoltState | null
   /** Day-of-week factors (null if insufficient data) */
   dowFactors: number[] | null
-  /** One-step-ahead errors from Holt fitting (for accuracy metrics) */
+  /** One-step-ahead errors from the variable model fit (for accuracy metrics + bands) */
   predictionErrors: number[]
   /** Method used for variable spending */
-  variableMethod: 'holt' | 'average' | 'none'
+  variableMethod: 'combination' | 'average' | 'none'
 }
 
 /**
@@ -384,21 +446,26 @@ function computeHistoricalResiduals(
 }
 
 /**
- * Fit variable spending model (Holt's or simple average) to residual series.
+ * Fit the variable-spending model to the residual series.
+ *
+ * Returns a horizon-aware forecaster `forecastAt(stepsAhead)`:
+ *   - ≥ MIN_DAYS_FOR_COMBINATION: equal-weighted Theta + damped-ETS combination
+ *   - 1..MIN_DAYS_FOR_COMBINATION-1: flat simple average (too little data for trend/slope)
+ *   - 0: no variable component
  */
 function fitVariableModel(residualSeries: number[]): {
   variableState: HoltState | null
   predictionErrors: number[]
-  variableMethod: 'holt' | 'average' | 'none'
-  variableDailyForecast: number
+  variableMethod: 'combination' | 'average' | 'none'
+  forecastAt: ((stepsAhead: number) => number) | null
 } {
-  if (residualSeries.length >= MIN_DAYS_FOR_HOLT) {
-    const result = runHolt(residualSeries)
+  if (residualSeries.length >= MIN_DAYS_FOR_COMBINATION) {
+    const combo = runCombination(residualSeries)
     return {
-      variableState: result.finalState,
-      predictionErrors: result.errors,
-      variableMethod: 'holt',
-      variableDailyForecast: holtForecast(result.finalState, 1),
+      variableState: combo.etsState,
+      predictionErrors: combo.errors,
+      variableMethod: 'combination',
+      forecastAt: combo.forecastAt,
     }
   }
 
@@ -410,11 +477,11 @@ function fitVariableModel(residualSeries: number[]): {
       variableState: null,
       predictionErrors: residualSeries.map((v) => v - avg),
       variableMethod: 'average',
-      variableDailyForecast: avg,
+      forecastAt: () => avg,
     }
   }
 
-  return { variableState: null, predictionErrors: [], variableMethod: 'none', variableDailyForecast: 0 }
+  return { variableState: null, predictionErrors: [], variableMethod: 'none', forecastAt: null }
 }
 
 /**
@@ -422,9 +489,8 @@ function fitVariableModel(residualSeries: number[]): {
  */
 function assembleDailyForecast(
   recurringDaily: Map<string, number>,
-  variableState: HoltState | null,
-  variableMethod: 'holt' | 'average' | 'none',
-  variableDailyForecast: number,
+  forecastAt: ((stepsAhead: number) => number) | null,
+  variableMethod: 'combination' | 'average' | 'none',
   predictionErrors: number[],
   dowFactors: number[] | null,
   startDate: string,
@@ -443,10 +509,8 @@ function assembleDailyForecast(
     const recurring = recurringDaily.get(dateStr) ?? 0
 
     let variable = 0
-    if (variableMethod !== 'none') {
-      variable = variableMethod === 'holt'
-        ? holtForecast(variableState!, dayIndex)
-        : variableDailyForecast
+    if (variableMethod !== 'none' && forecastAt) {
+      variable = forecastAt(dayIndex)
 
       if (dowFactors) {
         const dow = cursor.getDay()
@@ -504,13 +568,13 @@ export function buildForecast(
   const sortedDates = [...residualByDate.keys()].sort()
   const residualSeries = sortedDates.map((d) => residualByDate.get(d)!)
 
-  const { variableState, predictionErrors, variableMethod, variableDailyForecast } =
+  const { variableState, predictionErrors, variableMethod, forecastAt } =
     fitVariableModel(residualSeries)
 
   const dowFactors = calculateDayOfWeekFactors(residualByDate)
 
   const daily = assembleDailyForecast(
-    recurringDaily, variableState, variableMethod, variableDailyForecast,
+    recurringDaily, forecastAt, variableMethod,
     predictionErrors, dowFactors, startDate, endDate,
   )
 

@@ -15,7 +15,7 @@ import { useRouter } from 'vue-router'
 import { Wallet, Upload } from 'lucide-vue-next'
 import { db } from '@/db'
 import { buildForecast } from '@/engine/forecast'
-import { calculateRunway } from '@/engine/runway'
+import { calculateRunwayWithBands } from '@/engine/runway'
 import { calculateDailyAccuracy, summarizeAccuracy } from '@/engine/accuracy'
 import { formatDate } from '@/engine/dateUtils'
 import { formatAmount } from '@/composables/useFormat'
@@ -182,13 +182,18 @@ const accuracy = computed<AccuracySummary | null>(() => {
   return summarizeAccuracy(dailyAccuracy)
 })
 
-// Compute runway — uses the debounced cash-on-hand ref so the chart doesn't
-// thrash while the user is mid-type. DB persistence uses the raw ref below.
-const runway = computed<RunwayResult | null>(() => {
+// Compute runway with prediction bands — uses the debounced cash-on-hand ref so the chart
+// doesn't thrash while the user is mid-type. DB persistence uses the raw ref below.
+// Banded version computes expected/optimistic/pessimistic in one pass; we surface expected
+// as the primary runway and pessimistic as a "worst-case" safety figure (FORECASTING_RESEARCH §16.4:
+// downside under-coverage is the costly error for cashflow, so the cautious edge is shown explicitly).
+const runwayBands = computed(() => {
   if (cashOnHandForRunway.value === null || cashOnHandForRunway.value <= 0) return null
   if (!forecast.value) return null
-  return calculateRunway(cashOnHandForRunway.value, forecast.value.daily)
+  return calculateRunwayWithBands(cashOnHandForRunway.value, forecast.value.daily)
 })
+const runway = computed<RunwayResult | null>(() => runwayBands.value?.expected ?? null)
+const pessimisticRunway = computed<RunwayResult | null>(() => runwayBands.value?.pessimistic ?? null)
 
 // Persist cash on hand when changed
 let cashSaveTimeout: ReturnType<typeof setTimeout> | null = null
@@ -337,6 +342,7 @@ async function handleRequestSuggestions(id: string, description: string) {
       :currency-label="workspace.currencyLabel"
       :forecast="forecast"
       :runway="runway"
+      :pessimistic-runway="pessimisticRunway"
       :accuracy="accuracy"
     />
 

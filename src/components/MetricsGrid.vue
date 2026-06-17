@@ -21,7 +21,10 @@ const props = defineProps<{
   patterns: RecurringPattern[]
   currencyLabel: string
   forecast: ForecastResult | null
+  /** Expected-case runway (point forecast) */
   runway: RunwayResult | null
+  /** Pessimistic-case runway (lower confidence band) — surfaced as a worst-case safety figure */
+  pessimisticRunway?: RunwayResult | null
   accuracy: AccuracySummary | null
 }>()
 
@@ -127,6 +130,29 @@ const metrics = computed(() => {
         value: `${props.currencyLabel}${formatAmount(props.runway.endBalance)}`,
         trend: props.runway.endBalance >= 0 ? 'positive' : 'negative',
       })
+    }
+
+    // Worst-case runway (pessimistic confidence band). Shown only when it differs from the
+    // expected case, so users see the cautious number explicitly without a duplicate card.
+    // Requirement (FORECASTING_RESEARCH §16.4): lead with the downside — running out earlier
+    // than expected is the costly error for cashflow.
+    const worst = props.pessimisticRunway
+    if (worst && (worst.depletionDate !== props.runway.depletionDate || worst.endBalance !== props.runway.endBalance)) {
+      if (worst.daysRemaining !== null) {
+        cards.push({
+          label: 'Worst-case runway',
+          value: worst.depletionDate ?? '—',
+          sublabel: `${worst.daysRemaining} days if spending runs high`,
+          trend: 'negative',
+        })
+      } else {
+        cards.push({
+          label: 'Worst-case balance',
+          value: `${props.currencyLabel}${formatAmount(worst.endBalance)}`,
+          sublabel: 'if spending runs high',
+          trend: worst.endBalance >= 0 ? 'neutral' : 'negative',
+        })
+      }
     }
 
     if (props.runway.minimumBalanceDate) {

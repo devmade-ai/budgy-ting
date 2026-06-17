@@ -17,7 +17,8 @@
 
 <!-- From deep-research validation pass 2026-06-17. Full rationale + citations: docs/FORECASTING_RESEARCH.md §16. -->
 
-- [ ] Replace single Holt residual model with an equal-weighted combination of Theta (SES-with-drift) + damped-trend ETS + seasonal-naive. Backtest against current Holt via rolling-origin. Evidence: M4/M5 + "Size Matters" — simple+combination beats complex on a single short series; M5's GBDT win doesn't transfer. §16.1 (damped trend now in place — see below)
+- [ ] Backtest the Theta + damped-ETS combination against the previous single-Holt model via rolling-origin once the validation harness lands. The combination is live (decision 1a: Theta + damped-ETS, seasonal-naive deferred to avoid double-counting dowFactors); this item is just the empirical confirmation it helps. §16.1
+- [ ] Seasonal-naive as a third combination member — deferred (decision 1a). Only viable if dowFactors is replaced as the weekly-seasonality mechanism; otherwise it double-counts. Revisit if dowFactors is reworked. §16.1
 - [ ] Gate seasonality by history length: estimate weekly (period-7) only with enough weeks; never fit monthly/annual on <6 months daily data (overfits). Add a guard. §16.3
 - [ ] Spike test: split inflow/outflow into two non-negative streams and net the forecasts; compare accuracy vs forecasting signed totals. Croston/SBA/TSB don't fit signed net cashflow directly. §16.2
 
@@ -25,7 +26,6 @@
 
 <!-- From deep-research validation pass 2026-06-17. Full rationale + citations: docs/FORECASTING_RESEARCH.md §16.4-16.6. -->
 
-- [ ] Lead the runway display with the pessimistic/lower band edge (bands are now empirical 10th/90th quantiles; this is the remaining UI-side change). §16.4
 - [ ] Layer ACI/DtACI online miscoverage adjustment for a long-run coverage guarantee under drift (~40-70 LOC, no deps). §16.4
 - [ ] Calibrate intervals on daily/weekly residuals, never monthly totals; below ~100 residuals render bands as explicitly provisional (n too small for stable coverage). §16.4
 - [ ] Fix interval UI copy: bands mean "~80% of the time over the long run," not "80% confident about this month" (conformal gives marginal, not conditional, coverage). §16.4

@@ -273,8 +273,8 @@ describe('buildForecast', () => {
     expect(result.variableMethod).toBe('average')
   })
 
-  it('uses holt method with sufficient history', () => {
-    // Create 20 days of history (above MIN_DAYS_FOR_HOLT=14)
+  it('uses combination method with sufficient history', () => {
+    // Create 20 days of history (above MIN_DAYS_FOR_COMBINATION=14)
     const txns: Transaction[] = []
     for (let i = 1; i <= 20; i++) {
       txns.push(makeTxn({
@@ -285,7 +285,8 @@ describe('buildForecast', () => {
     }
 
     const result = buildForecast(txns, [], '2026-03-01', '2026-03-07')
-    expect(result.variableMethod).toBe('holt')
+    expect(result.variableMethod).toBe('combination')
+    // variableState exposes the damped-ETS component of the combination
     expect(result.variableState).not.toBeNull()
     expect(result.predictionErrors.length).toBeGreaterThan(0)
   })
@@ -369,8 +370,8 @@ describe('buildForecast', () => {
     }
   })
 
-  it('handles constant-series Holt initialization gracefully', () => {
-    // A constant series should produce near-zero trend
+  it('handles constant-series combination initialization gracefully', () => {
+    // A constant series should produce near-zero trend in the ETS component
     const txns: Transaction[] = []
     for (let i = 1; i <= 20; i++) {
       txns.push(makeTxn({
@@ -380,8 +381,30 @@ describe('buildForecast', () => {
       }))
     }
     const result = buildForecast(txns, [], '2026-03-01', '2026-03-07')
-    expect(result.variableMethod).toBe('holt')
+    expect(result.variableMethod).toBe('combination')
     // Trend should be near zero for constant series
     expect(Math.abs(result.variableState!.trend)).toBeLessThan(1)
+  })
+
+  it('combination forecast follows the residual trend direction', () => {
+    // Rising daily expense magnitude → forecast variable component stays negative and
+    // the combination (Theta drift + damped ETS) projects continued spend.
+    const txns: Transaction[] = []
+    for (let i = 1; i <= 20; i++) {
+      txns.push(makeTxn({
+        id: `t-${i}`,
+        date: `2026-02-${String(i).padStart(2, '0')}`,
+        amount: -(40 + i * 3), // steadily larger expenses
+      }))
+    }
+    const result = buildForecast(txns, [], '2026-03-01', '2026-03-07')
+    expect(result.variableMethod).toBe('combination')
+    const variablePoints = result.daily.filter((d) => d.source === 'recurring+variable')
+    expect(variablePoints.length).toBeGreaterThan(0)
+    // All forecast amounts are expenses (negative) and finite
+    for (const p of variablePoints) {
+      expect(p.amount).toBeLessThan(0)
+      expect(Number.isFinite(p.amount)).toBe(true)
+    }
   })
 })
