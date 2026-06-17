@@ -73,7 +73,7 @@ Current working features:
 - Variable recurring expenses (fixed/variable/irregular variability)
 - Variable-spending forecast: equal-weighted combination of Theta (SES-with-drift) + damped-trend ETS (Holt φ=0.9), with day-of-week seasonality
 - Cash runway calculation with confidence bands from empirical residual quantiles (optimistic/expected/pessimistic); worst-case (pessimistic) runway surfaced as its own metric
-- Prediction accuracy metrics (MAE, RMSE, bias, WMAPE, hit rate)
+- Prediction accuracy via rolling-origin (walk-forward) backtest — honest out-of-sample MAE/RMSE/bias/WMAPE/hit-rate, plus interval-calibration metrics (coverage + Wilson CI, pinball loss, PINAW, PIT histogram) in `src/engine/validation.ts`
 - Single-screen dashboard (cashflow graph with history/forecast timeline presets, metrics grid, transaction table)
 - Transaction edit modal with read-only view mode
 - Export/import/restore workspace data as JSON

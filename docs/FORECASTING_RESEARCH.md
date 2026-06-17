@@ -719,13 +719,14 @@ The single-screen UI simplifies the user experience dramatically — everything 
 
 A multi-source research pass (5 parallel search agents, adversarial verification) was run to pressure-test the current forecasting design — Holt's double exponential smoothing + day-of-week seasonality, with heuristic optimistic/expected/pessimistic bands. The findings **validate the hybrid decomposition** (Section 1) and sharpen two specifics: which statistical method to apply to the residual, and how to make the confidence bands actually calibrated.
 
-> **Implementation status (2026-06-17):** Four recommendations from this section are now live:
+> **Implementation status (2026-06-17):** Five recommendations from this section are now live:
 > 1. **Damped trend (φ=0.9)** on the variable-spending ETS model (§16.1) — caps trend extrapolation so a one-off spike no longer projects to the horizon. `HoltState.phi` is optional and defaults to undamped for externally-constructed states; the pipeline sets φ=0.9.
 > 2. **Empirical residual-quantile bands** (§16.4 step 1) — `calculatePredictionBands` uses the 10th/90th percentiles of historical residuals (bias-centred, √horizon-scaled) instead of ±1.28σ, so the band reflects real residual skew.
 > 3. **Theta + damped-ETS combination** (§16.1, decision 1a) — `runCombination` in `forecast.ts` equal-weights Theta (SES-with-drift, drift = ½·OLS-slope) and the damped-ETS Holt model on the variable residual. Seasonal-naive was *deferred* (decision 1a) because the pipeline already models weekly seasonality via `dowFactors`; adding it would double-count. Equal weights, not learned (Stock & Watson).
 > 4. **Worst-case runway metric** (§16.4) — `WorkspaceDashboard` computes `calculateRunwayWithBands` once and surfaces the pessimistic depletion date / balance as its own "Worst-case" card alongside the expected one (shown only when it differs).
+> 5. **Validation harness** (§16.5) — `src/engine/validation.ts`: rolling-origin (walk-forward) backtest (each origin trains on past-only data, no leakage), scored per horizon, plus pinball loss, PICP + Wilson CI, PINAW, and a PIT histogram. The dashboard's accuracy now runs through this out-of-sample backtest instead of the old leaky in-sample single fit, so the headline MAE/RMSE/etc are honest.
 >
-> Still pending (see docs/TODO.md): ACI/DtACI conformal calibration (§16.4 step 2), the validation harness (§16.5 — rolling-origin + pinball + PIT), history-length seasonality gating (§16.3), and the inflow/outflow split spike (§16.2). Backtesting the combination vs old single-Holt waits on the validation harness.
+> Still pending (see docs/TODO.md): ACI/DtACI conformal calibration (§16.4 step 2), surfacing the interval-calibration metrics in the UI (the harness computes them; not yet displayed), history-length seasonality gating (§16.3), and the inflow/outflow split spike (§16.2).
 
 WebFetch was 403-blocked across arXiv/journals during the pass, so claims rest on search-extracted summaries of the primary sources (arXiv IDs / DOIs are correct and verifiable). Items flagged below as synthesis are reasoning, not direct citations; none is load-bearing for the headline recommendations, which are multiply-sourced.
 

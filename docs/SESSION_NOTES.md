@@ -4,7 +4,7 @@
 
 ## Worked on
 
-Deep-research validation pass on Farlume's forecasting core, then implemented four findings from it: damped trend, empirical residual-quantile bands, the Theta + damped-ETS combination model, and a worst-case runway metric.
+Deep-research validation pass on Farlume's forecasting core, then implemented five findings from it: damped trend, empirical residual-quantile bands, the Theta + damped-ETS combination model, a worst-case runway metric, and a rolling-origin validation harness.
 
 ## Accomplished
 
@@ -15,11 +15,12 @@ Deep-research validation pass on Farlume's forecasting core, then implemented fo
   - **Empirical residual-quantile bands** in `calculatePredictionBands` — 10th/90th percentiles of historical residuals, bias-centred so √horizon scaling widens spread not bias. Replaces ±1.28σ Gaussian. Captures residual skew → asymmetric optimistic/pessimistic edges.
   - **Theta + damped-ETS combination** (decision 1a) — `runCombination` in `forecast.ts` equal-weights Theta (SES-with-drift, drift = ½·OLS-slope) and the damped-ETS Holt on the variable residual, running both incrementally so the band errors reflect the true combined model. `variableMethod` is now `'combination' | 'average' | 'none'` (was `'holt'`); `variableState` exposes the ETS component. Seasonal-naive deferred (would double-count dowFactors).
   - **Worst-case runway metric** (decision 2a) — `WorkspaceDashboard` computes `calculateRunwayWithBands` once, derives expected + pessimistic; `MetricsGrid` shows a "Worst-case runway/balance" card from the pessimistic band (only when it differs from expected).
-- Updated tests across all four changes. **All 151 tests pass, type-check clean, production build succeeds.**
+  - **Validation harness** (`src/engine/validation.ts`) — rolling-origin (walk-forward) backtest with no leakage (each origin trains on date ≤ origin only), scored per horizon, plus pinball loss, PICP + Wilson CI, PINAW, PIT histogram. **The dashboard's `accuracy` now runs through this out-of-sample backtest instead of the old in-sample single fit** — headline MAE/RMSE/etc are now honest (and will read worse than before, because the old number was leaky/over-optimistic). `AccuracySummary` shape unchanged so MetricsGrid is untouched. 24 new tests.
+- Updated tests across all changes. **All 175 tests pass, type-check clean, production build succeeds.**
 
 ## Current state
 
-Branch: `claude/fervent-rubin-y1wa0q`. Three commits: (1) research docs, (2) damped-trend + empirical-bands, (3) combination model + worst-case runway. Forecasting now runs a Theta + damped-ETS combination with empirical-quantile bands; the dashboard surfaces a worst-case runway figure. `PredictionBand`/`RunwayResult` shapes unchanged.
+Branch: `claude/fervent-rubin-y1wa0q`. Four commits: (1) research docs, (2) damped-trend + empirical-bands, (3) combination model + worst-case runway, (4) validation harness. Forecasting runs a Theta + damped-ETS combination with empirical-quantile bands; the dashboard surfaces a worst-case runway figure and reports out-of-sample accuracy. The harness also computes coverage/Wilson/pinball/PINAW/PIT but those aren't surfaced in the UI yet (TODO). `PredictionBand`/`RunwayResult`/`AccuracySummary` shapes unchanged.
 
 ## Key context
 
@@ -32,5 +33,6 @@ Branch: `claude/fervent-rubin-y1wa0q`. Three commits: (1) research docs, (2) dam
   6. Validate via rolling-origin per horizon + pinball loss (proper) + PIT histogram + PICP/PINAW with Wilson band.
 - **Client-side feasibility:** JS forecasting ecosystem is sparse/stale. Hand-roll on `simple-statistics` (already shipped). Conformal = arithmetic over residuals, ~40-80 LOC. Pyodide/WASM Python = skip (too heavy for an offline PWA). Implementation ladder: residual-quantile → split conformal → ACI/DtACI.
 - **Caveat:** WebFetch was 403-blocked during the pass, so claims rest on search-extracted summaries of primary sources (arXiv IDs/DOIs verified correct). Lowest-confidence items flagged in §16.7.
-- Remaining follow-ups from the same research: the validation harness (rolling-origin + pinball + PIT — needed to backtest the combination vs old single-Holt), ACI/DtACI conformal calibration (needs ~100+ residuals; calibrate on daily/weekly not monthly), history-length seasonality gating, and the inflow/outflow split spike.
+- Remaining follow-ups from the same research: surface the harness's interval-calibration metrics (coverage/Wilson/pinball/PINAW/PIT) in the debug pill or a metrics panel; ACI/DtACI conformal calibration (needs ~100+ residuals; calibrate on daily/weekly not monthly); history-length seasonality gating; and the inflow/outflow split spike.
+- The harness is the lever for everything else: it can now backtest the combination vs the old single-Holt empirically (point accuracy + coverage), so future forecasting changes are measurable not assumed.
 - φ=0.9 is a deliberate middle-ground damping constant (documented in forecast.ts with the 0.8/0.98 alternatives). On a clean linear series damped trend under-shoots vs undamped — that's the intended tradeoff (real cashflow residuals aren't clean lines).

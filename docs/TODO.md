@@ -29,9 +29,7 @@
 - [ ] Layer ACI/DtACI online miscoverage adjustment for a long-run coverage guarantee under drift (~40-70 LOC, no deps). §16.4
 - [ ] Calibrate intervals on daily/weekly residuals, never monthly totals; below ~100 residuals render bands as explicitly provisional (n too small for stable coverage). §16.4
 - [ ] Fix interval UI copy: bands mean "~80% of the time over the long run," not "80% confident about this month" (conformal gives marginal, not conditional, coverage). §16.4
-- [ ] Add rolling-origin backtest scored per horizon; replace any random splitting (K-fold leaks future into past). §16.5
-- [ ] Add pinball/quantile loss (≈ scaled CRPS) as the headline uncertainty metric alongside MAE/RMSE/bias/WMAPE — strictly proper, lower-variance at small N than coverage counting. §16.5
-- [ ] Add PIT-histogram calibration check + PICP/PINAW with a Wilson confidence band. §16.5
+- [ ] Surface the interval-calibration metrics in the UI (debug pill or a metrics panel): the validation harness (`src/engine/validation.ts`) already computes pooled coverage + Wilson CI, mean pinball, PINAW, and the PIT histogram per `summarizeBacktest` — they're just not displayed yet. The headline MAE/RMSE/etc are already wired to the out-of-sample backtest. §16.5
 
 ## Performance
 

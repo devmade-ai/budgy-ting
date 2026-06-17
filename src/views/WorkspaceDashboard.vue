@@ -16,7 +16,7 @@ import { Wallet, Upload } from 'lucide-vue-next'
 import { db } from '@/db'
 import { buildForecast } from '@/engine/forecast'
 import { calculateRunwayWithBands } from '@/engine/runway'
-import { calculateDailyAccuracy, summarizeAccuracy } from '@/engine/accuracy'
+import { backtestForecast } from '@/engine/validation'
 import { formatDate } from '@/engine/dateUtils'
 import { formatAmount } from '@/composables/useFormat'
 import { safeGetItem, safeSetItem } from '@/composables/useSafeStorage'
@@ -166,20 +166,13 @@ const forecast = computed<ForecastResult | null>(() => {
   return buildForecast(transactions.value, patterns.value, startDate, endDate)
 })
 
-// Compute accuracy (compare past forecast to actuals)
+// Compute accuracy via a rolling-origin (walk-forward) backtest. Each forecast origin trains
+// only on data before it, so the reported MAE/RMSE/etc are honest out-of-sample numbers — not
+// the in-sample (leaky, over-optimistic) figure the previous single-fit backtest produced.
+// See FORECASTING_RESEARCH.md §16.5 and src/engine/validation.ts.
 const accuracy = computed<AccuracySummary | null>(() => {
   if (!forecast.value || transactions.value.length === 0) return null
-
-  // Build a "backtest" forecast for the historical period
-  const dates = transactions.value.map((t) => t.date).sort()
-  if (dates.length < 14) return null
-
-  const firstDate = dates[0]!
-  const lastDate = dates[dates.length - 1]!
-  const backtestForecast = buildForecast(transactions.value, patterns.value, firstDate, lastDate)
-
-  const dailyAccuracy = calculateDailyAccuracy(backtestForecast.daily, transactions.value)
-  return summarizeAccuracy(dailyAccuracy)
+  return backtestForecast(transactions.value, patterns.value)?.accuracy ?? null
 })
 
 // Compute runway with prediction bands — uses the debounced cash-on-hand ref so the chart
