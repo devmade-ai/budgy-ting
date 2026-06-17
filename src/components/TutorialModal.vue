@@ -54,7 +54,7 @@ const steps: TutorialStep[] = [
   {
     icon: PiggyBank,
     title: 'Track your runway',
-    description: 'Enter your cash on hand to see how long your money will last. The forecast updates automatically as you import more data.',
+    description: 'Enter your cash on hand to see how long your money will last — including a worst-case estimate if spending runs high. The forecast updates automatically as you import more data.',
   },
 ]
 
