@@ -2,7 +2,7 @@
 
 ## Product Definition
 
-Farlume is a local-first progressive web app for planning and tracking household cashflow. Users create workspaces for different spending plans, capture once-off or recurring income and expense lines, import actual spend data from CSV or JSON files, and compare projected versus actual spend with automated matching and visual reporting.
+Farlume is a local-first progressive web app for planning and tracking cashflow — for any context: household, freelance, small business, project budget, side hustle. Users create workspaces for different spending plans, capture once-off or recurring income and expense lines, import actual spend data from CSV or JSON files, and compare projected versus actual spend with automated matching and visual reporting.
 
 All data lives on-device using IndexedDB. No authentication, no server. Exportable as JSON for backup or re-import.
 
@@ -394,7 +394,7 @@ All phases are **complete**. Preserved here as architectural reference.
   - Validate numeric fields are actually numeric before storage
   - Limit file upload size (10 MB cap) to prevent browser memory issues
 - IndexedDB data is unencrypted on device
-  - Acceptable for MVP since this is personal budget data, not financial credentials
+  - Acceptable for MVP since this is budget data, not financial credentials
   - Document that anyone with device access can read the data
 - Export JSON could contain sensitive budget information
   - No mitigation needed for MVP beyond user awareness

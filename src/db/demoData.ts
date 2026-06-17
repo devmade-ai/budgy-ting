@@ -177,7 +177,7 @@ export async function seedDemoWorkspace(): Promise<boolean> {
 
   const workspace: Workspace = {
     id: DEMO_WORKSPACE_ID,
-    name: 'Demo Household',
+    name: 'Demo Workspace',
     currencyLabel: 'R',
     periodType: 'monthly',
     startDate,

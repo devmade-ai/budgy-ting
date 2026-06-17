@@ -4,29 +4,25 @@
 
 ## Worked on
 
-Two cross-fleet alignment passes on the same branch:
-
-1. Closed the ICON_CACHE_BUST pattern by adding the one source-level tripwire test that wasn't already in `src/iconCacheBust.test.ts`.
-2. Replaced the legacy single-word `## Triggers` section in CLAUDE.md with the redesigned 48-trigger / 8-group / 6-meta-sweep / 7-reflective-pass version from glow-props CLAUDE.md.
+Broadened Farlume's positioning. User asked to drop the "personal/household" framing everywhere, permanently — the tool serves any cashflow context (household, freelance, small business, project budget, side hustle).
 
 ## Accomplished
 
-- Added the missing `index.html contains the exact literal hrefs the plugin replaces` source-level test to `src/iconCacheBust.test.ts`. Brings test count to 10 (5 source + 5 dist), full parity with the glow-props pattern doc plus three project-specific extras (manifest-srcs-bypass-versioned, sw-precache-no-duplicates, version.json-iconsHash). All 10 tests pass.
-- Verified pattern doc's Verification Checklist items 1-3 directly: dist manifest icons, dist HTML link tags, and dist sw.js workbox config all carry `?v=<8 hex>` / `/^v$/`.
-- Replaced `## Triggers` section in CLAUDE.md verbatim from glow-props (lines 290-441 of glow-props CLAUDE.md). New section: 48 triggers in 8 groups (`correctness` / `trust` / `speed` / `frontend` / `quality` / `ops` / `design` / `fleet`), 6 meta sweeps (`hot` / `quick` / `ship` / `session` / `tidy` / `all`), 7 reflective passes (`risk` / `surface` / `wrap` / `skipped` / `assumed` / `approach` / `cold`), scope modifiers (`branch` / `staged` / `file <path>`).
-- Added AI Notes line documenting trigger-name vs repo-path collisions: `docs` (folder), `tests` (npm script), `config`/`types`/`db` (`src/` subfolders), `patterns` (Dexie table), `state`. Precedence rule: standalone message = trigger; in-sentence/path = literal noun; ambiguous = ask.
-- Confirm checks pass: exactly one `## Triggers` heading, all 8 group tables present, no leftover `rev`/`aud`/`start`/`go` references.
+- Replaced "household cashflow" / "personal finance" / "personal budget" language across 10 files (README, USER_GUIDE, PRODUCT_DEFINITION, TESTING_GUIDE, FORECASTING_RESEARCH, WorkspaceForm placeholder, demoData workspace name, forecast.ts comment, patterns.ts comments, useTagSuggestions.ts comment).
+- Demo workspace display name: `Demo Household` → `Demo Workspace`. Internal id `demo-household` kept as-is — never user-visible and changing it would re-seed the dev's existing install (creating a duplicate).
+- WorkspaceForm name placeholder: `e.g. Household, Side Hustle, Wedding` → `e.g. Main Account, Freelance, Project Budget`. Three contexts, none exclusively personal.
+- README / USER_GUIDE / PRODUCT_DEFINITION: lead with "tracking cashflow" followed by a multi-context list (`household, freelance, small business, project budget, side hustle`) so "household" survives ONLY as one item in a breadth-list, never as the framing.
+- LICENSE untouched — CC license boilerplate, not project copy.
+- Demo transaction data (salary/rent/groceries) kept as-is. It's recognisable to most readers and demonstrates the FEATURES (recurring vs once-off, fixed vs variable, monthly cadence), not a statement of audience.
+- Added positioning rule to CLAUDE.md AI Notes so future sessions don't reintroduce "personal/household only" framing. Rule covers ALL surfaces (docs, code comments, in-app strings, commit messages, marketing copy, conversational descriptions).
 
 ## Current state
 
-ICON_CACHE_BUST: complete (core plumbing + OS-cache reinstall banner + 10/10 tripwire tests passing). Triggers section: aligned with glow-props verbatim. CLAUDE.md grew from 11 sections to 11 (no count change — section was replaced in place).
-
-Branch: `claude/complete-icon-cache-bust-X0wpf` (now carries both icon-cache-bust completion AND the triggers replacement).
+Branch: `claude/lucid-fermat-501d0n`. One commit covering all 11 files. Verified by grep that the only surviving `household`/`personal finance` mentions are intentional: multi-context lists, LICENSE boilerplate, and the internal `demo-household` id constant.
 
 ## Key context
 
-- Two unrelated tasks landed on this branch — branch name is from the first task; the triggers replacement was added in a second commit. The branch name is misleading but the task instructions explicitly named this branch.
-- Trigger collisions to watch: when reading `## Triggers` against this repo, `docs`/`tests`/`config`/`db`/`types`/`patterns`/`state` all match repo paths or scripts. If a future trigger run is ambiguous, ask.
-- The `index.html` literal-href test list must mirror `REPLACEMENTS` in `vite.config.ts` `iconCacheBustHtml()`. If new icon `<link>` tags are added to `index.html`, both lists need updating.
-- Test runner is `vitest` (not `node:test`) — `vitest`'s `expect`/`describe`/`it` map cleanly onto the pattern doc's `node:test` structure.
-- `npm install` is required before running tests in a fresh checkout — `node_modules/.bin/vitest` and `node_modules/.bin/vite` aren't shipped in the repo.
+- The positioning is now: **general cashflow tracker, works for any context**. Mix examples when needed; never lead with "personal" or "household."
+- The demo data still LOOKS household-flavored (salary, rent, groceries, Netflix, gym, medical aid, fuel, Uber, Takealot) — this is illustrative of features, not positioning. If we later want to rebuild the demo to mix business-flavor transactions (invoice income, software subs, contractor payments), that's a separate task.
+- Internal id `demo-household` is intentionally left unchanged — renaming it would re-seed existing installs.
+- The CLAUDE.md positioning note is the durable record. Future sessions reading CLAUDE.md will see it before doing any work.

@@ -7,7 +7,7 @@
  * Approach: Group by description similarity, calculate median interval between
  *   occurrences, map to nearest standard frequency, detect preferred anchor day.
  * Alternatives:
- *   - ML clustering: Rejected — overkill for personal finance, small datasets
+ *   - ML clustering: Rejected — overkill for small datasets
  *   - User manually picks frequency: Complementary — auto-detect first, allow override
  */
 
@@ -19,7 +19,7 @@ import { debugLog } from '@/debug/debugLog'
 /**
  * Coefficient of variation (stddev / mean) threshold above which a recurring item
  * is classified as "variable" rather than "fixed". 0.3 (30% variance) was chosen
- * from analysis of typical household expenses — rent/subscriptions are <10% CV,
+ * from analysis of typical recurring expenses — rent/subscriptions are <10% CV,
  * while utility bills commonly range 20-40%.
  */
 const VARIABLE_CV_THRESHOLD = 0.3

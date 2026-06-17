@@ -8,7 +8,7 @@ Everything you need to know about using Farlume to track and forecast your spend
 
 Farlume is a cashflow tracking tool that runs entirely on your device. No accounts, no cloud, no sign-ups. Your data stays in your browser and never leaves your device.
 
-When you first open the app, a **Demo Household** workspace is created automatically with realistic sample data — salary, rent, groceries, and more. This lets you explore all the features before creating your own workspace.
+When you first open the app, a **Demo Workspace** is created automatically with realistic sample data — recurring income, fixed and variable expenses, ad-hoc spending. This lets you explore all the features before creating your own workspace.
 
 You can also reopen the tutorial any time from the **menu** (hamburger icon) in the top-right corner.
 
@@ -22,7 +22,7 @@ A workspace is the top-level container for your transactions, recurring patterns
 
 1. From the home screen, click **New Workspace** (or **Create your first workspace** if you have none yet)
 2. Fill in the form:
-   - **Workspace name** — Give it a meaningful name (e.g. "Household", "Side Business")
+   - **Workspace name** — Give it a meaningful name (e.g. "Main Account", "Freelance", "Project Budget")
    - **Currency symbol** — The symbol shown next to amounts (e.g. "R", "$", "€"). Display only — doesn't do conversions
    - **Period type** — Choose **Monthly** (rolling view) or **Custom dates** (fixed start and end dates)
    - **Start date** / **End date** — Only shown for custom-date workspaces. End date is optional

@@ -86,7 +86,7 @@ function handleSubmit() {
         v-model="name"
         type="text"
         class="input input-bordered w-full text-base min-h-[44px]"
-        placeholder="e.g. Household, Side Hustle, Wedding"
+        placeholder="e.g. Main Account, Freelance, Project Budget"
         autofocus
       />
       <p v-if="errors['name']" class="text-sm text-error mt-1">{{ errors['name'] }}</p>

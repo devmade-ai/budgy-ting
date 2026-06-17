@@ -1,13 +1,13 @@
 # Farlume
 
-A local-first progressive web app for tracking household cashflow. Create workspaces, import bank statements, detect recurring spending patterns, and forecast your cashflow with statistical models.
+A local-first progressive web app for tracking cashflow — for any context: household, freelance, small business, project budget, side hustle. Create workspaces, import bank statements, detect recurring spending patterns, and forecast your cashflow with statistical models.
 
 All data lives on-device using IndexedDB. No authentication, no server. Exportable as JSON for backup or re-import.
 
 ## Features
 
 - **Workspace management** — Create, edit, delete workspaces with monthly or custom date ranges
-- **Demo workspace** — Auto-seeded realistic household data on first visit to explore features immediately
+- **Demo workspace** — Auto-seeded with realistic sample data on first visit to explore features immediately
 - **Transaction import** — Upload CSV/JSON bank statements with a 2-step wizard (upload, review & import)
 - **Recurring pattern detection** — Automatically groups similar transactions and detects frequency (daily, weekly, biweekly, monthly, quarterly, annually)
 - **Statistical forecasting** — Holt's double exponential smoothing with seasonal adjustments and confidence bands
