@@ -17,8 +17,6 @@
  */
 
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
-import { resolveThemeColor } from '@/composables/useThemeColor'
-import { useDarkMode } from '@/composables/useDarkMode'
 import {
   subscribe,
   getEntries,
@@ -32,9 +30,6 @@ const activeTab = ref<'log' | 'env' | 'pwa'>('log')
 const entries = ref<DebugEntry[]>([])
 const logContainer = ref<HTMLElement | null>(null)
 const copyFeedback = ref(false)
-
-// isDark triggers recompute of resolved colors when theme changes
-const { isDark } = useDarkMode()
 
 let unsubscribe: (() => void) | null = null
 let copyFeedbackTimer: ReturnType<typeof setTimeout> | null = null
@@ -71,42 +66,32 @@ const entryCount = computed(() => entries.value.length)
 const errorCount = computed(() => entries.value.filter((e) => e.severity === 'error').length)
 const warnCount = computed(() => entries.value.filter((e) => e.severity === 'warn').length)
 
-// ── Color mappings — resolved from DaisyUI theme tokens ──
-// Recompute when isDark changes (forces resolveThemeColor to re-read CSS vars)
+// ── Color mappings — fixed dev palette ──
+// The debug pill is a theme-independent dark overlay (CSS-independent by design),
+// so category/severity colors are constant, distinct hues rather than theme tokens.
+const sourceColors: Record<string, string> = {
+  boot: '#9333ea',
+  db: '#2563eb',
+  pwa: '#0d9488',
+  import: '#d97706',
+  engine: '#4f46e5',
+  ml: '#ea580c',
+  global: '#9ca3af',
+}
 
-const sourceColors = computed(() => {
-  // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-  isDark.value // dependency — triggers recompute on theme change
-  return {
-    boot: resolveThemeColor('--color-secondary', '#9333ea'),
-    db: resolveThemeColor('--color-info', '#2563eb'),
-    pwa: resolveThemeColor('--color-accent', '#0d9488'),
-    import: resolveThemeColor('--color-warning', '#d97706'),
-    engine: resolveThemeColor('--color-primary', '#4f46e5'),
-    ml: resolveThemeColor('--color-error', '#ea580c'),
-    global: resolveThemeColor('--color-base-content', '#6b7280'),
-  } as Record<string, string>
-})
+const severityColors: Record<string, string> = {
+  info: '#9ca3af',
+  success: '#16a34a',
+  warn: '#ca8a04',
+  error: '#dc2626',
+}
 
-const severityColors = computed(() => {
-  isDark.value
-  return {
-    info: resolveThemeColor('--color-base-content', '#6b7280'),
-    success: resolveThemeColor('--color-success', '#16a34a'),
-    warn: resolveThemeColor('--color-warning', '#ca8a04'),
-    error: resolveThemeColor('--color-error', '#dc2626'),
-  } as Record<string, string>
-})
-
-const statusIndicators = computed(() => {
-  isDark.value
-  return {
-    pass: { symbol: 'OK', color: resolveThemeColor('--color-success', '#16a34a') },
-    fail: { symbol: 'FAIL', color: resolveThemeColor('--color-error', '#dc2626') },
-    warn: { symbol: 'WARN', color: resolveThemeColor('--color-warning', '#ca8a04') },
-    running: { symbol: '...', color: resolveThemeColor('--color-base-content', '#6b7280') },
-  } as Record<string, { symbol: string; color: string }>
-})
+const statusIndicators: Record<string, { symbol: string; color: string }> = {
+  pass: { symbol: 'OK', color: '#16a34a' },
+  fail: { symbol: 'FAIL', color: '#dc2626' },
+  warn: { symbol: 'WARN', color: '#ca8a04' },
+  running: { symbol: '...', color: '#9ca3af' },
+}
 
 function formatTime(ts: number): string {
   const t = new Date(ts)
