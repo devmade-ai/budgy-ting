@@ -307,6 +307,7 @@ async function handleRequestSuggestions(id: string, description: string) {
           step="0.01"
           placeholder="0.00"
           :aria-label="`Cash on hand in ${workspace.currencyLabel}`"
+          aria-describedby="cash-on-hand-hint"
           class="fl-input fl-input--bare fl-input--num w-32 text-base min-h-[44px] no-print"
         />
         <!-- Print-only: static value replaces the interactive input -->
@@ -320,6 +321,13 @@ async function handleRequestSuggestions(id: string, description: string) {
       <span v-else-if="runway" class="text-sm text-pos">
         Projected <span class="fl-num">{{ workspace.currencyLabel }}{{ formatAmount(runway.endBalance) }}</span>
       </span>
+      <!-- Hint: cash-on-hand is the anchor for the whole Balance chart + runway date, so
+           nudge users to keep it current — that's where the chart's accuracy comes from.
+           w-full makes it wrap to its own line within the flex-wrap row; no-print + tied to
+           the input via aria-describedby. -->
+      <p id="cash-on-hand-hint" class="w-full text-xs text-ink-muted no-print">
+        Your balance chart and forecast build from this figure — keep it up to date for an accurate picture.
+      </p>
     </div>
 
     <!-- Cashflow graph -->

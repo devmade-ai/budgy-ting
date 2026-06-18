@@ -20,7 +20,7 @@
 
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import VueApexCharts from 'vue3-apexcharts'
-import { LineChart } from 'lucide-vue-next'
+import { LineChart, Info } from 'lucide-vue-next'
 import { useDarkMode } from '@/composables/useDarkMode'
 import { resolveThemeColor } from '@/composables/useThemeColor'
 import type { Transaction } from '@/types/models'
@@ -514,6 +514,18 @@ const chartSummary = computed(() => {
         :series="series"
         aria-hidden="true"
       />
+      <!-- Honesty note: the history half of the Balance line is reconstructed — the app
+           stores transactions + a single cash-on-hand figure, never past balances, so it
+           works backward from today's cash. A continuous line LOOKS like recorded fact;
+           this flags that it's derived (and thus only as good as the data) without a
+           scary banner. Shown only when there's a real cash anchor and history to derive. -->
+      <p
+        v-if="chartMode === 'balance' && balanceAnchor != null && actualPoints.length > 0"
+        class="flex items-start gap-1.5 text-xs text-ink-muted mt-2 no-print"
+      >
+        <Info :size="13" class="text-ink-faint shrink-0 mt-0.5" aria-hidden="true" />
+        <span>Past balance is worked out from your cash on hand and your transactions, so it's only as accurate as your records.</span>
+      </p>
     </div>
     <div v-else class="text-center py-12">
       <LineChart :size="36" class="text-ink-faint mx-auto mb-3" aria-hidden="true" />
