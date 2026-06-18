@@ -1,41 +1,44 @@
 /**
- * Requirement: DaisyUI theme combos for dark/light mode switching
- * Approach: Named combos (Approach B from glow-props THEME_DARK_MODE.md).
- *   Each combo pairs a light and dark DaisyUI theme. Users pick a combo,
- *   toggling dark/light switches between the paired themes.
- * Why combos over per-mode independent: Utility app — full theme picker
- *   would overwhelm users. Curated pairs are pre-vetted to look good.
- * Reference: glow-props docs/implementations/THEME_DARK_MODE.md
+ * Requirement: Light/dark theme switching for the Farlume design system.
+ * Approach: A single brand combo pairs the Farlume light + dark token themes.
+ *   `light`/`dark` are the values written to the <html data-theme> attribute;
+ *   the Farlume token layer (src/styles/tokens/colors.css) keys dark mode off
+ *   [data-theme="dark"] and treats anything else as light (:root defaults).
+ * Why a combo (not a bare boolean): keeps the existing useDarkMode plumbing,
+ *   cross-tab sync, and meta-color logic intact, and leaves room for more
+ *   brand palettes later without a rewrite.
+ *
+ * Sync points when changing theme names / colors:
+ *   1. this file (source of truth)
+ *   2. index.html flash-prevention script (vanilla JS, must mirror this)
+ *   3. vite.config.ts manifest theme_color (must match the light status-bar color)
  */
 
 export interface ThemeCombo {
   id: string
   label: string
+  /** data-theme value for light mode (anything but "dark" = light tokens). */
   light: string
+  /** data-theme value for dark mode (must be "dark" to trigger the dark scope). */
   dark: string
-  /** PWA status bar hex color for light mode — computed from DaisyUI theme oklch values */
+  /** PWA status-bar color, light mode — Farlume paper (surface-app). */
   metaColorLight: string
-  /** PWA status bar hex color for dark mode — computed from DaisyUI theme oklch values */
+  /** PWA status-bar color, dark mode — Farlume deep ink (surface-app). */
   metaColorDark: string
 }
 
 export const themeCombos: ThemeCombo[] = [
   {
-    id: 'vivid',
-    label: 'Vivid',
-    light: 'cmyk',
-    dark: 'night',
-    metaColorLight: '#45aeee',
-    metaColorDark: '#0f172a',
+    id: 'farlume',
+    label: 'Farlume',
+    light: 'light',
+    dark: 'dark',
+    metaColorLight: '#F4F0E8',
+    metaColorDark: '#0F1217',
   },
-  // To add more combos:
-  // 1. Add entry here
-  // 2. Register both DaisyUI theme names in src/index.css @plugin "daisyui" { themes: ... }
-  // 3. Add to index.html flash prevention script combos object (vanilla JS, must mirror this file)
-  // 4. Update vite.config.ts manifest theme_color if changing the default
 ]
 
-export const DEFAULT_COMBO = 'vivid'
+export const DEFAULT_COMBO = 'farlume'
 
 const comboIds = new Set(themeCombos.map(c => c.id))
 

@@ -206,28 +206,20 @@ function acceptAllSuggestions() {
 
 <template>
   <Teleport to="body">
-    <div class="modal modal-open z-[60]">
-      <!-- Backdrop -->
-      <div
-        class="modal-backdrop"
-        aria-hidden="true"
-        @click="requestClose"
-      />
-
-      <!-- Dialog — max-h + overflow-y-auto keeps long edit forms scrollable on
-           small phones. Without explicit overflow, DaisyUI's modal-box clips
-           content at 90vh and traps the user. -->
+    <div class="fl-overlay z-[60]" @click.self="requestClose">
+      <!-- Dialog — max-h keeps long edit forms scrollable on small phones; the
+           fl-dialog body scrolls internally so the dialog never traps the user. -->
       <div
         ref="dialogRef"
         role="dialog"
         :aria-label="editing ? 'Edit transaction' : 'Transaction details'"
         aria-modal="true"
-        class="modal-box max-w-md max-h-[90vh] overflow-y-auto p-4 sm:p-5"
+        class="fl-dialog fl-dialog--lg max-w-md"
       >
         <!-- Close button -->
         <!-- Mobile UX: 40x40px touch target for close button (was 18px icon with no padding) -->
         <button
-          class="absolute top-2 right-2 w-10 h-10 rounded-full flex items-center justify-center text-base-content/40 hover:text-base-content/70 hover:bg-base-200 transition-colors"
+          class="fl-dialog__x absolute top-2 right-2 w-10 h-10"
           aria-label="Close"
           @click="requestClose"
         >
@@ -236,85 +228,94 @@ function acceptAllSuggestions() {
 
         <!-- ── Read-only view ── -->
         <template v-if="!editing">
-          <h3 class="text-lg font-semibold text-base-content mb-4">Transaction details</h3>
+          <div class="fl-dialog__head">
+            <h3 class="fl-dialog__title">Transaction details</h3>
+          </div>
 
-          <div class="space-y-3">
-            <div>
-              <span class="text-xs text-base-content/60 uppercase tracking-wide">Description</span>
-              <p class="text-sm text-base-content mt-0.5">{{ transaction.description }}</p>
-            </div>
-
-            <div class="flex gap-6">
+          <div class="fl-dialog__body">
+            <div class="space-y-3">
               <div>
-                <span class="text-xs text-base-content/60 uppercase tracking-wide">Date</span>
-                <p class="text-sm text-base-content mt-0.5">{{ formatDateForDisplay(transaction.date, 'numeric') }}</p>
+                <span class="fl-eyebrow">Description</span>
+                <p class="text-sm text-ink mt-0.5">{{ transaction.description }}</p>
               </div>
+
+              <div class="flex gap-6">
+                <div>
+                  <span class="fl-eyebrow">Date</span>
+                  <p class="fl-num text-sm text-ink mt-0.5">{{ formatDateForDisplay(transaction.date, 'numeric') }}</p>
+                </div>
+                <div>
+                  <span class="fl-eyebrow">Type</span>
+                  <p class="text-sm text-ink mt-0.5">
+                    {{ transaction.classification === 'recurring' ? 'Recurring' : 'Once-off' }}
+                  </p>
+                </div>
+              </div>
+
               <div>
-                <span class="text-xs text-base-content/60 uppercase tracking-wide">Type</span>
-                <p class="text-sm text-base-content mt-0.5">
-                  {{ transaction.classification === 'recurring' ? 'Recurring' : 'Once-off' }}
+                <span class="fl-eyebrow">Amount</span>
+                <p
+                  class="fl-num text-sm font-semibold mt-0.5"
+                  :class="isIncome(transaction.amount) ? 'text-pos' : 'text-neg'"
+                >
+                  {{ isIncome(transaction.amount) ? '+' : '-' }}{{ currencyLabel }}{{ formatAmount(Math.abs(transaction.amount)) }}
                 </p>
               </div>
-            </div>
 
-            <div>
-              <span class="text-xs text-base-content/60 uppercase tracking-wide">Amount</span>
-              <p
-                class="text-sm font-semibold mt-0.5"
-                :class="isIncome(transaction.amount) ? 'text-success' : 'text-error'"
-              >
-                {{ isIncome(transaction.amount) ? '+' : '-' }}{{ currencyLabel }}{{ formatAmount(Math.abs(transaction.amount)) }}
-              </p>
-            </div>
-
-            <div>
-              <span class="text-xs text-base-content/60 uppercase tracking-wide">Tags</span>
-              <div class="flex flex-wrap items-center gap-1.5 mt-1">
-                <span
-                  v-for="tag in transaction.tags"
-                  :key="tag"
-                  class="badge badge-ghost badge-sm"
-                >
-                  {{ tag }}
-                </span>
-                <span v-if="transaction.tags.length === 0" class="text-xs text-base-content/60 italic">
-                  No tags
-                </span>
+              <div>
+                <span class="fl-eyebrow">Tags</span>
+                <div class="flex flex-wrap items-center gap-1.5 mt-1">
+                  <span
+                    v-for="tag in transaction.tags"
+                    :key="tag"
+                    class="fl-tag fl-tag--sm"
+                  >
+                    {{ tag }}
+                  </span>
+                  <span v-if="transaction.tags.length === 0" class="text-xs text-ink-muted italic">
+                    No tags
+                  </span>
+                </div>
               </div>
             </div>
           </div>
 
           <!-- Action buttons — read-only mode -->
-          <div class="flex gap-3 mt-5">
+          <div class="fl-dialog__foot flex-col !items-stretch gap-2">
+            <div class="flex gap-3">
+              <button
+                class="fl-btn fl-btn--ghost flex-1"
+                @click="emit('close')"
+              >
+                Close
+              </button>
+              <button
+                class="fl-btn fl-btn--primary flex-1"
+                @click="editing = true"
+              >
+                Edit
+              </button>
+            </div>
             <button
-              class="btn btn-ghost flex-1"
-              @click="emit('close')"
+              class="w-full text-xs text-ink-faint hover:text-neg transition-colors py-1"
+              @click="showDeleteConfirm = true"
             >
-              Close
-            </button>
-            <button
-              class="btn btn-primary flex-1"
-              @click="editing = true"
-            >
-              Edit
+              Delete transaction
             </button>
           </div>
-          <button
-            class="w-full mt-2 text-xs text-base-content/40 hover:text-error transition-colors py-1"
-            @click="showDeleteConfirm = true"
-          >
-            Delete transaction
-          </button>
         </template>
 
         <!-- ── Edit mode ── -->
         <template v-else>
-          <h3 class="text-lg font-semibold text-base-content mb-4">Edit transaction</h3>
+          <div class="fl-dialog__head">
+            <h3 class="fl-dialog__title">Edit transaction</h3>
+          </div>
 
-          <div class="space-y-4">
+          <div class="fl-dialog__body">
+            <div class="space-y-4">
             <!-- Description -->
             <div>
-              <label :for="`${uid}-desc`" class="text-sm text-base-content/70 mb-1 block">Description</label>
+              <label :for="`${uid}-desc`" class="text-sm text-ink-soft mb-1 block">Description</label>
               <input
                 :id="`${uid}-desc`"
                 ref="descInputRef"
@@ -322,13 +323,14 @@ function acceptAllSuggestions() {
                 type="text"
                 :aria-invalid="validationField === 'description' || undefined"
                 :aria-describedby="validationField === 'description' ? `${uid}-err` : undefined"
-                class="input input-bordered w-full text-base min-h-[44px]"
+                class="fl-input fl-input--bare min-h-[44px]"
+                :class="{ 'fl-input--invalid': validationField === 'description' }"
               />
             </div>
 
             <!-- Date -->
             <div>
-              <label :for="`${uid}-date`" class="text-sm text-base-content/70 mb-1 block">Date</label>
+              <label :for="`${uid}-date`" class="text-sm text-ink-soft mb-1 block">Date</label>
               <input
                 :id="`${uid}-date`"
                 ref="dateInputRef"
@@ -336,14 +338,15 @@ function acceptAllSuggestions() {
                 type="date"
                 :aria-invalid="validationField === 'date' || undefined"
                 :aria-describedby="validationField === 'date' ? `${uid}-err` : undefined"
-                class="input input-bordered w-full text-base min-h-[44px]"
+                class="fl-input fl-input--bare fl-input--num min-h-[44px]"
+                :class="{ 'fl-input--invalid': validationField === 'date' }"
               />
             </div>
 
             <!-- Amount + Direction -->
             <div class="flex gap-3">
               <div class="flex-1">
-                <label :for="`${uid}-amount`" class="text-sm text-base-content/70 mb-1 block">Amount ({{ currencyLabel }})</label>
+                <label :for="`${uid}-amount`" class="text-sm text-ink-soft mb-1 block">Amount ({{ currencyLabel }})</label>
                 <input
                   :id="`${uid}-amount`"
                   ref="amountInputRef"
@@ -354,15 +357,16 @@ function acceptAllSuggestions() {
                   step="0.01"
                   :aria-invalid="validationField === 'amount' || undefined"
                   :aria-describedby="validationField === 'amount' ? `${uid}-err` : undefined"
-                  class="input input-bordered w-full text-base min-h-[44px]"
+                  class="fl-input fl-input--bare fl-input--num min-h-[44px]"
+                  :class="{ 'fl-input--invalid': validationField === 'amount' }"
                 />
               </div>
               <div class="w-32">
-                <label :for="`${uid}-dir`" class="text-sm text-base-content/70 mb-1 block">Direction</label>
+                <label :for="`${uid}-dir`" class="text-sm text-ink-soft mb-1 block">Direction</label>
                 <select
                   :id="`${uid}-dir`"
                   v-model="localIsIncome"
-                  class="select select-bordered w-full text-base min-h-[44px]"
+                  class="fl-select-el min-h-[44px]"
                 >
                   <option :value="false">Expense</option>
                   <option :value="true">Income</option>
@@ -372,11 +376,11 @@ function acceptAllSuggestions() {
 
             <!-- Classification -->
             <div>
-              <label :for="`${uid}-type`" class="text-sm text-base-content/70 mb-1 block">Type</label>
+              <label :for="`${uid}-type`" class="text-sm text-ink-soft mb-1 block">Type</label>
               <select
                 :id="`${uid}-type`"
                 v-model="localClassification"
-                class="select select-bordered w-full text-base min-h-[44px]"
+                class="fl-select-el min-h-[44px]"
               >
                 <option value="recurring">Recurring</option>
                 <option value="once-off">Once-off</option>
@@ -385,12 +389,12 @@ function acceptAllSuggestions() {
 
             <!-- Tags -->
             <div>
-              <label :for="`${uid}-tags`" class="text-sm text-base-content/70 mb-1 block">Tags</label>
+              <label :for="`${uid}-tags`" class="text-sm text-ink-soft mb-1 block">Tags</label>
               <div class="flex flex-wrap items-center gap-1.5 mb-2">
                 <span
                   v-for="tag in localTags"
                   :key="tag"
-                  class="inline-flex items-center gap-1 text-xs bg-info/10 text-info rounded pl-2 pr-0.5 py-0.5"
+                  class="fl-tag fl-tag--info"
                 >
                   {{ tag }}
                   <!-- Mobile UX: 28×28 touch target (was 20×20; 20px is below the
@@ -398,14 +402,14 @@ function acceptAllSuggestions() {
                        in the app — 28 keeps chip compactness without sacrificing
                        reliable tappability). -->
                   <button
-                    class="w-7 h-7 flex items-center justify-center opacity-60 hover:opacity-100 rounded-full hover:bg-info/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-info transition-colors"
+                    class="fl-tag__x w-7 h-7 focus:outline-none focus-visible:ring-2 focus-visible:ring-info"
                     :aria-label="`Remove ${tag}`"
                     @click="removeTag(tag)"
                   >
                     <X :size="14" aria-hidden="true" />
                   </button>
                 </span>
-                <span v-if="localTags.length === 0" class="text-xs text-base-content/60 italic">
+                <span v-if="localTags.length === 0" class="text-xs text-ink-muted italic">
                   No tags
                 </span>
               </div>
@@ -420,12 +424,12 @@ function acceptAllSuggestions() {
               />
               <div
                 v-if="suggestionsLoading"
-                class="flex items-center gap-1 mt-1 text-xs text-base-content/60"
+                class="flex items-center gap-1 mt-1 text-xs text-ink-muted"
                 role="status"
                 aria-live="polite"
                 aria-busy="true"
               >
-                <span class="loading loading-spinner loading-xs" aria-hidden="true" />
+                <span class="fl-spinner fl-spinner--sm" aria-hidden="true" />
                 Suggesting tags...
               </div>
 
@@ -433,11 +437,11 @@ function acceptAllSuggestions() {
                    Matches the retry pattern in ImportStepReview so users see a way forward. -->
               <div
                 v-else-if="suggestionsError && filteredSuggestions.length === 0"
-                class="flex items-center gap-2 mt-1 text-xs text-base-content/60"
+                class="flex items-center gap-2 mt-1 text-xs text-ink-muted"
               >
                 <span>Suggestions unavailable.</span>
                 <button
-                  class="inline-flex items-center gap-1 text-primary hover:underline"
+                  class="inline-flex items-center gap-1 text-accent hover:underline"
                   type="button"
                   @click="emit('retrySuggestions')"
                 >
@@ -453,7 +457,7 @@ function acceptAllSuggestions() {
                   v-model="tagInput"
                   type="text"
                   placeholder="Add a tag..."
-                  class="input input-bordered w-full text-base min-h-[44px]"
+                  class="fl-input fl-input--bare min-h-[44px]"
                   role="combobox"
                   :aria-expanded="showAutocomplete"
                   aria-autocomplete="list"
@@ -468,7 +472,7 @@ function acceptAllSuggestions() {
                   v-if="showAutocomplete"
                   :id="`${uid}-taglist`"
                   role="listbox"
-                  class="absolute z-10 left-0 right-0 bottom-full mb-0.5 bg-base-100 border border-base-300 rounded shadow-lg max-h-40 overflow-y-auto"
+                  class="absolute z-10 left-0 right-0 bottom-full mb-0.5 bg-card border border-line-2 rounded-md shadow-lg max-h-40 overflow-y-auto"
                 >
                   <li
                     v-for="(result, i) in autocompleteResults"
@@ -476,8 +480,8 @@ function acceptAllSuggestions() {
                     :key="result"
                     role="option"
                     :aria-selected="i === selectedIndex"
-                    class="text-sm px-3 py-2 hover:bg-primary/10 cursor-pointer text-base-content"
-                    :class="{ 'bg-primary/10': i === selectedIndex }"
+                    class="text-sm px-3 py-2 hover:bg-accent-soft cursor-pointer text-ink"
+                    :class="{ 'bg-accent-soft': i === selectedIndex }"
                     @mousedown.prevent="addTag(result)"
                   >
                     {{ result }}
@@ -485,39 +489,43 @@ function acceptAllSuggestions() {
                 </ul>
                 <p
                   v-else-if="tagInput.length > 0 && autocompleteResults.length === 0"
-                  class="text-xs text-base-content/60 mt-1"
+                  class="text-xs text-ink-muted mt-1"
                 >
                   No matching tags — press Enter to create "{{ tagInput }}"
                 </p>
               </div>
             </div>
           </div>
+          </div>
 
-          <!-- Validation error — role="alert" auto-announces on insert for screen readers.
-               Paired with aria-describedby on the failing input above. -->
-          <p
-            v-if="validationError"
-            :id="`${uid}-err`"
-            role="alert"
-            class="text-sm text-error mt-4"
-          >
-            {{ validationError }}
-          </p>
+          <!-- Action buttons — edit mode. Validation error sits above the row so
+               role="alert" stays adjacent to the failing field's describedby. -->
+          <div class="fl-dialog__foot flex-col !items-stretch gap-3">
+            <!-- Validation error — role="alert" auto-announces on insert for screen readers.
+                 Paired with aria-describedby on the failing input above. -->
+            <p
+              v-if="validationError"
+              :id="`${uid}-err`"
+              role="alert"
+              class="text-sm text-neg"
+            >
+              {{ validationError }}
+            </p>
 
-          <!-- Action buttons — edit mode -->
-          <div class="flex gap-3 mt-4">
-            <button
-              class="btn btn-ghost flex-1"
-              @click="requestCancelEdit"
-            >
-              Cancel
-            </button>
-            <button
-              class="btn btn-primary flex-1"
-              @click="handleSave"
-            >
-              Save
-            </button>
+            <div class="flex gap-3">
+              <button
+                class="fl-btn fl-btn--ghost flex-1"
+                @click="requestCancelEdit"
+              >
+                Cancel
+              </button>
+              <button
+                class="fl-btn fl-btn--primary flex-1"
+                @click="handleSave"
+              >
+                Save
+              </button>
+            </div>
           </div>
         </template>
       </div>

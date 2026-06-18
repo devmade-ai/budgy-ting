@@ -17,8 +17,6 @@
  */
 
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
-import { resolveThemeColor } from '@/composables/useThemeColor'
-import { useDarkMode } from '@/composables/useDarkMode'
 import {
   subscribe,
   getEntries,
@@ -32,9 +30,6 @@ const activeTab = ref<'log' | 'env' | 'pwa'>('log')
 const entries = ref<DebugEntry[]>([])
 const logContainer = ref<HTMLElement | null>(null)
 const copyFeedback = ref(false)
-
-// isDark triggers recompute of resolved colors when theme changes
-const { isDark } = useDarkMode()
 
 let unsubscribe: (() => void) | null = null
 let copyFeedbackTimer: ReturnType<typeof setTimeout> | null = null
@@ -71,42 +66,32 @@ const entryCount = computed(() => entries.value.length)
 const errorCount = computed(() => entries.value.filter((e) => e.severity === 'error').length)
 const warnCount = computed(() => entries.value.filter((e) => e.severity === 'warn').length)
 
-// ── Color mappings — resolved from DaisyUI theme tokens ──
-// Recompute when isDark changes (forces resolveThemeColor to re-read CSS vars)
+// ── Color mappings — fixed dev palette ──
+// The debug pill is a theme-independent dark overlay (CSS-independent by design),
+// so category/severity colors are constant, distinct hues rather than theme tokens.
+const sourceColors: Record<string, string> = {
+  boot: '#9333ea',
+  db: '#2563eb',
+  pwa: '#0d9488',
+  import: '#d97706',
+  engine: '#4f46e5',
+  ml: '#ea580c',
+  global: '#9ca3af',
+}
 
-const sourceColors = computed(() => {
-  // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-  isDark.value // dependency — triggers recompute on theme change
-  return {
-    boot: resolveThemeColor('--color-secondary', '#9333ea'),
-    db: resolveThemeColor('--color-info', '#2563eb'),
-    pwa: resolveThemeColor('--color-accent', '#0d9488'),
-    import: resolveThemeColor('--color-warning', '#d97706'),
-    engine: resolveThemeColor('--color-primary', '#4f46e5'),
-    ml: resolveThemeColor('--color-error', '#ea580c'),
-    global: resolveThemeColor('--color-base-content', '#6b7280'),
-  } as Record<string, string>
-})
+const severityColors: Record<string, string> = {
+  info: '#9ca3af',
+  success: '#16a34a',
+  warn: '#ca8a04',
+  error: '#dc2626',
+}
 
-const severityColors = computed(() => {
-  isDark.value
-  return {
-    info: resolveThemeColor('--color-base-content', '#6b7280'),
-    success: resolveThemeColor('--color-success', '#16a34a'),
-    warn: resolveThemeColor('--color-warning', '#ca8a04'),
-    error: resolveThemeColor('--color-error', '#dc2626'),
-  } as Record<string, string>
-})
-
-const statusIndicators = computed(() => {
-  isDark.value
-  return {
-    pass: { symbol: 'OK', color: resolveThemeColor('--color-success', '#16a34a') },
-    fail: { symbol: 'FAIL', color: resolveThemeColor('--color-error', '#dc2626') },
-    warn: { symbol: 'WARN', color: resolveThemeColor('--color-warning', '#ca8a04') },
-    running: { symbol: '...', color: resolveThemeColor('--color-base-content', '#6b7280') },
-  } as Record<string, { symbol: string; color: string }>
-})
+const statusIndicators: Record<string, { symbol: string; color: string }> = {
+  pass: { symbol: 'OK', color: '#16a34a' },
+  fail: { symbol: 'FAIL', color: '#dc2626' },
+  warn: { symbol: 'WARN', color: '#ca8a04' },
+  running: { symbol: '...', color: '#9ca3af' },
+}
 
 function formatTime(ts: number): string {
   const t = new Date(ts)
@@ -282,20 +267,20 @@ function toggle() {
     <!-- Collapsed pill -->
     <button
       v-if="!expanded"
-      class="bg-neutral text-neutral-content text-xs px-3 py-1.5 rounded-full border-none cursor-pointer shadow-lg flex items-center gap-1.5"
+      class="bg-[#15181d]text-white text-xs px-3 py-1.5 rounded-full border-none cursor-pointer shadow-lg flex items-center gap-1.5"
       @click="toggle"
     >
       <span>dbg</span>
-      <span class="text-neutral-content/50">{{ entryCount }}</span>
+      <span class="text-white/50">{{ entryCount }}</span>
       <span
         v-if="errorCount > 0"
-        class="bg-error text-error-content text-[10px] px-1.5 rounded-full leading-4"
+        class="bg-[#dc2626] text-white text-[10px] px-1.5 rounded-full leading-4"
       >
         {{ errorCount }}
       </span>
       <span
         v-if="warnCount > 0"
-        class="bg-warning text-warning-content text-[10px] px-1.5 rounded-full leading-4"
+        class="bg-[#d97706] text-white text-[10px] px-1.5 rounded-full leading-4"
       >
         {{ warnCount }}
       </span>
@@ -304,16 +289,16 @@ function toggle() {
     <!-- Expanded panel -->
     <div
       v-else
-      class="bg-neutral text-neutral-content rounded-xl shadow-2xl w-[calc(100vw-2rem)] max-w-[360px] max-h-[70vh] flex flex-col overflow-hidden"
+      class="bg-[#15181d]text-white rounded-xl shadow-2xl w-[calc(100vw-2rem)] max-w-[360px] max-h-[70vh] flex flex-col overflow-hidden"
     >
       <!-- Header -->
-      <div class="flex items-center justify-between px-3 py-2 border-b border-neutral-content/10">
+      <div class="flex items-center justify-between px-3 py-2 border-b border-white/10">
         <div class="flex gap-1">
           <button
             v-for="tab in (['log', 'env', 'pwa'] as const)"
             :key="tab"
             class="text-xs px-2 py-1 rounded border-none cursor-pointer transition-colors"
-            :class="activeTab === tab ? 'bg-neutral-content/20 text-neutral-content' : 'bg-transparent text-neutral-content/50'"
+            :class="activeTab === tab ? 'bg-white/15 text-white' : 'bg-transparent text-white/50'"
             @click="activeTab = tab"
           >
             {{ tab === 'log' ? 'Log' : tab === 'env' ? 'Env' : 'PWA' }}
@@ -321,19 +306,19 @@ function toggle() {
         </div>
         <div class="flex gap-1">
           <button
-            class="text-xs px-2 py-1 rounded border-none cursor-pointer bg-transparent text-neutral-content/50"
+            class="text-xs px-2 py-1 rounded border-none cursor-pointer bg-transparent text-white/50"
             @click="copyReport"
           >
             {{ copyFeedback ? 'Copied!' : 'Copy' }}
           </button>
           <button
-            class="text-xs px-2 py-1 rounded border-none cursor-pointer bg-transparent text-neutral-content/50"
+            class="text-xs px-2 py-1 rounded border-none cursor-pointer bg-transparent text-white/50"
             @click="handleClear"
           >
             Clear
           </button>
           <button
-            class="text-xs px-2 py-1 rounded border-none cursor-pointer bg-transparent text-neutral-content/50"
+            class="text-xs px-2 py-1 rounded border-none cursor-pointer bg-transparent text-white/50"
             @click="toggle"
           >
             Close
@@ -347,7 +332,7 @@ function toggle() {
         ref="logContainer"
         class="flex-1 overflow-y-auto p-2 text-[11px] leading-relaxed min-h-[200px] max-h-[50vh]"
       >
-        <div v-if="entries.length === 0" class="text-neutral-content/40 text-center py-8">
+        <div v-if="entries.length === 0" class="text-white/40 text-center py-8">
           No entries yet
         </div>
         <div
@@ -355,11 +340,11 @@ function toggle() {
           :key="entry.id"
           class="px-1 py-0.5 flex gap-1.5 items-start rounded"
         >
-          <span class="text-neutral-content/40 shrink-0">{{ formatTime(entry.timestamp) }}</span>
+          <span class="text-white/40 shrink-0">{{ formatTime(entry.timestamp) }}</span>
           <span class="shrink-0" :style="{ color: sourceColors[entry.source] ?? '' }">[{{ entry.source }}]</span>
           <span :style="{ color: severityColors[entry.severity] ?? '' }" class="break-all">
             {{ entry.event }}
-            <span v-if="entry.details" class="text-neutral-content/40">
+            <span v-if="entry.details" class="text-white/40">
               {{ JSON.stringify(entry.details) }}
             </span>
           </span>
@@ -374,10 +359,10 @@ function toggle() {
         <div
           v-for="item in envData"
           :key="item.label"
-          class="flex justify-between py-1.5 border-b border-neutral-content/10"
+          class="flex justify-between py-1.5 border-b border-white/10"
         >
-          <span class="text-neutral-content/50 shrink-0">{{ item.label }}</span>
-          <span class="text-neutral-content/80 text-right min-w-0 truncate ml-2">{{ item.value }}</span>
+          <span class="text-white/50 shrink-0">{{ item.label }}</span>
+          <span class="text-white/80 text-right min-w-0 truncate ml-2">{{ item.value }}</span>
         </div>
       </div>
 
@@ -386,17 +371,17 @@ function toggle() {
         v-else
         class="flex-1 overflow-y-auto p-3 text-xs min-h-[200px] max-h-[50vh]"
       >
-        <div v-if="diagnostics.length === 0" class="text-neutral-content/40 text-center py-8">
+        <div v-if="diagnostics.length === 0" class="text-white/40 text-center py-8">
           Loading diagnostics...
         </div>
         <div
           v-for="diag in diagnostics"
           :key="diag.label"
-          class="flex justify-between items-center py-1.5 border-b border-neutral-content/10"
+          class="flex justify-between items-center py-1.5 border-b border-white/10"
         >
-          <span class="text-neutral-content/50 shrink-0">{{ diag.label }}</span>
+          <span class="text-white/50 shrink-0">{{ diag.label }}</span>
           <div class="flex items-center gap-2 min-w-0">
-            <span class="text-neutral-content/80 text-[11px] min-w-0 truncate">{{ diag.detail }}</span>
+            <span class="text-white/80 text-[11px] min-w-0 truncate">{{ diag.detail }}</span>
             <span
               class="font-bold text-[10px] min-w-[32px] text-right"
               :style="{ color: statusIndicators[diag.status]?.color ?? '' }"
@@ -407,7 +392,7 @@ function toggle() {
         </div>
         <button
           v-if="diagnostics.length > 0"
-          class="mt-3 text-[11px] px-2 py-1 rounded border-none cursor-pointer bg-neutral-content/10 text-neutral-content/50 w-full"
+          class="mt-3 text-[11px] px-2 py-1 rounded border-none cursor-pointer bg-white/10 text-white/50 w-full"
           @click="runDiagnostics"
         >
           Re-run diagnostics

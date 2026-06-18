@@ -53,13 +53,13 @@ function handleCancel() {
 <template>
   <div>
     <button
-      class="text-sm text-base-content/60 hover:text-base-content mb-4 flex items-center gap-1"
+      class="text-sm text-ink-muted hover:text-ink mb-4 flex items-center gap-1"
       @click="handleCancel"
     >
       <ArrowLeft :size="16" />
       Back
     </button>
-    <h1 class="text-2xl font-bold text-base-content mb-6">New Workspace</h1>
+    <h1 class="font-display text-2xl font-bold text-ink mb-6">New Workspace</h1>
     <ErrorAlert v-if="error" :message="error" @dismiss="error = ''" />
     <WorkspaceForm @submit="handleSubmit" @cancel="handleCancel" />
   </div>

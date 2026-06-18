@@ -1,11 +1,10 @@
 /**
- * Requirement: Read DaisyUI theme colors as hex for libraries that can't use CSS variables
- * Approach: getComputedStyle reads the resolved oklch value from <html>, then
+ * Requirement: Read Farlume theme tokens as hex for libraries that can't use CSS variables
+ * Approach: getComputedStyle reads the resolved color value from <html>, then
  *   a canvas 1x1 pixel converts it to hex via the browser's color engine.
- *   No manual oklch→sRGB math — the browser handles gamut mapping natively.
- * Why: ApexCharts config objects require hex/rgb strings. DaisyUI stores
- *   colors as oklch CSS custom properties that only resolve at render time.
- * Reference: glow-props docs/implementations/THEME_DARK_MODE.md
+ *   No manual color-space math — the browser handles gamut mapping natively.
+ * Why: ApexCharts config objects require hex/rgb strings. The Farlume tokens are
+ *   CSS custom properties (hex/rgba/color-mix) that only resolve at render time.
  */
 
 let canvas: HTMLCanvasElement | null = null
@@ -36,8 +35,8 @@ function cssColorToHex(cssColor: string, fallback: string): string {
 }
 
 /**
- * Read a DaisyUI CSS custom property from <html> and return it as a hex string.
- * @param prop - CSS property name including --, e.g. '--color-primary'
+ * Read a Farlume CSS custom property from <html> and return it as a hex string.
+ * @param prop - CSS property name including --, e.g. '--chart-forecast'
  * @param fallback - hex fallback if reading fails
  */
 export function resolveThemeColor(prop: string, fallback: string): string {

@@ -69,14 +69,14 @@ onUnmounted(() => {
         role="dialog"
         :aria-label="title"
         aria-modal="true"
-        class="absolute top-0 right-0 h-full w-[calc(100%-1rem)] sm:w-[calc(100%-2rem)] max-w-lg bg-base-100 shadow-xl transition-transform duration-200 flex flex-col"
+        class="absolute top-0 right-0 h-full w-[calc(100%-1rem)] sm:w-[calc(100%-2rem)] max-w-lg bg-card shadow-xl transition-transform duration-200 flex flex-col"
         :class="visible ? 'translate-x-0' : 'translate-x-full'"
       >
         <!-- Header -->
-        <div class="flex items-center justify-between px-5 py-4 border-b border-base-300 shrink-0">
-          <h2 class="text-lg font-semibold text-base-content">{{ title }}</h2>
+        <div class="flex items-center justify-between px-5 py-4 border-b border-line-2 shrink-0">
+          <h2 class="text-lg font-semibold text-ink">{{ title }}</h2>
           <button
-            class="w-8 h-8 rounded-full flex items-center justify-center text-base-content/40 hover:text-base-content/70 hover:bg-base-200 transition-colors"
+            class="fl-iconbtn fl-iconbtn--sm w-8 h-8 rounded-full"
             aria-label="Close"
             @click="handleClose"
           >

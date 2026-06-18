@@ -14,10 +14,8 @@ defineProps<{
 
 <template>
   <span
-    class="text-xs sm:text-sm px-1.5 py-0.5 rounded"
-    :class="classification === 'recurring'
-      ? 'bg-info/10 text-info'
-      : 'bg-base-200 text-base-content/60'"
+    class="fl-badge"
+    :class="classification === 'recurring' ? 'fl-badge--info' : 'fl-badge--neutral'"
   >
     {{ classification === 'recurring' ? 'Recurring' : 'Once-off' }}
   </span>

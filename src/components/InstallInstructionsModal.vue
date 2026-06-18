@@ -150,9 +150,8 @@ const instructions = computed<InstructionSet>(() => {
 //   dock) persist across browser site-data clears. An installed PWA that updated
 //   its icon still shows the old icon until the user uninstalls and reinstalls.
 // Approach: Platform-specific reinstall instructions in a collapsible. Uses
-//   native <details>/<summary> (works with DaisyUI `collapse` classes in v5,
-//   zero JS, accessible by default). Collapsed by default so first-time
-//   installers stay focused on the main install flow.
+//   native <details>/<summary> (zero JS, accessible by default). Collapsed by
+//   default so first-time installers stay focused on the main install flow.
 // Reference: glow-props docs/implementations/PWA_ICON_CACHE_BUST.md
 const reinstallInstructions = computed<ReinstallInstructions>(() => {
   if (isIOS) {
@@ -178,86 +177,87 @@ const reinstallInstructions = computed<ReinstallInstructions>(() => {
 
 <template>
   <Teleport to="body">
-    <div class="modal modal-open z-[60]">
-      <!-- Backdrop -->
-      <div class="modal-backdrop" aria-hidden="true" @click="emit('close')" />
-
+    <div class="fl-overlay z-[60]" @click.self="emit('close')">
       <!-- Dialog -->
       <div
         ref="dialogRef"
         role="dialog"
         :aria-label="instructions.title"
         aria-modal="true"
-        class="modal-box max-w-sm max-h-[90vh] overflow-y-auto"
+        class="fl-dialog max-w-sm"
       >
-        <h3 class="text-lg font-semibold text-base-content mb-4">
-          {{ instructions.title }}
-        </h3>
+        <div class="fl-dialog__head">
+          <h3 class="fl-dialog__title">{{ instructions.title }}</h3>
+        </div>
 
-        <ol class="space-y-3">
-          <li
-            v-for="step in instructions.steps"
-            :key="step.step"
-            class="flex items-start gap-3"
-          >
-            <span
-              class="w-6 h-6 rounded-full bg-primary/15 text-primary text-xs font-bold flex items-center justify-center shrink-0 mt-0.5"
+        <div class="fl-dialog__body">
+          <ol class="space-y-3">
+            <li
+              v-for="step in instructions.steps"
+              :key="step.step"
+              class="flex items-start gap-3"
             >
-              {{ step.step }}
-            </span>
-            <div class="flex items-center gap-2 text-sm text-base-content/80">
-              <component v-if="step.icon" :is="step.icon" :size="16" class="text-base-content/40 shrink-0" aria-hidden="true" />
-              <span>{{ step.text }}</span>
+              <span
+                class="w-6 h-6 rounded-full bg-accent-soft text-accent-active text-xs font-bold flex items-center justify-center shrink-0 mt-0.5"
+              >
+                {{ step.step }}
+              </span>
+              <div class="flex items-center gap-2 text-sm text-ink-soft">
+                <component v-if="step.icon" :is="step.icon" :size="16" class="text-ink-faint shrink-0" aria-hidden="true" />
+                <span>{{ step.text }}</span>
+              </div>
+            </li>
+          </ol>
+
+          <!-- Warning note — browser-specific caveats -->
+          <div v-if="instructions.note" class="bg-accent-soft border border-line-2 rounded-lg p-3 mt-4">
+            <div class="flex items-start gap-2">
+              <AlertTriangle :size="14" class="text-accent-active shrink-0 mt-0.5" aria-hidden="true" />
+              <p class="text-xs text-accent-active">{{ instructions.note }}</p>
             </div>
-          </li>
-        </ol>
-
-        <!-- Warning note — browser-specific caveats -->
-        <div v-if="instructions.note" class="bg-warning/10 border border-warning/20 rounded-lg p-3 mt-4">
-          <div class="flex items-start gap-2">
-            <AlertTriangle :size="14" class="text-warning shrink-0 mt-0.5" aria-hidden="true" />
-            <p class="text-xs text-warning">{{ instructions.note }}</p>
           </div>
+
+          <!-- Benefits — helps non-technical users understand WHY to install -->
+          <div class="fl-divider"></div>
+          <div>
+            <p class="text-xs text-ink-muted mb-1.5">Why install?</p>
+            <ul class="text-xs text-ink-muted space-y-1">
+              <li class="flex items-center gap-2">
+                <Check :size="12" class="text-accent shrink-0" aria-hidden="true" />
+                Works offline — no internet needed
+              </li>
+              <li class="flex items-center gap-2">
+                <Check :size="12" class="text-accent shrink-0" aria-hidden="true" />
+                Opens from your home screen or dock
+              </li>
+              <li class="flex items-center gap-2">
+                <Check :size="12" class="text-accent shrink-0" aria-hidden="true" />
+                Full-screen experience without browser controls
+              </li>
+            </ul>
+          </div>
+
+          <!-- Reinstall hint for users whose OS-cached icon didn't refresh.
+               `open` binds to props.expandReinstall so the icon-refresh banner
+               can launch the modal with this section already visible. -->
+          <details :open="props.expandReinstall" class="mt-4 border-t border-line-2 pt-3">
+            <summary class="text-xs text-ink-muted cursor-pointer hover:text-ink">
+              {{ reinstallInstructions.title }}
+            </summary>
+            <p class="text-xs text-ink-muted mt-2 leading-relaxed">
+              {{ reinstallInstructions.body }}
+            </p>
+          </details>
         </div>
 
-        <!-- Benefits — helps non-technical users understand WHY to install -->
-        <div class="divider"></div>
-        <div>
-          <p class="text-xs text-base-content/60 mb-1.5">Why install?</p>
-          <ul class="text-xs text-base-content/60 space-y-1">
-            <li class="flex items-center gap-2">
-              <Check :size="12" class="text-primary shrink-0" aria-hidden="true" />
-              Works offline — no internet needed
-            </li>
-            <li class="flex items-center gap-2">
-              <Check :size="12" class="text-primary shrink-0" aria-hidden="true" />
-              Opens from your home screen or dock
-            </li>
-            <li class="flex items-center gap-2">
-              <Check :size="12" class="text-primary shrink-0" aria-hidden="true" />
-              Full-screen experience without browser controls
-            </li>
-          </ul>
+        <div class="fl-dialog__foot">
+          <button
+            class="fl-btn fl-btn--ghost fl-btn--full"
+            @click="emit('close')"
+          >
+            Got it
+          </button>
         </div>
-
-        <!-- Reinstall hint for users whose OS-cached icon didn't refresh.
-             `open` binds to props.expandReinstall so the icon-refresh banner
-             can launch the modal with this section already visible. -->
-        <details :open="props.expandReinstall" class="mt-4 border-t border-base-300 pt-3">
-          <summary class="text-xs text-base-content/60 cursor-pointer hover:text-base-content">
-            {{ reinstallInstructions.title }}
-          </summary>
-          <p class="text-xs text-base-content/60 mt-2 leading-relaxed">
-            {{ reinstallInstructions.body }}
-          </p>
-        </details>
-
-        <button
-          class="btn btn-ghost w-full mt-4"
-          @click="emit('close')"
-        >
-          Got it
-        </button>
       </div>
     </div>
   </Teleport>

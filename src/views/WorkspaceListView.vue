@@ -116,8 +116,8 @@ onMounted(() => { loadStorageUsage() })
 <template>
   <div>
     <div class="flex flex-wrap items-center justify-between gap-y-3 mb-6">
-      <h1 class="text-2xl font-bold text-base-content">Workspaces</h1>
-      <button class="btn btn-primary" @click="createWorkspace">
+      <h1 class="font-display text-2xl font-bold text-ink">Workspaces</h1>
+      <button class="fl-btn fl-btn--primary" @click="createWorkspace">
         <Plus :size="16" class="mr-1 inline-block" />
         New Workspace
       </button>
@@ -126,14 +126,14 @@ onMounted(() => { loadStorageUsage() })
     <!-- Install reminder for repeat users -->
     <div
       v-if="showInstallReminder"
-      class="bg-primary/10 border border-primary/20 rounded-lg p-3 mb-4 flex items-center justify-between text-sm"
+      class="fl-alert fl-alert--warning mb-4 items-center justify-between text-sm"
     >
-      <div class="flex items-center gap-2 text-primary">
+      <div class="flex items-center gap-2 text-accent-active">
         <Smartphone :size="18" />
         <span>Add Farlume to your home screen for quick access</span>
       </div>
       <button
-        class="text-primary/50 hover:text-primary text-xs ml-2 whitespace-nowrap"
+        class="text-accent-active/60 hover:text-accent-active text-xs ml-2 whitespace-nowrap"
         @click="dismissInstallReminder"
       >
         Dismiss
@@ -149,12 +149,12 @@ onMounted(() => { loadStorageUsage() })
       :style="{ height: `${Math.max(pullDistance, refreshing ? 40 : 0)}px` }"
     >
       <progress
-        class="progress w-8 h-1 mb-1"
-        :class="canRelease ? 'progress-primary' : ''"
+        class="w-8 h-1 mb-1 rounded-full bg-sunken [&::-webkit-progress-bar]:bg-sunken [&::-webkit-progress-value]:bg-accent [&::-moz-progress-bar]:bg-accent"
+        :class="canRelease ? 'accent-accent' : 'accent-line-3'"
         :value="refreshing ? 100 : pullProgress * 100"
         max="100"
       />
-      <span :class="canRelease ? 'text-primary font-medium' : 'text-base-content/60'">
+      <span :class="canRelease ? 'text-accent font-medium' : 'text-ink-muted'">
         {{ refreshing ? 'Refreshing...' : canRelease ? 'Release to refresh' : 'Pull to refresh' }}
       </span>
     </div>
@@ -168,10 +168,10 @@ onMounted(() => { loadStorageUsage() })
       description="Create your first workspace or restore from a backup"
     >
       <div class="flex gap-3 justify-center">
-        <button class="btn btn-primary" @click="createWorkspace">
+        <button class="fl-btn fl-btn--primary" @click="createWorkspace">
           Create your first workspace
         </button>
-        <button class="btn btn-ghost" @click="triggerRestore?.()">
+        <button class="fl-btn fl-btn--ghost" @click="triggerRestore?.()">
           Restore from file
         </button>
       </div>
@@ -183,26 +183,26 @@ onMounted(() => { loadStorageUsage() })
         <button
           v-for="ws in workspaces"
           :key="ws.id"
-          class="bg-base-100 rounded-xl border border-base-300 p-4 shadow-sm w-full text-left hover:border-primary/30 transition-colors cursor-pointer"
+          class="fl-card fl-card--interactive p-4 w-full text-left"
           @click="openWorkspace(ws.id)"
         >
           <div class="flex items-center justify-between">
             <div class="min-w-0">
-              <h2 class="font-semibold text-base-content truncate">{{ ws.name }}</h2>
-              <p class="text-sm text-base-content/60 mt-0.5">
+              <h2 class="font-semibold text-ink truncate">{{ ws.name }}</h2>
+              <p class="text-sm text-ink-muted mt-0.5">
                 {{ ws.periodType === 'monthly' ? 'Monthly' : 'Custom period' }}
                 <span v-if="ws.currencyLabel" class="ml-1">
                   &middot; {{ ws.currencyLabel }}
                 </span>
                 <template v-if="workspaceSummaries[ws.id]">
-                  &middot; {{ workspaceSummaries[ws.id]!.count }} transaction{{ workspaceSummaries[ws.id]!.count === 1 ? '' : 's' }}
+                  &middot; <span class="fl-num">{{ workspaceSummaries[ws.id]!.count }}</span> transaction{{ workspaceSummaries[ws.id]!.count === 1 ? '' : 's' }}
                   <template v-if="workspaceSummaries[ws.id]!.monthlyTotal > 0">
-                    &middot; {{ ws.currencyLabel }}{{ formatAmount(workspaceSummaries[ws.id]!.monthlyTotal) }}/mo
+                    &middot; <span class="fl-num">{{ ws.currencyLabel }}{{ formatAmount(workspaceSummaries[ws.id]!.monthlyTotal) }}</span>/mo
                   </template>
                 </template>
               </p>
             </div>
-            <ChevronRight :size="16" class="text-base-content/40" />
+            <ChevronRight :size="16" class="text-ink-faint" />
           </div>
         </button>
       </div>
@@ -214,14 +214,14 @@ onMounted(() => { loadStorageUsage() })
          isn't supported (some older Safari / Android). -->
     <div
       v-if="!loading && storageUsage"
-      class="mt-8 flex items-center gap-2 text-xs text-base-content/60"
+      class="mt-8 flex items-center gap-2 text-xs text-ink-muted"
     >
       <Database :size="12" class="shrink-0" aria-hidden="true" />
-      <span class="whitespace-nowrap">
+      <span class="whitespace-nowrap fl-num">
         {{ formatStorageSize(storageUsage.used) }} of {{ formatStorageSize(storageUsage.quota) }} used
       </span>
       <progress
-        class="progress progress-primary h-1 flex-1 max-w-[180px]"
+        class="h-1 flex-1 max-w-[180px] rounded-full bg-sunken accent-accent [&::-webkit-progress-bar]:bg-sunken [&::-webkit-progress-value]:bg-accent [&::-moz-progress-bar]:bg-accent"
         :value="storagePct"
         max="100"
         :aria-label="`Storage ${storagePct.toFixed(0)}% used`"

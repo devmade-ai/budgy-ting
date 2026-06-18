@@ -27,20 +27,20 @@ function retry() {
 
 <template>
   <div v-if="hasError" class="max-w-md mx-auto mt-16 text-center">
-    <AlertTriangle :size="48" class="text-warning mx-auto mb-4" />
-    <h2 class="text-lg font-semibold text-base-content mb-2">Something went wrong</h2>
-    <p class="text-base-content/60 text-sm mb-1">
+    <AlertTriangle :size="48" class="text-accent-active mx-auto mb-4" />
+    <h2 class="text-lg font-semibold text-ink mb-2">Something went wrong</h2>
+    <p class="text-ink-muted text-sm mb-1">
       The app ran into a problem. Your data is safe.
     </p>
-    <p v-if="errorMessage" class="text-base-content/60 text-xs mb-6 font-mono">
+    <p v-if="errorMessage" class="text-ink-muted text-xs mb-6 font-mono">
       {{ errorMessage }}
     </p>
     <div class="flex gap-3 justify-center">
-      <button class="btn btn-primary" @click="retry">
+      <button class="fl-btn fl-btn--primary" @click="retry">
         Try again
       </button>
       <button
-        class="btn btn-ghost"
+        class="fl-btn fl-btn--ghost"
         @click="$router.push({ name: 'workspace-list' })"
       >
         Go to workspaces

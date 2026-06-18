@@ -1,48 +1,85 @@
 @import "tailwindcss";
 
-/* Requirement: Migrate from custom CSS variable tokens to DaisyUI semantic theme system
-   Approach: DaisyUI v5 @plugin directive with named combos (Approach B).
-     Single "Vivid" combo registered: cmyk (light) / night (dark).
-     DaisyUI handles dark/light color switching via data-theme attribute.
-     Tailwind dark: variant still works via .dark class for custom overrides.
+/* ============================================================
+   Requirement: Remove DaisyUI; adopt the Farlume design system as
+     the app's own styling layer (brand facelift).
+   Approach: Import the ported Farlume tokens (colors/type/spacing/
+     effects/fonts/print) + the .fl-* component layer, then expose
+     the semantic tokens to Tailwind via `@theme inline` so utility
+     classes (bg-card, text-ink, text-accent, bg-pos…) resolve to
+     live CSS vars that flip under [data-theme="dark"].
    Alternatives:
-     - Keep custom :root/.dark variables: Rejected — DaisyUI handles this automatically
-     - Per-mode independent themes (Approach A): Rejected — utility app, combos are simpler
-   Reference: glow-props docs/implementations/THEME_DARK_MODE.md (Migration Guide) */
+     - Custom DaisyUI theme mapping our palette: Rejected — the brief
+       is to remove DaisyUI entirely, not reskin it.
+     - Hardcode colors per component: Rejected — tokens are the single
+       source of truth and must drive light/dark together.
+   Source of truth: Farlume design system bundle (tokens + components).
+   ============================================================ */
+@import "./styles/tokens/fonts.css";
+@import "./styles/tokens/colors.css";
+@import "./styles/tokens/typography.css";
+@import "./styles/tokens/spacing.css";
+@import "./styles/tokens/effects.css";
+@import "./styles/tokens/print.css";
+@import "./styles/components.css";
 
-/* Register DaisyUI themes — matches combos in src/config/themes.ts */
-@plugin "daisyui" {
-  themes: cmyk --default, night --prefersdark;
-}
-
-/* Typography plugin — renders markdown v-html content with theme-aware colors.
-   Replaces 16 lines of custom :deep(.prose) scoped styles in HelpDrawer. */
+/* Typography plugin — renders markdown v-html in HelpDrawer.
+   Prose palette is wired to Farlume tokens in components.css (.prose). */
 @plugin "@tailwindcss/typography";
 
-/* Class-based dark mode for Tailwind v4 — targets .dark on <html>.
-   Required alongside DaisyUI's data-theme for Tailwind dark: utilities. */
+/* Class-based dark mode for Tailwind utilities — kept as a safety net for
+   any `dark:` utilities. The Farlume token layer keys off [data-theme="dark"];
+   useDarkMode.ts keeps the .dark class and data-theme attribute in sync. */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* ------------------------------------------------------------
+   Expose Farlume semantic tokens as Tailwind color/font utilities.
+   `inline` makes utilities reference the var directly (not a copy),
+   so bg-card / text-ink / text-accent flip with the theme.
+   ------------------------------------------------------------ */
+@theme inline {
+  /* Surfaces */
+  --color-app: var(--surface-app);
+  --color-card: var(--surface-card);
+  --color-sunken: var(--surface-sunken);
+  --color-deep: var(--surface-deep);
 
-/* Native form inputs, selects, scrollbars must match theme.
-   Without color-scheme, they stay light-themed in dark mode. */
-@layer base {
-  html { color-scheme: light; }
-  html.dark { color-scheme: dark; }
+  /* Text / ink */
+  --color-ink: var(--text-primary);
+  --color-ink-soft: var(--text-secondary);
+  --color-ink-muted: var(--text-muted);
+  --color-ink-faint: var(--text-disabled);
+  --color-on-accent: var(--text-on-accent);
+
+  /* Accent (lume amber) */
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-active: var(--accent-active);
+  --color-accent-soft: var(--accent-soft);
+
+  /* Finance semantics */
+  --color-pos: var(--pos);
+  --color-pos-soft: var(--pos-soft);
+  --color-neg: var(--neg);
+  --color-neg-soft: var(--neg-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+
+  /* Hairlines */
+  --color-line: var(--border-subtle);
+  --color-line-2: var(--border-default);
+  --color-line-3: var(--border-strong);
+
+  /* Fonts → font-sans / font-display / font-mono utilities */
+  --font-sans: var(--font-sans);
+  --font-display: var(--font-display);
+  --font-mono: var(--font-mono);
 }
 
 /* Requirement: Users with vestibular disorders / motion sensitivity can opt out.
-   Approach: Global clamp on animations and transitions when the OS-level
-     prefers-reduced-motion media query is set. Tailwind's animate-*, DaisyUI
-     spinners, and ApexCharts transitions all respect this because they use
-     CSS animations or transitions under the hood.
-   Alternatives:
-     - Per-component conditional classes: Rejected — misses transitions applied
-       by third-party libraries (DaisyUI, ApexCharts).
-     - Disable animations entirely by default: Rejected — motion is part of
-       the default affordance vocabulary.
-   Note: `scroll-behavior: auto` prevents smooth-scroll overrides from making
-   scroll jumps nauseating. */
+   Approach: Global clamp on animations and transitions when prefers-reduced-motion
+     is set. Tailwind animate-*, the .fl-* component transitions, and ApexCharts
+     all respect this because they use CSS animation/transition under the hood. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -55,65 +92,12 @@
 }
 
 /* Requirement: Bounded first-use hint pulse for the workspace kebab menu.
-   Approach: Same keyframe as Tailwind's `animate-pulse`, but with
-     animation-iteration-count: 5 (~10s total), then the ring stays visible
-     via the surrounding ring utility until the user taps.
-   Alternatives:
-     - `animate-pulse` infinite: Rejected — WCAG 2.2.2 requires a stop
-       mechanism for motion running longer than 5 seconds.
-     - JS-timed class removal: Rejected — CSS handles the termination; no
-       timer to clean up, no extra state.
-   Reference: glow-props docs/implementations/BURGER_MENU.md discoverability. */
+   Approach: Same keyframe as Tailwind's animate-pulse, but iteration-count: 5
+     (~10s total, satisfies WCAG 2.2.2), then the surrounding ring stays until tap. */
 @keyframes hint-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
 }
 .animate-hint-pulse {
   animation: hint-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) 5;
-}
-
-/* Print overrides — force readable output regardless of dark mode.
-   Reference: glow-props docs/implementations/DOWNLOAD_PDF.md */
-@media print {
-  .no-print {
-    display: none !important;
-  }
-  /* Requirement: Show elements only in print (e.g. desktop table when hidden by responsive classes)
-     Approach: Utility class that overrides display:none in print context */
-  .print-show {
-    display: block !important;
-  }
-  body {
-    background: white !important;
-    color: black !important;
-    print-color-adjust: exact;
-    -webkit-print-color-adjust: exact;
-  }
-  a {
-    color: black !important;
-    text-decoration: underline !important;
-  }
-  /* Target card-like containers — both DaisyUI .card and any rounded-xl bordered containers */
-  section, .card, .rounded-xl {
-    break-inside: avoid;
-    page-break-inside: avoid;
-  }
-  /* Requirement: ApexCharts interactive toolbar has no purpose in print
-     Approach: Hide toolbar, force readable text colors for chart labels/legend
-     Alternatives:
-       - Re-render chart in light mode before print: Rejected — complex, timing-sensitive */
-  .apexcharts-toolbar {
-    display: none !important;
-  }
-  .apexcharts-text tspan,
-  .apexcharts-yaxis-label tspan,
-  .apexcharts-xaxis-label tspan {
-    fill: #6b7280 !important;
-  }
-  .apexcharts-legend-text {
-    color: #374151 !important;
-  }
-  .apexcharts-gridline {
-    stroke: #e5e7eb !important;
-  }
 }

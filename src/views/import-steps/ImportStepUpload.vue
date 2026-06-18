@@ -153,17 +153,17 @@ function handleContinue() {
 
 <template>
   <div>
-    <h1 class="text-2xl font-bold text-base-content mb-2">Import transactions</h1>
-    <p class="text-base-content/60 text-sm mb-6">
+    <h1 class="text-2xl font-bold text-ink mb-2">Import transactions</h1>
+    <p class="text-ink-muted text-sm mb-6">
       Upload a CSV or JSON file with your actual spending data
     </p>
 
     <label
-      class="bg-base-100 rounded-xl border-2 border-dashed border-base-300 p-4 flex flex-col items-center justify-center py-12 hover:border-primary transition-colors cursor-pointer focus-within:border-primary focus-within:ring-2 focus-within:ring-primary"
+      class="bg-sunken rounded-xl border-2 border-dashed border-line-2 p-4 flex flex-col items-center justify-center py-12 hover:border-accent hover:bg-accent-soft transition-colors cursor-pointer focus-within:border-accent focus-within:ring-2 focus-within:ring-accent"
     >
-      <Upload :size="28" class="text-base-content/40 mb-3" aria-hidden="true" />
-      <p class="text-base-content/70 font-medium">Choose a file</p>
-      <p class="text-base-content/60 text-sm mt-1">CSV or JSON, max 10 MB</p>
+      <Upload :size="28" class="text-ink-faint mb-3" aria-hidden="true" />
+      <p class="text-ink-soft font-medium">Choose a file</p>
+      <p class="text-ink-muted text-sm mt-1">CSV or JSON, max 10 MB</p>
       <input
         type="file"
         accept=".csv,.json"
@@ -174,40 +174,40 @@ function handleContinue() {
     </label>
 
     <!-- File info — shown immediately after selection, before parsing completes -->
-    <div v-if="selectedFile && !parsedData" class="mt-4 flex items-center gap-3 text-sm text-base-content/70">
-      <File :size="18" class="text-base-content/40" />
+    <div v-if="selectedFile && !parsedData" class="mt-4 flex items-center gap-3 text-sm text-ink-soft">
+      <File :size="18" class="text-ink-faint" />
       <div>
         <p class="font-medium">{{ selectedFile.name }}</p>
-        <p class="text-xs text-base-content/60">{{ selectedFile.size }}</p>
+        <p class="text-xs text-ink-muted fl-num">{{ selectedFile.size }}</p>
       </div>
       <span
         v-if="parsing"
-        class="text-xs text-base-content/60 ml-auto inline-flex items-center gap-1.5"
+        class="text-xs text-ink-muted ml-auto inline-flex items-center gap-1.5"
         role="status"
         aria-live="polite"
         aria-busy="true"
       >
-        <span class="loading loading-spinner loading-xs" aria-hidden="true" />
+        <span class="fl-spinner fl-spinner--sm" aria-hidden="true" />
         Parsing — large files may take a moment…
       </span>
     </div>
 
-    <p v-if="fileError" class="text-sm text-error mt-3">{{ fileError }}</p>
+    <p v-if="fileError" class="text-sm text-neg mt-3">{{ fileError }}</p>
 
     <!-- Preview -->
     <template v-if="parsedData">
       <div class="mt-6">
-        <p class="text-sm text-base-content/70 mb-2">
-          {{ parsedData.totalRows }} rows detected with {{ parsedData.headers.length }} columns
+        <p class="text-sm text-ink-soft mb-2">
+          <span class="fl-num">{{ parsedData.totalRows }}</span> rows detected with <span class="fl-num">{{ parsedData.headers.length }}</span> columns
         </p>
         <div class="overflow-x-auto">
-          <table class="w-full text-xs border border-base-300 rounded-lg">
+          <table class="w-full text-xs border border-line-2 rounded-lg">
             <thead>
-              <tr class="bg-base-200">
+              <tr class="bg-app">
                 <th
                   v-for="h in parsedData.headers"
                   :key="h"
-                  class="text-left px-2 py-1.5 font-medium text-base-content/70"
+                  class="text-left px-2 py-1.5 font-medium text-ink-soft"
                 >
                   {{ h }}
                 </th>
@@ -217,12 +217,12 @@ function handleContinue() {
               <tr
                 v-for="(row, i) in parsedData.rows.slice(0, 5)"
                 :key="i"
-                class="border-t border-base-200"
+                class="border-t border-line"
               >
                 <td
                   v-for="h in parsedData.headers"
                   :key="h"
-                  class="px-2 py-1.5 text-base-content/80 truncate max-w-[150px]"
+                  class="px-2 py-1.5 text-ink-soft truncate max-w-[150px]"
                 >
                   {{ row[h] }}
                 </td>
@@ -230,7 +230,7 @@ function handleContinue() {
             </tbody>
           </table>
         </div>
-        <p v-if="parsedData.errors.length > 0" class="text-xs text-warning mt-2">
+        <p v-if="parsedData.errors.length > 0" class="text-xs text-accent-active mt-2">
           {{ parsedData.errors.length }} warning(s): {{ parsedData.errors[0] }}
         </p>
       </div>
@@ -241,11 +241,11 @@ function handleContinue() {
            Explicit for/id label association so screen-reader users hear
            "Date format combobox" when focusing. -->
       <div class="mt-4 flex items-center gap-3">
-        <label for="date-format-select" class="text-sm text-base-content/70">Date format:</label>
+        <label for="date-format-select" class="text-sm text-ink-soft">Date format:</label>
         <select
           id="date-format-select"
           v-model.number="dateFormatIndex"
-          class="select select-bordered w-auto text-base min-h-[44px]"
+          class="fl-select-el w-auto min-h-[44px]"
         >
           <option
             v-for="(fmt, i) in DATE_FORMATS"
@@ -257,7 +257,7 @@ function handleContinue() {
         </select>
       </div>
 
-      <button class="btn btn-primary mt-4" @click="handleContinue">
+      <button class="fl-btn fl-btn--primary mt-4" @click="handleContinue">
         Review &amp; import
       </button>
     </template>

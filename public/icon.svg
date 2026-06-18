@@ -1,24 +1,22 @@
 <!--
-  App icon source — rasterized by scripts/generate-icons.mjs via sharp.
+  App icon source — Farlume logomark. Rasterized by scripts/generate-icons.mjs (sharp).
 
-  Requirement: Icon must render identically in CI (Ubuntu) and locally.
-  Approach: Geometric rising chart line — no font dependency at all.
-  Alternatives:
-    - Letter monogram (F/B): Rejected — chart line better represents a finance app
-    - Wallet/coin illustrations: Rejected — too detailed for small favicon sizes
-  Design: Upward trend line with endpoint dot on cmyk blue (#45aeee).
-    Line dips then rises to convey growth. Thick rounded stroke for legibility
-    at small sizes. Dot marks the current position.
+  Design: a paper-white forecast line rising across a deep-ink tile into a glowing
+  amber beacon ("far + lume" — light thrown far ahead). Matches the brand mark in
+  src/assets/brand/logo-mark.svg, scaled to the 512 icon grid with a brighter core
+  for legibility at favicon sizes.
+
+  Generator contract (do not break, and keep this comment free of SVG-tag literals
+  so the generator's regex targets the real background): viewBox must be 0 0 512 512;
+  the background rectangle must be the first element and use the 92px corner radius;
+  all mark elements come after it. The maskable build drops the corner radius
+  (full-bleed) and wraps the mark in an 80% safe-zone group.
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" shape-rendering="geometricPrecision">
-  <rect width="512" height="512" rx="92" fill="#45aeee"/>
-  <polyline
-    points="100,360 190,300 260,340 400,140"
-    fill="none"
-    stroke="white"
-    stroke-width="40"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-  />
-  <circle cx="400" cy="140" r="32" fill="white"/>
+  <rect width="512" height="512" rx="92" fill="#16191F"/>
+  <path d="M107 352 L192 299 L267 320 L352 203" fill="none" stroke="#FCFAF5" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M352 203 L416 128" fill="none" stroke="#CC8A2E" stroke-width="28" stroke-linecap="round" stroke-dasharray="4 24"/>
+  <circle cx="352" cy="203" r="91" fill="#CC8A2E" fill-opacity="0.22"/>
+  <circle cx="352" cy="203" r="43" fill="#E0A63E"/>
+  <circle cx="352" cy="203" r="20" fill="#F4DCA6"/>
 </svg>

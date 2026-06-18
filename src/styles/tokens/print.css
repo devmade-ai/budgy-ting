@@ -1,0 +1,92 @@
+/* ============================================================
+   PRINT — Farlume
+   The "Save as PDF" theme. Farlume's dashboard prints to paper:
+   interactive controls are hidden, dark mode is forced back to
+   light (ink on white saves toner and reads on paper), shadows
+   flatten to hairlines, and tables/charts are tuned for output.
+
+   Opt-in utilities (design system):
+     .fl-print-hide   — removed from print (nav, toggles, buttons)
+     .fl-print-only   — shown ONLY in print (page header, footer)
+     .fl-print-break  — force a page break before this element
+     .fl-print-avoid  — keep this block from splitting across pages
+   The legacy app utility `.no-print` is kept as an alias of
+   `.fl-print-hide` so existing markup keeps working.
+
+   Source of truth: Farlume design system (tokens/print.css).
+   ============================================================ */
+
+@media print {
+  /* Force the light print theme regardless of the on-screen theme. */
+  :root,
+  [data-theme="dark"] {
+    --surface-app:    #FFFFFF;
+    --surface-card:   #FFFFFF;
+    --surface-sunken: #FFFFFF;
+    --surface-deep:   #F4F0E8;
+    --text-primary:   #16191F;
+    --text-secondary: #3A4049;
+    --text-muted:     #5A616B;
+    --border-subtle:  rgba(22, 25, 31, 0.16);
+    --border-default: rgba(22, 25, 31, 0.24);
+    --border-strong:  rgba(22, 25, 31, 0.36);
+    color-scheme: light;
+  }
+
+  html, body {
+    background: #FFFFFF !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Flatten elevation — paper doesn't cast shadows. */
+  .fl-card, .fl-dialog, .fl-toast {
+    box-shadow: none !important;
+    border: 1px solid var(--border-default) !important;
+  }
+
+  /* Drop the lume glow on the primary action if it survives to print. */
+  .fl-btn--primary { box-shadow: none !important; }
+
+  /* Hide live chrome and reveal print-only blocks. */
+  .fl-print-hide,
+  .no-print { display: none !important; }
+  .fl-print-only { display: revert !important; }
+  /* Legacy alias: reveal print-only blocks hidden on screen. */
+  .print-show { display: block !important; }
+
+  /* Pagination helpers. */
+  .fl-print-break { break-before: page; }
+  .fl-print-avoid { break-inside: avoid; }
+
+  /* Keep table rows intact and repeat the head on every page. */
+  .fl-table thead { display: table-header-group; }
+  .fl-table tr { break-inside: avoid; }
+  .fl-table th { position: static; }
+
+  /* Card-like containers shouldn't split across pages. */
+  section, .fl-card, .rounded-xl, .rounded-lg {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Sticky bars must not float over printed content. */
+  [style*="position:sticky"], [style*="position: sticky"] { position: static !important; }
+  .fl-sticky { position: static !important; }
+
+  a { text-decoration: none; color: inherit; }
+
+  /* ApexCharts: the interactive toolbar has no purpose on paper, and chart
+     text/gridlines must stay legible against white. */
+  .apexcharts-toolbar { display: none !important; }
+  .apexcharts-text tspan,
+  .apexcharts-yaxis-label tspan,
+  .apexcharts-xaxis-label tspan { fill: #5A616B !important; }
+  .apexcharts-legend-text { color: #16191F !important; }
+  .apexcharts-gridline { stroke: rgba(22, 25, 31, 0.12) !important; }
+
+  @page { margin: 16mm 14mm; }
+}
+
+/* Hidden on screen, shown only when printing (e.g. a PDF page header). */
+.fl-print-only { display: none; }

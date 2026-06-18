@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
  * Requirement: Display ML-suggested tags as interactive chips the user can accept or dismiss
- * Approach: Dashed-border chips with sparkle icon. Tap to accept, x to dismiss.
+ * Approach: Farlume accent tags (fl-tag fl-tag--accent) with a sparkle icon. Tap to accept, x to dismiss.
  *   Confidence not shown — non-technical audience. Hidden when no suggestions.
  * Alternatives:
  *   - Inline in tag input: Rejected — import flow doesn't have a tag input per group
@@ -24,14 +24,14 @@ const emit = defineEmits<{
 
 <template>
   <div v-if="props.suggestions.length > 0" class="flex flex-wrap items-center gap-1 mt-1">
-    <Sparkles :size="12" class="text-warning flex-shrink-0" aria-hidden="true" />
+    <Sparkles :size="12" class="text-accent-active flex-shrink-0" aria-hidden="true" />
     <span
       v-for="s in props.suggestions"
       :key="s.tag"
-      class="inline-flex items-center gap-0.5 text-xs border border-dashed border-base-300 text-base-content/70 rounded px-1.5 py-0.5"
+      class="fl-tag fl-tag--accent fl-tag--sm"
     >
       <button
-        class="hover:text-info transition-colors"
+        class="bg-transparent border-none cursor-pointer p-0 text-inherit"
         :aria-label="`Add tag: ${s.tag}`"
         @click="emit('accept', s.tag)"
       >
@@ -39,7 +39,7 @@ const emit = defineEmits<{
       </button>
       <!-- Mobile UX: 20x20px touch target for dismiss (was 10px icon) -->
       <button
-        class="w-5 h-5 flex items-center justify-center opacity-50 hover:opacity-100 ml-0.5 rounded-full"
+        class="fl-tag__x w-5 h-5"
         :aria-label="`Dismiss ${s.tag}`"
         @click="emit('dismiss', s.tag)"
       >
@@ -48,7 +48,7 @@ const emit = defineEmits<{
     </span>
     <button
       v-if="props.suggestions.length >= 2"
-      class="text-xs text-info hover:text-info/80 underline ml-1"
+      class="fl-link text-xs ml-1"
       @click="emit('acceptAll')"
     >
       Add all

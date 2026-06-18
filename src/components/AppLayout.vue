@@ -18,6 +18,8 @@ import { useDarkMode } from '@/composables/useDarkMode'
 import { useRestoreWorkspace } from '@/composables/useRestoreWorkspace'
 import BurgerMenu from '@/components/BurgerMenu.vue'
 import type { MenuItem } from '@/components/BurgerMenu.vue'
+import logoMark from '@/assets/brand/logo-mark.svg'
+import logoMarkLight from '@/assets/brand/logo-mark-light.svg'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import ErrorAlert from '@/components/ErrorAlert.vue'
 import InstallPrompt from '@/components/InstallPrompt.vue'
@@ -90,20 +92,19 @@ function onBeforePrint() {
     html.dataset.printWasDark = 'true'
     html.dataset.printTheme = html.getAttribute('data-theme') || ''
     html.classList.remove('dark')
-    // Set the light DaisyUI theme for print — must match LIGHT_THEME in themes.ts
-    html.setAttribute('data-theme', 'cmyk')
+    // Set the Farlume light theme for print — must match the combo's `light`
+    // value in themes.ts. tokens/print.css also forces light via @media print;
+    // swapping data-theme here additionally lets ApexCharts re-read light colors.
+    html.setAttribute('data-theme', 'light')
   }
 }
 function onAfterPrint() {
   const html = document.documentElement
   if (html.dataset.printWasDark === 'true') {
     html.classList.add('dark')
-    // Fallback must be a theme registered in src/index.css (cmyk, night).
-    // Previous fallback was 'black' which isn't registered — if onAfterPrint
-    // ever fires without a matching onBeforePrint, DaisyUI would silently
-    // reset to the default theme. 'night' is the correct dark-theme fallback
-    // here since we only reach this branch when printWasDark === 'true'.
-    html.setAttribute('data-theme', html.dataset.printTheme || 'night')
+    // Restore the on-screen theme; fall back to the dark token theme since we
+    // only reach this branch when printWasDark === 'true'.
+    html.setAttribute('data-theme', html.dataset.printTheme || 'dark')
     delete html.dataset.printWasDark
     delete html.dataset.printTheme
   }
@@ -152,7 +153,7 @@ const menuItems = computed<MenuItem[]>(() => [
   {
     label: isDark.value ? 'Light mode' : 'Dark mode',
     icon: isDark.value ? Sun : Moon,
-    iconClass: isDark.value ? 'text-warning' : 'text-base-content/60',
+    iconClass: isDark.value ? 'text-accent' : 'text-ink-muted',
     action: () => toggleDarkMode(),
     separator: true,
   },
@@ -166,11 +167,11 @@ const menuItems = computed<MenuItem[]>(() => [
 </script>
 
 <template>
-  <div class="min-h-screen bg-base-200">
+  <div class="min-h-screen bg-app">
     <!-- Update banner -->
     <div
       v-if="hasUpdate"
-      class="bg-primary text-primary-content text-sm px-4 py-2 flex items-center justify-between no-print"
+      class="bg-accent text-on-accent text-sm px-4 py-2 flex items-center justify-between no-print"
     >
       <span>A new version is available</span>
       <button
@@ -184,7 +185,7 @@ const menuItems = computed<MenuItem[]>(() => [
     <!-- Offline-ready notification (auto-dismisses after 3s) -->
     <div
       v-if="offlineReady"
-      class="bg-success text-success-content text-sm px-4 py-2 text-center no-print"
+      class="bg-pos-soft text-pos text-sm px-4 py-2 text-center no-print"
     >
       App is ready for offline use
     </div>
@@ -195,7 +196,7 @@ const menuItems = computed<MenuItem[]>(() => [
          web side can't force a refresh. The banner is the mitigation. -->
     <div
       v-if="iconNeedsRefresh"
-      class="bg-info text-info-content text-sm px-4 py-2 flex items-center justify-between gap-3 no-print"
+      class="bg-info-soft text-info text-sm px-4 py-2 flex items-center justify-between gap-3 no-print"
       role="status"
     >
       <span>Your Farlume icon was updated — reinstall to see the new look.</span>
@@ -224,13 +225,15 @@ const menuItems = computed<MenuItem[]>(() => [
     </div>
 
     <!-- Header -->
-    <header class="bg-base-100 border-b border-base-300 sticky top-0 z-10 no-print">
+    <header class="fl-bar fl-sticky no-print">
       <div class="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
         <button
-          class="text-lg font-bold text-primary hover:text-primary/80 transition-colors"
+          class="flex items-center gap-2.5"
           @click="goHome"
+          aria-label="Farlume — home"
         >
-          Farlume
+          <img :src="isDark ? logoMarkLight : logoMark" width="28" height="28" alt="" class="block" />
+          <span class="font-display text-xl font-medium tracking-tight text-ink">Farlume</span>
         </button>
 
         <BurgerMenu :items="menuItems" />
