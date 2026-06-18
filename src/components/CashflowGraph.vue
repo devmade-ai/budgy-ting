@@ -144,22 +144,27 @@ const series = computed(() => {
   }
 
   // Forecast — bridge from last actual so lines connect without a gap
-  // Requirement: No visual gap between actuals line and forecast line
-  // Approach: Prepend the last actual data point to the forecast series so the
-  //   forecast line starts where actuals end. This creates a seamless visual join.
+  // Requirement: No visual gap OR jump between the actuals line and the forecast line.
+  // Approach: The forecast carries its own cumulative running total that restarts at 0
+  //   (assembleDailyForecast). In cumulative mode that would make the projected line jump
+  //   back to zero instead of continuing from where history ends, so offset every forecast
+  //   point by the last actual's cumulative. Then prepend the last actual point as the join.
   // Alternatives:
   //   - Extend actuals to today with zero amounts: Rejected — misleading data
   //   - Overlap date ranges: Rejected — tooltip shows duplicate entries
   if (props.forecastPoints.length > 0) {
+    const lastActual = actualPoints.value.length > 0
+      ? actualPoints.value[actualPoints.value.length - 1]!
+      : null
+    // Continue the cumulative line from where history ends (0 when there are no actuals).
+    const offset = chartMode.value === 'cumulative' && lastActual ? lastActual.cumulative : 0
     const forecastData = props.forecastPoints.map((p) => ({
       x: p.date,
-      y: chartMode.value === 'cumulative' ? p.cumulative : p.amount,
+      y: chartMode.value === 'cumulative' ? offset + p.cumulative : p.amount,
     }))
 
-    // If we have actuals, prepend the last actual point so the forecast line
-    // connects visually to where actuals end (no gap)
-    if (actualPoints.value.length > 0) {
-      const lastActual = actualPoints.value[actualPoints.value.length - 1]!
+    // Prepend the last actual point so the forecast line connects visually (no gap)
+    if (lastActual) {
       const firstForecastDate = props.forecastPoints[0]?.date
       // Only bridge if there's actually a date gap
       if (firstForecastDate && lastActual.date < firstForecastDate) {
