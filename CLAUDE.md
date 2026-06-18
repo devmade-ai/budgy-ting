@@ -65,7 +65,7 @@ Respond as if talking to yourself. Peer-to-peer, no servility.
 Current working features:
 
 - Workspace CRUD with monthly or custom date ranges
-- Demo workspace auto-seeded on first visit
+- Demo workspace auto-seeded on first visit — ~12 months of deterministic daily-spread data (~730 transactions, 20 patterns) covering every cadence (daily/weekly/biweekly/monthly/quarterly/annually/irregular) and variability (fixed/variable/irregular), with a salary-raise trend, day-of-week structure, and once-off shocks so the forecast, day-of-week seasonality, rolling-origin backtest, and runway are all exercisable. Patterns are derived from the generated transactions (never drift). Seeds only into an empty DB — clear site data / use a fresh profile to re-seed.
 - 2-step import wizard (Upload → Review & Import) for CSV/JSON bank statements
 - Per-transaction review with ML tag suggestions (zero-shot classification)
 - Embedding-based fuzzy pattern matching (cosine similarity)

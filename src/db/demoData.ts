@@ -1,12 +1,26 @@
 /**
  * Demo workspace with realistic transaction data.
  *
- * Requirement: Pre-populated workspace so users can explore the tool before creating their own
- * Approach: Seed a full workspace with 2 months of transactions + recurring patterns on first
- *   app load (empty DB). Uses signed amounts (positive=income, negative=expense).
+ * Requirement: A pre-populated workspace rich enough to exercise EVERY analytical
+ *   feature — forecasting (trend + day-of-week seasonality), the rolling-origin
+ *   backtest (needs ~26 weekly origins), cash runway, and recurring-pattern
+ *   detection across all cadences and variabilities.
+ * Approach: Deterministically generate ~12 months of daily-spread transactions on
+ *   first app load (empty DB). Amounts are signed (positive = income, negative =
+ *   expense). Patterns are computed FROM the generated transactions so the seeded
+ *   pattern stats (expected amount, std-dev, last-seen) always match the data.
+ *   Jitter is keyed by calendar date, so the same day always renders identically
+ *   while still giving the forecaster realistic noise to learn from.
+ * Coverage: daily (weekday coffee), weekly (groceries, fuel), biweekly (freelance),
+ *   monthly (salary, rent, subscriptions, utilities), quarterly (provisional tax,
+ *   car service), annually (licence, hosting), irregular (prepaid electricity,
+ *   data bundles); fixed / variable / irregular variability; plus once-off shocks
+ *   (laptop, flights, dental) and a mid-history salary raise for a visible trend.
  * Alternatives:
- *   - Read-only demo mode: Rejected — users should be able to edit/delete demo data freely
- *   - Load from external JSON: Rejected — adds latency, fails offline on first visit
+ *   - 2 months of monthly-only data (previous seed): Rejected — too thin for the
+ *     backtest, day-of-week seasonality, or cadence variety; runway/accuracy were
+ *     not meaningfully testable.
+ *   - Load from external JSON: Rejected — adds latency, fails offline on first visit.
  */
 
 import { db } from './index'
@@ -15,6 +29,9 @@ import { touchTags } from '@/composables/useTagAutocomplete'
 import type { Workspace, Transaction, RecurringPattern } from '@/types/models'
 
 const DEMO_WORKSPACE_ID = 'demo-household'
+
+/** Months of history to generate (12 saturates the 26-origin weekly backtest). */
+const HISTORY_MONTHS = 12
 
 function makeId(suffix: string): string {
   return `demo-${suffix}`
@@ -55,8 +72,8 @@ function makePattern(
   anchorDay: number,
   tags: string[],
   lastSeenDate: string,
-  variability: RecurringPattern['variability'] = 'fixed',
-  amountStdDev: number = 0,
+  variability: RecurringPattern['variability'],
+  amountStdDev: number,
 ): RecurringPattern {
   const now = new Date().toISOString()
   return {
@@ -77,90 +94,230 @@ function makePattern(
   }
 }
 
-/**
- * Generate 2 months of realistic demo transactions.
- * Amounts are signed: positive = income, negative = expense.
- */
-function generateDemoTransactions(baseDate: Date): Transaction[] {
-  const txns: Transaction[] = []
-
-  // Generate for prev month and the month before
-  for (let monthOffset = 1; monthOffset <= 2; monthOffset++) {
-    const d = new Date(baseDate.getFullYear(), baseDate.getMonth() - monthOffset, 1)
-    const y = d.getFullYear()
-    const m = String(d.getMonth() + 1).padStart(2, '0')
-    const suffix = monthOffset === 1 ? '1' : '2'
-
-    // Income — recurring
-    txns.push(makeTransaction(`salary-${suffix}`, `${y}-${m}-25`, 25000, 'Salary', ['Income', 'FNB Cheque'], 'recurring', 'pat-salary'))
-    txns.push(makeTransaction(`freelance-${suffix}`, `${y}-${m}-15`, 4200 + (monthOffset === 2 ? 800 : 0), 'Freelance payment', ['Income', 'Capitec'], 'recurring', 'pat-freelance'))
-
-    // Fixed expenses — recurring (negative amounts)
-    txns.push(makeTransaction(`rent-${suffix}`, `${y}-${m}-01`, -12000, 'Rent transfer', ['Housing'], 'recurring', 'pat-rent'))
-    txns.push(makeTransaction(`utilities-${suffix}`, `${y}-${m}-07`, -(1800 + monthOffset * 150), 'City of Cape Town utilities', ['Housing'], 'recurring', 'pat-utilities'))
-    txns.push(makeTransaction(`internet-${suffix}`, `${y}-${m}-03`, -1000, 'Vumatel fibre', ['Housing'], 'recurring', 'pat-internet'))
-    txns.push(makeTransaction(`insurance-${suffix}`, `${y}-${m}-01`, -2500, 'MiWay car insurance', ['Insurance'], 'recurring', 'pat-insurance'))
-    txns.push(makeTransaction(`medical-${suffix}`, `${y}-${m}-01`, -3500, 'Discovery medical aid', ['Medical'], 'recurring', 'pat-medical'))
-    txns.push(makeTransaction(`gym-${suffix}`, `${y}-${m}-01`, -699, 'Virgin Active debit order', ['Health'], 'recurring', 'pat-gym'))
-    txns.push(makeTransaction(`netflix-${suffix}`, `${y}-${m}-02`, -199, 'Netflix subscription', ['Entertainment'], 'recurring', 'pat-netflix'))
-    txns.push(makeTransaction(`spotify-${suffix}`, `${y}-${m}-02`, -80, 'Spotify subscription', ['Entertainment'], 'recurring', 'pat-spotify'))
-
-    // Variable recurring — regular timing, variable amount (utility bill)
-    txns.push(makeTransaction(`water-${suffix}`, `${y}-${m}-10`, -(450 + monthOffset * 120), 'City of CT water', ['Housing'], 'recurring', 'pat-water'))
-
-    // Irregular recurring — no schedule, bought when needed (prepaid)
-    txns.push(makeTransaction(`prepaid-elec-${suffix}-a`, `${y}-${m}-${String(5 + monthOffset * 3).padStart(2, '0')}`, -(350 + monthOffset * 50), 'Prepaid electricity', ['Housing'], 'recurring', 'pat-prepaid-elec'))
-    txns.push(makeTransaction(`prepaid-elec-${suffix}-b`, `${y}-${m}-${String(18 - monthOffset * 2).padStart(2, '0')}`, -(280 + monthOffset * 30), 'Prepaid electricity', ['Housing'], 'recurring', 'pat-prepaid-elec'))
-    txns.push(makeTransaction(`data-${suffix}`, `${y}-${m}-${String(12 + monthOffset * 5).padStart(2, '0')}`, -(150 + monthOffset * 20), 'Vodacom data bundle', ['Connectivity'], 'recurring', 'pat-data'))
-
-    // Variable expenses — once-off (amounts vary month to month)
-    txns.push(makeTransaction(`groc-${suffix}-a`, `${y}-${m}-03`, -(1250 + monthOffset * 80), 'Checkers Groceries', ['Food'], 'once-off', null))
-    txns.push(makeTransaction(`groc-${suffix}-b`, `${y}-${m}-10`, -(980 + monthOffset * 60), 'Pick n Pay', ['Food'], 'once-off', null))
-    txns.push(makeTransaction(`groc-${suffix}-c`, `${y}-${m}-17`, -(1450 - monthOffset * 100), 'Woolworths Food', ['Food'], 'once-off', null))
-    txns.push(makeTransaction(`groc-${suffix}-d`, `${y}-${m}-24`, -(1100 + monthOffset * 50), 'Checkers Groceries', ['Food'], 'once-off', null))
-
-    txns.push(makeTransaction(`eat-${suffix}-a`, `${y}-${m}-05`, -(350 + monthOffset * 30), 'Nandos', ['Food', 'Discretionary'], 'once-off', null))
-    txns.push(makeTransaction(`eat-${suffix}-b`, `${y}-${m}-12`, -(520 - monthOffset * 40), 'Spur', ['Food', 'Discretionary'], 'once-off', null))
-    txns.push(makeTransaction(`eat-${suffix}-c`, `${y}-${m}-19`, -(280 + monthOffset * 20), 'Steers', ['Food', 'Discretionary'], 'once-off', null))
-    txns.push(makeTransaction(`eat-${suffix}-d`, `${y}-${m}-26`, -(680 + monthOffset * 50), 'Ocean Basket', ['Food', 'Discretionary'], 'once-off', null))
-
-    txns.push(makeTransaction(`fuel-${suffix}-a`, `${y}-${m}-04`, -(850 + monthOffset * 30), 'Engen fuel', ['Transport'], 'once-off', null))
-    txns.push(makeTransaction(`fuel-${suffix}-b`, `${y}-${m}-14`, -(920 - monthOffset * 20), 'Shell fuel', ['Transport'], 'once-off', null))
-    txns.push(makeTransaction(`fuel-${suffix}-c`, `${y}-${m}-22`, -(780 + monthOffset * 40), 'BP fuel', ['Transport'], 'once-off', null))
-
-    // Ad-hoc purchases
-    txns.push(makeTransaction(`shop-${suffix}`, `${y}-${m}-08`, -(350 + monthOffset * 100), 'Takealot order', ['Shopping'], 'once-off', null))
-    txns.push(makeTransaction(`uber-${suffix}`, `${y}-${m}-20`, -(180 + monthOffset * 30), 'Uber rides', ['Transport'], 'once-off', null))
+// ── Deterministic helpers ───────────────────────────────────────────
+// FNV-1a string hash → [0,1). Keyed by calendar date so the demo is stable per
+// day but varies across days (realistic noise the forecaster can actually learn).
+function rand(key: string): number {
+  let h = 2166136261
+  for (let i = 0; i < key.length; i++) {
+    h ^= key.charCodeAt(i)
+    h = Math.imul(h, 16777619)
   }
+  return ((h >>> 0) % 100000) / 100000
+}
 
-  return txns
+/** Jitter a base amount by ±spread (fraction of base), deterministically keyed. */
+function jitter(base: number, spread: number, key: string): number {
+  return Math.round(base * (1 + (rand(key) - 0.5) * 2 * spread))
+}
+
+function iso(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+function addDays(d: Date, n: number): Date {
+  const r = new Date(d)
+  r.setDate(r.getDate() + n)
+  return r
+}
+function daysInMonth(y: number, month0: number): number {
+  return new Date(y, month0 + 1, 0).getDate()
+}
+function meanOf(xs: number[]): number {
+  return xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0
+}
+function stdOf(xs: number[]): number {
+  if (xs.length < 2) return 0
+  const m = meanOf(xs)
+  return Math.sqrt(xs.reduce((a, b) => a + (b - m) ** 2, 0) / xs.length)
+}
+
+// ── Recurring-group specs (pattern metadata) ────────────────────────
+// expectedAmount + amountStdDev + lastSeenDate are computed from the generated
+// transactions; everything else (cadence, anchor, variability, tags) lives here.
+interface GroupSpec {
+  description: string
+  frequency: RecurringPattern['frequency']
+  /** Monthly/quarterly/annually: day-of-month. Weekly/biweekly: day-of-week (0=Sun). Daily/irregular: 0. */
+  anchorDay: number
+  variability: RecurringPattern['variability']
+  tags: string[]
+}
+
+const SPECS: Record<string, GroupSpec> = {
+  // Income
+  salary: { description: 'Salary', frequency: 'monthly', anchorDay: 25, variability: 'fixed', tags: ['Income', 'FNB Cheque'] },
+  freelance: { description: 'Freelance project', frequency: 'biweekly', anchorDay: 4, variability: 'variable', tags: ['Income', 'Capitec'] },
+  // Monthly fixed
+  rent: { description: 'Rent transfer', frequency: 'monthly', anchorDay: 1, variability: 'fixed', tags: ['Housing'] },
+  insurance: { description: 'MiWay car insurance', frequency: 'monthly', anchorDay: 2, variability: 'fixed', tags: ['Insurance'] },
+  medical: { description: 'Discovery medical aid', frequency: 'monthly', anchorDay: 3, variability: 'fixed', tags: ['Medical'] },
+  gym: { description: 'Virgin Active debit order', frequency: 'monthly', anchorDay: 1, variability: 'fixed', tags: ['Health'] },
+  internet: { description: 'Vumatel fibre', frequency: 'monthly', anchorDay: 3, variability: 'fixed', tags: ['Housing'] },
+  netflix: { description: 'Netflix subscription', frequency: 'monthly', anchorDay: 2, variability: 'fixed', tags: ['Entertainment'] },
+  spotify: { description: 'Spotify subscription', frequency: 'monthly', anchorDay: 2, variability: 'fixed', tags: ['Entertainment'] },
+  // Monthly variable
+  utilities: { description: 'City of Cape Town utilities', frequency: 'monthly', anchorDay: 7, variability: 'variable', tags: ['Housing'] },
+  water: { description: 'City of CT water', frequency: 'monthly', anchorDay: 10, variability: 'variable', tags: ['Housing'] },
+  // Weekly
+  groceries: { description: 'Weekly groceries', frequency: 'weekly', anchorDay: 6, variability: 'variable', tags: ['Food'] },
+  fuel: { description: 'Fuel', frequency: 'weekly', anchorDay: 3, variability: 'variable', tags: ['Transport'] },
+  // Daily
+  coffee: { description: 'Coffee & snacks', frequency: 'daily', anchorDay: 0, variability: 'variable', tags: ['Food', 'Discretionary'] },
+  // Quarterly
+  tax: { description: 'SARS provisional tax', frequency: 'quarterly', anchorDay: 20, variability: 'fixed', tags: ['Tax'] },
+  service: { description: 'Car service & maintenance', frequency: 'quarterly', anchorDay: 15, variability: 'variable', tags: ['Transport'] },
+  // Annually
+  licence: { description: 'Car licence renewal', frequency: 'annually', anchorDay: 12, variability: 'fixed', tags: ['Transport'] },
+  hosting: { description: 'Domain + hosting renewal', frequency: 'annually', anchorDay: 8, variability: 'fixed', tags: ['Subscriptions'] },
+  // Irregular (on-demand) — projected as a daily rate from linked history
+  'prepaid-elec': { description: 'Prepaid electricity', frequency: 'irregular', anchorDay: 0, variability: 'irregular', tags: ['Housing'] },
+  data: { description: 'Vodacom data bundle', frequency: 'irregular', anchorDay: 0, variability: 'irregular', tags: ['Connectivity'] },
 }
 
 /**
- * Generate recurring patterns from the demo data.
+ * Build the full demo dataset (transactions + patterns) for a given "today".
+ * Patterns are derived from the generated transactions so the two never drift.
  */
-function generateDemoPatterns(baseDate: Date): RecurringPattern[] {
-  const prevMonth = new Date(baseDate.getFullYear(), baseDate.getMonth() - 1, 1)
-  const y = prevMonth.getFullYear()
-  const m = String(prevMonth.getMonth() + 1).padStart(2, '0')
+function buildDemoData(baseDate: Date): { transactions: Transaction[]; patterns: RecurringPattern[] } {
+  const txns: Transaction[] = []
+  const today = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate())
+  const start = new Date(today.getFullYear(), today.getMonth() - HISTORY_MONTHS, 1)
+  const inRange = (d: Date) => d >= start && d <= today
 
-  return [
-    makePattern('pat-salary', 'Salary', 25000, 'monthly', 25, ['Income', 'FNB Cheque'], `${y}-${m}-25`),
-    makePattern('pat-freelance', 'Freelance payment', 4200, 'monthly', 15, ['Income', 'Capitec'], `${y}-${m}-15`),
-    makePattern('pat-rent', 'Rent transfer', -12000, 'monthly', 1, ['Housing'], `${y}-${m}-01`),
-    makePattern('pat-utilities', 'City of Cape Town utilities', -1950, 'monthly', 7, ['Housing'], `${y}-${m}-07`),
-    makePattern('pat-internet', 'Vumatel fibre', -1000, 'monthly', 3, ['Housing'], `${y}-${m}-03`),
-    makePattern('pat-insurance', 'MiWay car insurance', -2500, 'monthly', 1, ['Insurance'], `${y}-${m}-01`),
-    makePattern('pat-medical', 'Discovery medical aid', -3500, 'monthly', 1, ['Medical'], `${y}-${m}-01`),
-    makePattern('pat-gym', 'Virgin Active debit order', -699, 'monthly', 1, ['Health'], `${y}-${m}-01`),
-    makePattern('pat-netflix', 'Netflix subscription', -199, 'monthly', 2, ['Entertainment'], `${y}-${m}-02`),
-    makePattern('pat-spotify', 'Spotify subscription', -80, 'monthly', 2, ['Entertainment'], `${y}-${m}-02`),
-    // Variable recurring — regular timing, variable amount
-    makePattern('pat-water', 'City of CT water', -570, 'monthly', 10, ['Housing'], `${y}-${m}-10`, 'variable', 120),
-    // Irregular recurring — no fixed schedule, bought when needed
-    makePattern('pat-prepaid-elec', 'Prepaid electricity', -350, 'irregular', 0, ['Housing'], `${y}-${m}-16`, 'irregular'),
-    makePattern('pat-data', 'Vodacom data bundle', -170, 'irregular', 0, ['Connectivity'], `${y}-${m}-17`, 'irregular'),
-  ]
+  // Per-group running stats, used to compute pattern expectedAmount/std/lastSeen.
+  const stats = new Map<string, { amounts: number[]; lastSeen: string }>()
+
+  const addRecurring = (idPrefix: string, d: Date, amount: number, group: string, description?: string) => {
+    if (!inRange(d)) return
+    const spec = SPECS[group]!
+    txns.push(makeTransaction(`${idPrefix}-${iso(d)}`, iso(d), amount, description ?? spec.description, spec.tags, 'recurring', group))
+    const s = stats.get(group) ?? { amounts: [], lastSeen: '' }
+    s.amounts.push(amount)
+    if (iso(d) > s.lastSeen) s.lastSeen = iso(d)
+    stats.set(group, s)
+  }
+  const addOnce = (idPrefix: string, d: Date, amount: number, description: string, tags: string[]) => {
+    if (!inRange(d)) return
+    txns.push(makeTransaction(`${idPrefix}-${iso(d)}`, iso(d), amount, description, tags, 'once-off', null))
+  }
+
+  const monthKey = (y: number, m0: number) => `${y}-${m0}`
+  const onDay = (y: number, m0: number, day: number, idPrefix: string, amount: number, group: string, description?: string) =>
+    addRecurring(idPrefix, new Date(y, m0, Math.min(day, daysInMonth(y, m0))), amount, group, description)
+
+  // ── Monthly / quarterly items ──
+  const grossMonths = HISTORY_MONTHS + 1 // include the partial current month
+  for (let mi = 0; mi < grossMonths; mi++) {
+    const mDate = new Date(start.getFullYear(), start.getMonth() + mi, 1)
+    const y = mDate.getFullYear()
+    const m0 = mDate.getMonth()
+    if (mDate > today) break
+    const k = monthKey(y, m0)
+    const monthsAgo = (today.getFullYear() * 12 + today.getMonth()) - (y * 12 + m0)
+
+    // Income — salary with a raise in the most recent 6 months (visible upward trend)
+    onDay(y, m0, SPECS.salary!.anchorDay, 'salary', monthsAgo <= 5 ? 26500 : 25000, 'salary')
+
+    // Fixed monthly expenses
+    onDay(y, m0, SPECS.rent!.anchorDay, 'rent', -12500, 'rent')
+    onDay(y, m0, SPECS.insurance!.anchorDay, 'insurance', -2500, 'insurance')
+    onDay(y, m0, SPECS.medical!.anchorDay, 'medical', -3500, 'medical')
+    onDay(y, m0, SPECS.gym!.anchorDay, 'gym', -699, 'gym')
+    onDay(y, m0, SPECS.internet!.anchorDay, 'internet', -1000, 'internet')
+    onDay(y, m0, SPECS.netflix!.anchorDay, 'netflix', -199, 'netflix')
+    onDay(y, m0, SPECS.spotify!.anchorDay, 'spotify', -80, 'spotify')
+
+    // Variable monthly expenses (utilities creep up slightly with the trend)
+    onDay(y, m0, SPECS.utilities!.anchorDay, 'utilities', jitter(-2000 - (5 - Math.min(monthsAgo, 5)) * 40, 0.16, `util-${k}`), 'utilities')
+    onDay(y, m0, SPECS.water!.anchorDay, 'water', jitter(-600, 0.28, `water-${k}`), 'water')
+
+    // Quarterly — provisional tax (Mar/Jun/Sep/Dec) and car service (Jan/Apr/Jul/Oct)
+    if (m0 % 3 === 2) onDay(y, m0, SPECS.tax!.anchorDay, 'tax', -8500, 'tax')
+    if (m0 % 3 === 0) onDay(y, m0, SPECS.service!.anchorDay, 'service', jitter(-2800, 0.3, `svc-${k}`), 'service')
+  }
+
+  // ── Biweekly freelance income (every 14 days, anchored to a Thursday) ──
+  let fl = new Date(start)
+  while (fl.getDay() !== SPECS.freelance!.anchorDay) fl = addDays(fl, 1)
+  for (; fl <= today; fl = addDays(fl, 14)) {
+    addRecurring('freelance', fl, jitter(3200, 0.32, `fl-${iso(fl)}`), 'freelance')
+  }
+
+  // ── Weekly groceries (Saturdays), rotating stores ──
+  const grocStores = ['Checkers Groceries', 'Pick n Pay', 'Woolworths Food', 'Spar']
+  let g = new Date(start)
+  while (g.getDay() !== SPECS.groceries!.anchorDay) g = addDays(g, 1)
+  for (let i = 0; g <= today; g = addDays(g, 7), i++) {
+    addRecurring('groc', g, jitter(-1150, 0.22, `groc-${iso(g)}`), 'groceries', grocStores[i % grocStores.length])
+  }
+
+  // ── Weekly fuel (Wednesdays), rotating stations ──
+  const stations = ['Engen fuel', 'Shell fuel', 'BP fuel', 'Sasol fuel']
+  let fu = new Date(start)
+  while (fu.getDay() !== SPECS.fuel!.anchorDay) fu = addDays(fu, 1)
+  for (let i = 0; fu <= today; fu = addDays(fu, 7), i++) {
+    addRecurring('fuel', fu, jitter(-900, 0.2, `fuel-${iso(fu)}`), 'fuel', stations[i % stations.length])
+  }
+
+  // ── Daily weekday coffee (drives day-of-week seasonality + dense daily series) ──
+  for (let c = new Date(start); c <= today; c = addDays(c, 1)) {
+    const dow = c.getDay()
+    if (dow >= 1 && dow <= 5) addRecurring('coffee', c, jitter(-42, 0.18, `cof-${iso(c)}`), 'coffee')
+  }
+
+  // ── Irregular / on-demand spending (deterministic per-day probability) ──
+  for (let d = new Date(start); d <= today; d = addDays(d, 1)) {
+    const ds = iso(d)
+    const dow = d.getDay()
+    const weekend = dow === 5 || dow === 6
+
+    // Dining out — weekend-weighted (once-off, variable amount)
+    if (rand(`dine-${ds}`) < (weekend ? 0.5 : 0.06)) {
+      const places = ['Nandos', 'Spur', 'Ocean Basket', 'Steers', 'Kauai', 'RocoMamas', 'The Bohemian']
+      addOnce('dine', d, jitter(-380, 0.4, `dinea-${ds}`), places[Math.floor(rand(`dinep-${ds}`) * places.length)]!, ['Food', 'Discretionary'])
+    }
+    // Ride-hailing
+    if (rand(`uber-${ds}`) < 0.13) addOnce('uber', d, jitter(-150, 0.5, `ubera-${ds}`), 'Uber trip', ['Transport'])
+    // Online shopping
+    if (rand(`shop-${ds}`) < 0.07) addOnce('shop', d, jitter(-520, 0.6, `shopa-${ds}`), 'Takealot order', ['Shopping'])
+    // Irregular recurring — prepaid electricity (linked group → projected as daily rate)
+    if (rand(`elec-${ds}`) < 0.06) addRecurring('elec', d, jitter(-350, 0.3, `eleca-${ds}`), 'prepaid-elec')
+    // Irregular recurring — data bundles
+    if (rand(`data-${ds}`) < 0.045) addRecurring('data', d, jitter(-180, 0.3, `dataa-${ds}`), 'data')
+  }
+
+  // ── Annual renewals (one occurrence each, placed in history) ──
+  const licDate = new Date(today.getFullYear(), today.getMonth() - 6, SPECS.licence!.anchorDay)
+  addRecurring('licence', licDate, -680, 'licence')
+  const hostDate = new Date(today.getFullYear(), today.getMonth() - 9, SPECS.hosting!.anchorDay)
+  addRecurring('hosting', hostDate, -1850, 'hosting')
+
+  // ── Once-off shocks (test once-off handling + runway dips) ──
+  addOnce('laptop', new Date(today.getFullYear(), today.getMonth() - 4, 18), -22000, 'Laptop — iStore', ['Shopping'])
+  addOnce('flights', new Date(today.getFullYear(), today.getMonth() - 7, 9), -6500, 'Flight booking — FlySafair', ['Travel'])
+  addOnce('dental', new Date(today.getFullYear(), today.getMonth() - 2, 14), -4200, 'Dentist — crown', ['Medical'])
+
+  // ── Build patterns from the collected stats ──
+  const patterns: RecurringPattern[] = []
+  for (const [id, spec] of Object.entries(SPECS)) {
+    const s = stats.get(id)
+    if (!s || s.amounts.length === 0) continue // no occurrences fell in range
+    patterns.push(
+      makePattern(
+        id,
+        spec.description,
+        Math.round(meanOf(s.amounts)),
+        spec.frequency,
+        spec.anchorDay,
+        spec.tags,
+        s.lastSeen,
+        spec.variability,
+        Math.round(stdOf(s.amounts)),
+      ),
+    )
+  }
+
+  return { transactions: txns, patterns }
 }
 
 /**
@@ -183,13 +340,12 @@ export async function seedDemoWorkspace(): Promise<boolean> {
     startDate,
     endDate: null,
     isDemo: true,
-    cashOnHand: 15000,
+    cashOnHand: 18000,
     createdAt: nowISO,
     updatedAt: nowISO,
   }
 
-  const transactions = generateDemoTransactions(now)
-  const patterns = generateDemoPatterns(now)
+  const { transactions, patterns } = buildDemoData(now)
 
   try {
     await db.transaction('rw', [db.workspaces, db.transactions, db.patterns], async () => {
