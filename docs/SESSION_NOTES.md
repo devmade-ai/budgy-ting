@@ -11,12 +11,17 @@ demo seed** so every analytical feature is exercisable.
 ## Accomplished
 
 - **Demo seed rewrite (`src/db/demoData.ts`):** deterministic ~12-month generator —
-  ~730 transactions / 20 patterns covering all 7 cadences + 3 variabilities, day-of-week
+  731 transactions / 20 patterns covering all 7 cadences + 3 variabilities, day-of-week
   structure (weekday coffee, weekend dining), a mid-history salary raise (trend), and
   once-off shocks (laptop/flights/dental). Patterns are computed FROM the generated
-  transactions so stats never drift. Verified end-to-end: runway resolves a depletion
-  date, the rolling-origin backtest runs 333 out-of-sample predictions with full interval
-  calibration, accuracy-by-horizon has 26 samples/horizon. Seeds only into an empty DB.
+  transactions so stats never drift. **Audited correctness** (Playwright + IndexedDB):
+  every pattern's expectedAmount == data mean, last-seen matches, median intervals match
+  the declared cadence. **Balance tuned** to a realistic moderate overspend — income
+  ≈R35.4k/mo, expenses ≈R43.7k/mo, net ≈−R8.3k/mo (forecast deficit ≈−R3.3k/mo) — so the
+  cash runway depletes honestly: expected "cash lasts until" ≈6 months out, worst-case
+  ≈2 months. Demo seeds `forecast-months=12` for the workspace so the full year + the
+  runway date show by default (the 3-month default is too short to surface it). Backtest:
+  333 out-of-sample predictions, accuracy ~74%, full interval calibration. Empty-DB only.
 - **Foundation (new):**
   - `src/styles/tokens/` — ported Farlume tokens: `colors.css` (palette + semantic aliases; light `:root`, dark `[data-theme="dark"]`), `typography.css`, `spacing.css`, `effects.css` (radii/shadows/glow; z-index remapped to the repo scale 50/60/70 so the debug pill stays on top), `fonts.css`, `print.css`.
   - `src/styles/components.css` — the full `.fl-*` component layer (buttons, icon buttons, inputs/selects/switch/checkbox/radio, tags + tag input, card, badge, stat/metric, table, forecast chart, dialog/overlay, toast, tooltip, segmented control, tabs, empty state, alert, spinner, skeleton, steps, progress, range, popover/menu, divider, sticky bar, link, eyebrow, prose theming). Wrapped in `@layer components`.

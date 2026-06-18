@@ -26,6 +26,7 @@
 import { db } from './index'
 import { debugLog } from '@/debug/debugLog'
 import { touchTags } from '@/composables/useTagAutocomplete'
+import { safeSetItem } from '@/composables/useSafeStorage'
 import type { Workspace, Transaction, RecurringPattern } from '@/types/models'
 
 const DEMO_WORKSPACE_ID = 'demo-household'
@@ -216,7 +217,7 @@ function buildDemoData(baseDate: Date): { transactions: Transaction[]; patterns:
     const monthsAgo = (today.getFullYear() * 12 + today.getMonth()) - (y * 12 + m0)
 
     // Income — salary with a raise in the most recent 6 months (visible upward trend)
-    onDay(y, m0, SPECS.salary!.anchorDay, 'salary', monthsAgo <= 5 ? 26500 : 25000, 'salary')
+    onDay(y, m0, SPECS.salary!.anchorDay, 'salary', monthsAgo <= 5 ? 30500 : 28500, 'salary')
 
     // Fixed monthly expenses
     onDay(y, m0, SPECS.rent!.anchorDay, 'rent', -12500, 'rent')
@@ -293,9 +294,9 @@ function buildDemoData(baseDate: Date): { transactions: Transaction[]; patterns:
   addRecurring('hosting', hostDate, -1850, 'hosting')
 
   // ── Once-off shocks (test once-off handling + runway dips) ──
-  addOnce('laptop', new Date(today.getFullYear(), today.getMonth() - 4, 18), -22000, 'Laptop — iStore', ['Shopping'])
-  addOnce('flights', new Date(today.getFullYear(), today.getMonth() - 7, 9), -6500, 'Flight booking — FlySafair', ['Travel'])
-  addOnce('dental', new Date(today.getFullYear(), today.getMonth() - 2, 14), -4200, 'Dentist — crown', ['Medical'])
+  addOnce('laptop', new Date(today.getFullYear(), today.getMonth() - 4, 18), -14000, 'Laptop — iStore', ['Shopping'])
+  addOnce('flights', new Date(today.getFullYear(), today.getMonth() - 7, 9), -5000, 'Flight booking — FlySafair', ['Travel'])
+  addOnce('dental', new Date(today.getFullYear(), today.getMonth() - 2, 14), -3200, 'Dentist — crown', ['Medical'])
 
   // ── Build patterns from the collected stats ──
   const patterns: RecurringPattern[] = []
@@ -340,7 +341,7 @@ export async function seedDemoWorkspace(): Promise<boolean> {
     startDate,
     endDate: null,
     isDemo: true,
-    cashOnHand: 18000,
+    cashOnHand: 20000,
     createdAt: nowISO,
     updatedAt: nowISO,
   }
@@ -358,6 +359,11 @@ export async function seedDemoWorkspace(): Promise<boolean> {
     for (const t of transactions) for (const tag of t.tags) allTags.add(tag)
     for (const p of patterns) for (const tag of p.tags) allTags.add(tag)
     await touchTags([...allTags])
+
+    // Open the demo on a 12-month forecast so the full year of history + the
+    // cash-runway depletion (a mild, realistic deficit) are visible by default;
+    // the 3-month default would be too short to surface the runway date.
+    safeSetItem(`farlume:forecast-months:${DEMO_WORKSPACE_ID}`, '12')
 
     debugLog('db', 'success', `Seeded demo workspace with ${transactions.length} transactions and ${patterns.length} patterns`)
     return true
