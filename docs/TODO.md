@@ -33,7 +33,7 @@
 
 ## Performance
 
-- [ ] CashflowGraph `:key` triggers full ApexCharts re-init on chartMode / timeRange / forecastMonths / isDark change. Investigate mutating the chart instance (via `this.chart.updateOptions`) instead of a keyed remount.
+- [ ] CashflowGraph `:key` triggers full ApexCharts re-init on chartMode / chartType / timeRange / forecastMonths / isDark change. Investigate mutating the chart instance (via `this.chart.updateOptions`) instead of a keyed remount. Note: the chartMode→chartType switch (line ↔ rangeArea) genuinely needs a re-init since ApexCharts can't hot-swap the base chart type; the other deps could use updateOptions.
 
 ## Testing
 

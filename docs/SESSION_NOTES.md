@@ -6,7 +6,8 @@
 
 Complete visual facelift: **removed DaisyUI** and adopted the **Farlume design system**
 (handoff bundle from Claude Design) as the app's own styling layer. Then **extended the
-demo seed** so every analytical feature is exercisable.
+demo seed** so every analytical feature is exercisable, audited the forecasting/runway
+math for correctness, and **reframed the main chart to "cash balance over time."**
 
 ## Accomplished
 
@@ -30,7 +31,9 @@ demo seed** so every analytical feature is exercisable.
   - `daisyui` removed from package.json.
 - **Theme machinery:** `src/config/themes.ts` → single `farlume` combo (light/dark, paper/ink status-bar colors); `index.html` flash script + `vite.config.ts` manifest `theme_color` (`#F4F0E8`) updated; AppLayout print handlers use `light`/`dark`.
 - **Migrated all 33 DaisyUI-using files** to `.fl-*` + Farlume utilities (8 by hand incl. AppLayout, CashflowGraph, ConfirmDialog, MetricCard, EmptyState, ErrorAlert, LoadingSpinner, ClassificationBadge; the rest via 6 parallel agents). DebugPill converted to a fixed-dark, theme-independent palette.
-- **Chart:** CashflowGraph wired to the Farlume chart language — ink history line, dashed amber forecast, green balance, tokenized grid/labels (via `resolveThemeColor` on `--chart-*`/`--pos`/`--text-muted`). Controls → segmented controls.
+- **Chart (`src/components/CashflowGraph.vue`):** two reframes.
+  1. Wired to the Farlume chart language — tokenized colors/grid/labels via `resolveThemeColor` on `--chart-*`/`--text-muted`; controls → segmented controls.
+  2. **Default mode is now "Balance" = cash balance over time** (was "Cumulative" net-from-zero). One continuous absolute-cash line: history is reconstructed backward from today's cash-on-hand (`historyOffset = cashOnHand − lastActualCumulative`), the forecast projects forward from the same boundary, and the line crosses a red "Out of cash" zero reference exactly at the runway depletion date (red "Runs out" vertical marker). The forecast's optimistic/pessimistic spread is a translucent amber **rangeArea** band (cumulative `band.upper`/`band.lower`, same edges runway.ts uses). A "Daily net" mode keeps the per-day in/out lines. `cashOnHand` is a new prop from WorkspaceDashboard (`cashOnHandForRunway`); when it's null/≤0, Balance falls back to a "Net position" line from zero with no zero/runway markers. `dataLabels` forced off (rangeArea defaults them on). History = ink solid, forecast = dashed amber, range = amber fill.
 - **Brand copy:** meta + manifest description → "Forecast your cash position — local-first, on your device." Header uses the logomark + "Farlume" in Newsreader.
 - **Docs:** CLAUDE.md (DaisyUI sync points → Farlume; added design-system section + no-DaisyUI rule), README tech stack, TODO (facelift follow-ups), USER_ACTIONS (icon regen).
 
@@ -38,7 +41,8 @@ demo seed** so every analytical feature is exercisable.
 
 - **Working / verified:** `npm run build` ✓, `vue-tsc` typecheck ✓, `npm test` ✓ (178/178). Built CSS contains all Farlume utilities, `.fl-*` classes, the dark `[data-theme=dark]` scope, and the self-hosted fonts. Zero DaisyUI residue in `src/` (grep-clean).
 - **App icons:** regenerated from the Farlume logomark via `npm run generate-icons` (favicon/apple-touch/pwa-any/maskable + `icon.svg`); cache-bust hash flow picks up the new bytes.
-- **Visual QA done:** Playwright sweep (pre-installed Chromium at `/opt/pw-browsers`, driven via `executablePath`) across list / dashboard / import / tutorial / help / edit-modal / create / burger-menu in light + dark, desktop + mobile — no styling regressions. The Farlume chart language (ink history / dashed amber forecast / green balance), mono numerals, serif headings, and dark mode all render correctly.
+- **Visual QA done:** Playwright sweep (pre-installed Chromium at `/opt/pw-browsers`, driven via `executablePath`) across list / dashboard / import / tutorial / help / edit-modal / create / burger-menu in light + dark, desktop + mobile — no styling regressions. The Farlume chart language (ink history / dashed amber forecast / amber range band), mono numerals, serif headings, and dark mode all render correctly. The reframed Balance chart was screenshot-verified in both themes: history declines from ~R110k to today's R20k, forecast continues the sawtooth through the zero line at the "Runs out" marker (matches the "Runs out 2026-12-20" header figure), band widens over the horizon. `dataLabels` off, daily-net mode clean.
+- **Forecast/runway math audited** (read every formula in `forecast.ts` / `runway.ts` / `accuracy.ts` / `conformal.ts` / `validation.ts`): all textbook-correct. Two defensible simplifications, both documented in-code: constant-width bands (mean-reverting residual + deterministic recurring → no √h growth), and runway optimistic/pessimistic applying the daily band every day (a sustained-scenario, wider than a √h cumulative — the cautious-edge choice for cashflow).
 
 ## Key context
 

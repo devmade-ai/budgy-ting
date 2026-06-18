@@ -327,6 +327,7 @@ async function handleRequestSuggestions(id: string, description: string) {
       :transactions="transactions"
       :forecast-points="forecast?.daily ?? []"
       :runway="runway"
+      :cash-on-hand="cashOnHandForRunway"
       :currency-label="workspace.currencyLabel"
       :forecast-months="forecastMonths"
       @update:forecast-months="forecastMonths = $event"
