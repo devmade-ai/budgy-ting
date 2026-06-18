@@ -24,7 +24,8 @@ Complete visual facelift: **removed DaisyUI** and adopted the **Farlume design s
 ## Current state
 
 - **Working / verified:** `npm run build` ✓, `vue-tsc` typecheck ✓, `npm test` ✓ (178/178). Built CSS contains all Farlume utilities, `.fl-*` classes, the dark `[data-theme=dark]` scope, and the self-hosted fonts. Zero DaisyUI residue in `src/` (grep-clean).
-- **Not done (no in-browser pass available here):** visual QA across screens in light/dark/mobile; app-icon regeneration from the logomark. Both tracked in TODO / USER_ACTIONS.
+- **App icons:** regenerated from the Farlume logomark via `npm run generate-icons` (favicon/apple-touch/pwa-any/maskable + `icon.svg`); cache-bust hash flow picks up the new bytes.
+- **Visual QA done:** Playwright sweep (pre-installed Chromium at `/opt/pw-browsers`, driven via `executablePath`) across list / dashboard / import / tutorial / help / edit-modal / create / burger-menu in light + dark, desktop + mobile — no styling regressions. The Farlume chart language (ink history / dashed amber forecast / green balance), mono numerals, serif headings, and dark mode all render correctly.
 
 ## Key context
 

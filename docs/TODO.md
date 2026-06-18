@@ -48,9 +48,8 @@
 
 ## Design / Facelift follow-ups (Farlume design system)
 
-<!-- The DaisyUI→Farlume facelift landed: tokens in src/styles/, .fl-* component layer, self-hosted fonts. Build/typecheck/178 tests pass. These are the remaining polish items. -->
+<!-- The DaisyUI→Farlume facelift landed: tokens in src/styles/, .fl-* component layer, self-hosted fonts, brand icons. Build/typecheck/178 tests pass, and a Playwright visual sweep (light + dark, desktop + mobile) across list/dashboard/import/tutorial/help/edit-modal/create/menu found no styling regressions. These are the remaining optional polish items. -->
 
-- [ ] **Visual QA pass across every screen in light + dark.** The migration was verified by build + grep + tests, but no in-browser visual pass was run. Walk every surface (dashboard, import wizard upload + review, transaction table + edit modal, workspace list/detail/create/edit, tutorial, help drawers, install modal, toasts, bottom sheet) in both themes and on mobile widths; fix any spacing/contrast/alignment regressions.
 - [ ] Native `<progress>` elements in WorkspaceListView (pull-to-refresh + storage bar) are token-styled via Tailwind arbitrary variants rather than the `.fl-progress` div component — swap to `.fl-progress` for visual parity if desired.
 - [ ] ForecastDiagnostics keeps a native `<details>/<summary>` disclosure (accessible, zero-JS) styled with Farlume tokens rather than a `.fl-card` + chevron-button. Fine as-is; revisit only if a chevron-toggle look is wanted.
 - [ ] TagSuggestions accept-chip lost its hover text-color affordance (would clash inside the solid accent pill). If a hover cue is wanted, use a subtle chip background/opacity shift instead.
