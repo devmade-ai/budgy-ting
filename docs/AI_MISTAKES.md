@@ -125,6 +125,14 @@ This is explicitly documented in CLAUDE.md Documentation section: "Update them a
 
 **How to prevent it:** After completing each step, output the result and stop. Don't preview the next step. Don't prepare for it. Don't "get ahead." Wait for the explicit go-ahead. The user's workflow is: review output → decide → approve next step. Skipping the review window removes the user's control.
 
+## Mount-time scroll lock froze an always-mounted dialog's page (2026-06-19)
+
+**What went wrong:** `useDialogA11y` registered the dialog (and locked `body`/`html` scroll) in `onMounted`, on the assumption that a dialog component is only mounted while it's open. That holds for every `v-if`-mounted modal, but `BottomSheet` stays mounted permanently (so its slide `<Transition>` can animate) and gates visibility via an `open` prop. Result: on the workspace detail screen the *closed* bottom sheet locked page scroll the instant it mounted and never released — the whole screen couldn't scroll.
+
+**Why it happened:** The composable conflated "component mounted" with "dialog open." The two diverge for any always-mounted-but-conditionally-visible component, and `BottomSheet` was the lone such consumer, so the assumption went unnoticed until content overflowed the viewport on a real device.
+
+**How to prevent it:** When a composable engages a global side effect (scroll lock, focus trap, listener) on mount, confirm every consumer is mounted only while active. For components that stay mounted and gate visibility via a prop, drive the side effect from the reactive open-state, not the lifecycle hook. `useDialogA11y` now takes an optional `isOpen` arg for exactly this; `BottomSheet` passes `() => props.open`. Covered by regression tests in `useDialogA11y.test.ts` ("reactive open state").
+
 ## Deleted entire UI instead of migrating it (2026-03-04)
 
 **What went wrong:** User asked to clean up deprecated type tags and legacy hacks. Instead of removing the `@deprecated` annotations and fixing the code properly, deleted 25 files — every view, engine, and component that used the old types — leaving the app as an empty shell with only workspace CRUD. The workspace list detail tabs, import wizard, export/import, and all comparison views were gone.

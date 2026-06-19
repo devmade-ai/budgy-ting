@@ -8,7 +8,7 @@
  * dialog also closed the outer one.
  */
 
-import { onMounted, onUnmounted, type Ref } from 'vue'
+import { onMounted, onUnmounted, watch, toValue, type Ref, type MaybeRefOrGetter } from 'vue'
 
 const FOCUSABLE_SELECTOR = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
 
@@ -120,15 +120,40 @@ function releaseListenerIfIdle() {
   listenerAttached = false
 }
 
+/**
+ * @param isOpen Optional reactive open-state (ref or getter). Supply it for a
+ *   dialog that stays mounted and gates visibility via a prop — e.g. BottomSheet,
+ *   which must stay mounted so its slide `<Transition>` can animate open/close.
+ *   When given, the stack registration / scroll-lock / focus-trap engage on open
+ *   and release on close, NOT on mount. Omit it for the common case where the
+ *   component is `v-if`-mounted only while open (mount == open), preserving the
+ *   original mount/unmount lifecycle.
+ *
+ * Requirement: a closed-but-mounted bottom sheet was locking page scroll on the
+ *   workspace detail screen — its mount-time `lockBodyScroll()` fired while the
+ *   sheet sat invisible and never released, freezing the whole page.
+ * Approach: drive engagement from the open state when it's provided, so a mounted
+ *   dialog only registers (and locks scroll) while actually visible.
+ * Alternatives:
+ *   - `v-if` the BottomSheet in the parent: Rejected — unmounts the component
+ *     before its leave transition can play, killing the slide-down animation, and
+ *     leaves the same footgun for the next always-mounted consumer.
+ */
 export function useDialogA11y(
   dialogRef: Ref<HTMLElement | null>,
   onClose: () => void,
+  isOpen?: MaybeRefOrGetter<boolean>,
 ) {
   let previouslyFocused: HTMLElement | null = null
   let rafId: number | null = null
+  // Guard so the reactive watcher and the onUnmounted safety net can't
+  // double-engage or double-disengage (e.g. unmounting while still open).
+  let engaged = false
   const entry: DialogEntry = { dialogRef, onClose }
 
-  onMounted(() => {
+  function engage() {
+    if (engaged) return
+    engaged = true
     previouslyFocused = document.activeElement as HTMLElement | null
     const wasEmpty = stack.length === 0
     stack.push(entry)
@@ -136,7 +161,7 @@ export function useDialogA11y(
     if (wasEmpty) lockBodyScroll()
 
     // Focus the first focusable element in the dialog.
-    // Track RAF ID so it can be cancelled if the component unmounts before it fires.
+    // Track RAF ID so it can be cancelled if the dialog closes before it fires.
     rafId = requestAnimationFrame(() => {
       rafId = null
       const dialog = dialogRef.value
@@ -144,17 +169,41 @@ export function useDialogA11y(
       const first = dialog.querySelector<HTMLElement>(FOCUSABLE_SELECTOR)
       first?.focus()
     })
-  })
+  }
 
-  onUnmounted(() => {
-    if (rafId !== null) cancelAnimationFrame(rafId)
+  function disengage() {
+    if (!engaged) return
+    engaged = false
+    if (rafId !== null) {
+      cancelAnimationFrame(rafId)
+      rafId = null
+    }
     const idx = stack.lastIndexOf(entry)
     if (idx !== -1) stack.splice(idx, 1)
     releaseListenerIfIdle()
     if (stack.length === 0) unlockBodyScroll()
     // Restore focus to the element that was focused before this dialog opened.
     // With stacked dialogs this naturally returns to the outer dialog's last
-    // focused control when the inner dialog unmounts.
+    // focused control when the inner dialog closes.
     previouslyFocused?.focus()
-  })
+  }
+
+  if (isOpen !== undefined) {
+    // Always-mounted dialog: engage on open, release on close. `immediate`
+    // runs the closed case on setup so nothing locks while the dialog is hidden.
+    watch(
+      () => toValue(isOpen),
+      (open) => {
+        if (open) engage()
+        else disengage()
+      },
+      { immediate: true },
+    )
+    // Safety net: unmounting while still open must release the lock + listener.
+    onUnmounted(disengage)
+  } else {
+    // `v-if`-mounted dialog: mount == open, so engage for the component's lifetime.
+    onMounted(engage)
+    onUnmounted(disengage)
+  }
 }

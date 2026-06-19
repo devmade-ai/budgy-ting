@@ -10,7 +10,7 @@
  * in @vue/test-utils — keeps this to the existing dep set.
  */
 import { describe, it, expect, beforeEach } from 'vitest'
-import { createApp, defineComponent, h, ref } from 'vue'
+import { createApp, defineComponent, h, ref, nextTick, type Ref } from 'vue'
 import { useDialogA11y, isDialogOpen } from './useDialogA11y'
 
 function mountDialog(onClose: () => void = () => {}) {
@@ -30,6 +30,32 @@ function mountDialog(onClose: () => void = () => {}) {
           h('button', { type: 'button' }, 'last'),
         ],
       )
+    },
+  })
+  const host = document.createElement('div')
+  document.body.appendChild(host)
+  const app = createApp(component)
+  app.mount(host)
+  return {
+    unmount: () => {
+      app.unmount()
+      host.remove()
+    },
+  }
+}
+
+// Mounts a dialog that stays mounted and gates engagement on a reactive `open`
+// ref — the always-mounted BottomSheet shape.
+function mountReactiveDialog(open: Ref<boolean>, onClose: () => void = () => {}) {
+  const dialogRef = ref<HTMLElement | null>(null)
+  const component = defineComponent({
+    setup() {
+      useDialogA11y(dialogRef, onClose, () => open.value)
+      return { dialogRef }
+    },
+    render() {
+      // Content only renders while open, mirroring BottomSheet's inner v-if.
+      return h('div', { ref: 'dialogRef' }, open.value ? [h('button', { type: 'button' }, 'first')] : [])
     },
   })
   const host = document.createElement('div')
@@ -146,6 +172,64 @@ describe('useDialogA11y', () => {
       expect(document.body.style.overflow).toBe('auto')
       expect(document.body.style.overscrollBehavior).toBe('auto')
       expect(document.documentElement.style.overflow).toBe('scroll')
+    })
+  })
+
+  // Regression: an always-mounted dialog (BottomSheet) used to lock page scroll
+  // the moment it mounted closed, because engagement was tied to mount, not open.
+  describe('reactive open state (always-mounted dialog)', () => {
+    it('does not register or lock scroll while mounted-but-closed', () => {
+      const open = ref(false)
+      const { unmount } = mountReactiveDialog(open)
+
+      expect(isDialogOpen()).toBe(false)
+      expect(document.body.style.overflow).toBe('')
+      expect(document.documentElement.style.overflow).toBe('')
+
+      unmount()
+    })
+
+    it('engages on open and releases on close', async () => {
+      const open = ref(false)
+      const { unmount } = mountReactiveDialog(open)
+
+      open.value = true
+      await nextTick()
+      expect(isDialogOpen()).toBe(true)
+      expect(document.body.style.overflow).toBe('hidden')
+
+      open.value = false
+      await nextTick()
+      expect(isDialogOpen()).toBe(false)
+      expect(document.body.style.overflow).toBe('')
+
+      unmount()
+    })
+
+    it('releases the lock if unmounted while still open', async () => {
+      const open = ref(false)
+      const { unmount } = mountReactiveDialog(open)
+
+      open.value = true
+      await nextTick()
+      expect(document.body.style.overflow).toBe('hidden')
+
+      unmount()
+      expect(isDialogOpen()).toBe(false)
+      expect(document.body.style.overflow).toBe('')
+    })
+
+    it('does not suppress a sibling mounted dialog when closed', () => {
+      // The closed reactive dialog must not sit on the stack and shadow a real one.
+      const open = ref(false)
+      const reactive = mountReactiveDialog(open)
+      const real = mountDialog()
+
+      expect(isDialogOpen()).toBe(true) // the real dialog
+      real.unmount()
+      expect(isDialogOpen()).toBe(false) // reactive (closed) never registered
+
+      reactive.unmount()
     })
   })
 })

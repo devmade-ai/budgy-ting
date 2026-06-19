@@ -11,7 +11,7 @@
 import { ref, watch } from 'vue'
 import { useDialogA11y } from '@/composables/useDialogA11y'
 
-defineProps<{
+const props = defineProps<{
   open: boolean
   /** Accessible label for screen readers — required for role="dialog" */
   ariaLabel?: string
@@ -22,7 +22,10 @@ const emit = defineEmits<{
 }>()
 
 const sheetRef = ref<HTMLElement | null>(null)
-useDialogA11y(sheetRef, () => emit('close'))
+// This sheet stays mounted (so its slide transition can play), so pass `open`
+// to gate the scroll-lock/focus-trap on visibility — without it the closed
+// sheet would lock page scroll the moment it mounts.
+useDialogA11y(sheetRef, () => emit('close'), () => props.open)
 
 function handleBackdropClick() {
   emit('close')
